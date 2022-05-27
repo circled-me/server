@@ -13,8 +13,8 @@ type Asset struct {
 	ID        uint64 `gorm:"primaryKey"`
 	UserID    uint64 `gorm:"index:uniq_remote_id,unique;not null"`
 	RemoteID  string `gorm:"type:varchar(300);index:uniq_remote_id,unique;not null"`
-	CreatedAt int
-	UpdatedAt int
+	CreatedAt uint64
+	UpdatedAt uint64
 	Size      int64
 	User      User    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	GroupID   *uint64 // can be null
@@ -23,6 +23,11 @@ type Asset struct {
 	Bucket    storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	Name      string         `gorm:"type:varchar(300)"`
 	MimeType  string         `gorm:"type:varchar(50)"`
+	GpsLat    *float64       `gorm:"type:double"`
+	GpsLong   *float64       `gorm:"type:double"`
+	Favourite bool
+	Width     uint16
+	Height    uint16
 }
 
 // GetPath returns the path of the asset. For example:
@@ -53,5 +58,6 @@ func (a *Asset) BeforeSave(tx *gorm.DB) (err error) {
 			name.WriteString("_")
 		}
 	}
+	a.Name = name.String()
 	return
 }

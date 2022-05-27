@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"io"
+	"log"
 	"server/db"
 )
 
@@ -35,10 +36,10 @@ func Init() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Storage Buckets found: %d\n", len(buckets))
+	log.Printf("Storage Buckets found: %d\n", len(buckets))
 	var storage StorageAPI
 	for _, bucket := range buckets {
-		fmt.Printf("Bucket: %+v\n", bucket)
+		log.Printf("Bucket: %+v\n", bucket)
 		if bucket.StorageType == StorageTypeFile {
 			storage = NewDiskStorage(&bucket)
 		} else if bucket.StorageType == StorageTypeS3 {
