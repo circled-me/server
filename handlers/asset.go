@@ -14,6 +14,10 @@ type AssetFetchRequest struct {
 	ID uint64 `form:"id" binding:"required"`
 }
 
+type AssetInfo struct {
+	ID uint64 `json:"id"`
+}
+
 func AssetList(c *gin.Context) {
 	session := auth.LoadSession(c)
 	userID := session.UserID()
@@ -23,20 +27,18 @@ func AssetList(c *gin.Context) {
 	}
 	rows, err := db.Instance.Table("assets").Select("id").Where("user_id = ?", userID).Order("created_at DESC").Rows()
 	if err != nil {
-		c.Error(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
 	}
 	defer rows.Close()
-	var id string
-	result := []string{}
+	result := []AssetInfo{}
 	for rows.Next() {
-		if err = rows.Scan(&id); err != nil {
-			c.Error(err)
+		assetInfo := AssetInfo{}
+		if err = rows.Scan(&assetInfo.ID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
 		}
-		result = append(result, id)
+		result = append(result, assetInfo)
 	}
 	c.JSON(http.StatusOK, result)
 }

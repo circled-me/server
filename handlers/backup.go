@@ -101,7 +101,6 @@ func BackupCheck(c *gin.Context) {
 	}
 	rows, err := db.Instance.Table("assets").Select("remote_id").Where("user_id = ? AND remote_id IN (?)", userID, r.IDs).Rows()
 	if err != nil {
-		c.Error(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
 	}
@@ -110,7 +109,6 @@ func BackupCheck(c *gin.Context) {
 	result := []string{}
 	for rows.Next() {
 		if err = rows.Scan(&remoteID); err != nil {
-			c.Error(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
 		}
