@@ -1,17 +1,26 @@
 package handlers
 
 import (
+	"bytes"
+	"image"
+	"io"
 	"net/http"
 	"server/auth"
 	"server/db"
 	"server/models"
 	"server/storage"
 
+	"image/jpeg"
+	_ "image/jpeg"
+
 	"github.com/gin-gonic/gin"
+	"github.com/nfnt/resize"
 )
 
 type AssetFetchRequest struct {
-	ID uint64 `form:"id" binding:"required"`
+	ID    uint64 `form:"id" binding:"required"`
+	Thumb uint   `form:"thumb"`
+	Size  uint   `form:"size"`
 }
 
 type AssetInfo struct {
@@ -43,6 +52,15 @@ func AssetList(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+func createThumb(size uint, reader io.Reader, writer io.Writer) error {
+	image, _, err := image.Decode(reader)
+	if err != nil {
+		return err
+	}
+	newImage := resize.Thumbnail(size, size, image, resize.Lanczos3)
+	return jpeg.Encode(writer, newImage, &jpeg.Options{Quality: 90})
+}
+
 func AssetFetch(c *gin.Context) {
 	session := auth.LoadSession(c)
 	userID := session.UserID()
@@ -69,8 +87,22 @@ func AssetFetch(c *gin.Context) {
 		panic("Storage is nil")
 	}
 	c.Header("content-type", asset.MimeType)
-	_, err = storage.Load(asset.GetPath(), c.Writer)
+	if r.Thumb == 1 {
+		if r.Size == 0 {
+			// Default big (1280) size
+			_, err = storage.Load(asset.GetThumbPath(), c.Writer)
+		} else {
+			// Custom size
+			var buf bytes.Buffer
+			if _, err = storage.Load(asset.GetThumbPath(), &buf); err == nil {
+				err = createThumb(r.Size, &buf, c.Writer)
+			}
+		}
+	} else {
+		_, err = storage.Load(asset.GetPath(), c.Writer)
+	}
+	// Handle errors
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "storage error"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 }

@@ -30,7 +30,8 @@ func main() {
 	router.Use(sessions.Sessions(sessionCookieName, cookieStore))
 
 	router.POST("/backup/check", handlers.BackupCheck)
-	router.POST("/backup/do", handlers.BackupAsset)
+	router.POST("/backup/asset", handlers.BackupAsset)
+	router.POST("/backup/thumb", handlers.BackupAssetThumb)
 	router.POST("/bucket/create", handlers.BucketCreate)
 	router.POST("/user/create", handlers.UserCreate)
 	router.POST("/user/login", handlers.UserLogin)

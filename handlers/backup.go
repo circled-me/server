@@ -24,6 +24,10 @@ type BackupRequest struct {
 	Height    uint16   `form:"height" binding:""`
 }
 
+type BackupThumbRequest struct {
+	ID string `form:"id" binding:"required"`
+}
+
 type BackupCheckRequest struct {
 	IDs []string `binding:"required"`
 }
@@ -81,6 +85,39 @@ func BackupAsset(c *gin.Context) {
 		return
 	}
 	// Re-save asset as we have new .Size (TODOD: .MimeType)
+	db.Instance.Updates(&asset)
+	c.JSON(200, gin.H{"error": "", "id": asset.ID})
+}
+
+func BackupAssetThumb(c *gin.Context) {
+	session := auth.LoadSession(c)
+	userID := session.UserID()
+	if userID == 0 || !session.HasPermission(models.PermissionPhoneBackup) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+		return
+	}
+	var r BackupThumbRequest
+	err := c.ShouldBindQuery(&r)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	storage := storage.GetDefaultStorage()
+	if storage == nil {
+		panic("Storage is nil")
+	}
+	asset := models.Asset{}
+	result := db.Instance.Where("user_id = ? AND remote_id = ?", userID, r.ID).Find(&asset)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		return
+	}
+	asset.ThumbSize, err = storage.Save(asset.GetThumbPath(), c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	// Re-save asset as we have new .Size (TODO: .MimeType)
 	db.Instance.Updates(&asset)
 	c.JSON(200, gin.H{"error": "", "id": asset.ID})
 }

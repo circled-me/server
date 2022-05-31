@@ -16,6 +16,7 @@ type Asset struct {
 	CreatedAt uint64 `gorm:"index:user_asset_created,priority:2"`
 	UpdatedAt uint64
 	Size      int64
+	ThumbSize int64
 	User      User    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	GroupID   *uint64 // can be null
 	Group     Group   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
@@ -34,6 +35,14 @@ type Asset struct {
 //  - group/56/image.jpg
 //  - user/3/file.xls
 func (a *Asset) GetPath() string {
+	return a.GetPathOrThumb(false)
+}
+
+func (a *Asset) GetThumbPath() string {
+	return a.GetPathOrThumb(true)
+}
+
+func (a *Asset) GetPathOrThumb(thumb bool) string {
 	subDir := ""
 	if a.GroupID != nil {
 		// This is an asset uploaded to a Group (as part of a Post)
@@ -42,7 +51,14 @@ func (a *Asset) GetPath() string {
 		// It must be an asset for a User (private or part of Post on their "wall")
 		subDir = "user/" + strconv.FormatUint(a.UserID, 10)
 	}
-	return subDir + "/" + strconv.FormatUint(a.ID, 10) + filepath.Ext(a.Name)
+	path := subDir + "/" + strconv.FormatUint(a.ID, 10)
+	if thumb {
+		// Thumbs are always JPEG
+		path += "_thumb.jpg"
+	} else {
+		path += strings.ToLower(filepath.Ext(a.Name))
+	}
+	return path
 }
 
 func (a *Asset) BeforeSave(tx *gorm.DB) (err error) {
