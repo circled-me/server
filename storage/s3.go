@@ -18,6 +18,11 @@ func (s *S3Storage) Save(path string, reader io.Reader) (int64, error) {
 	return 0, nil
 }
 
+func (s *S3Storage) Load(path string, writer io.Writer) (int64, error) {
+	// TODO
+	return 0, nil
+}
+
 func (s *S3Storage) Delete(path string) error {
 	// TODO
 	return nil

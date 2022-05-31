@@ -34,5 +34,7 @@ func main() {
 	router.POST("/bucket/create", handlers.BucketCreate)
 	router.POST("/user/create", handlers.UserCreate)
 	router.POST("/user/login", handlers.UserLogin)
+	router.GET("/asset/list", handlers.AssetList)
+	router.GET("/asset/fetch", handlers.AssetFetch)
 	router.Run("0.0.0.0:8080")
 }

@@ -44,6 +44,17 @@ func (s *DiskStorage) Save(path string, reader io.Reader) (int64, error) {
 	return result, err
 }
 
+func (s *DiskStorage) Load(path string, writer io.Writer) (int64, error) {
+	fileName := s.BasePath + "/" + path
+	file, err := os.Open(fileName)
+	if err != nil {
+		return 0, err
+	}
+	result, err := io.Copy(writer, file)
+	file.Close()
+	return result, err
+}
+
 func (s *DiskStorage) Delete(path string) error {
 	return os.Remove(path)
 }

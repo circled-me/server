@@ -9,6 +9,7 @@ import (
 
 type StorageAPI interface {
 	Save(path string, reader io.Reader) (int64, error)
+	Load(path string, writer io.Writer) (int64, error)
 	Delete(path string) error
 	GetTotalSpace() uint64
 	GetFreeSpace() uint64
