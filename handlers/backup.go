@@ -70,11 +70,17 @@ func BackupAsset(c *gin.Context) {
 	}
 	result := db.Instance.Create(&asset)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
-		return
+		// Try loading the asset by RemoteID, maybe it exists and we should overwrite it
+		result = db.Instance.First(&asset, "remote_id = ?", r.ID)
+		if result.Error != nil {
+			// Now give up...
+			c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+			return
+		}
 	}
 	asset.Size, err = storage.Save(asset.GetPath(), c.Request.Body)
 	if err != nil {
+		// We couldn't save the file, delete the DB record too
 		db.Instance.Delete(asset)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -136,7 +142,9 @@ func BackupCheck(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	rows, err := db.Instance.Table("assets").Select("remote_id").Where("user_id = ? AND remote_id IN (?)", userID, r.IDs).Rows()
+	rows, err := db.Instance.Table("assets").Select("remote_id").
+		Where("user_id = ? AND remote_id IN (?) AND (thumb_size>0 OR (mime_type NOT LIKE 'image/%' AND mime_type NOT LIKE 'video/%'))", userID, r.IDs).Rows()
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
