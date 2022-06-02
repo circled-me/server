@@ -2,6 +2,7 @@ package storage
 
 import (
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
@@ -53,6 +54,11 @@ func (s *DiskStorage) Load(path string, writer io.Writer) (int64, error) {
 	result, err := io.Copy(writer, file)
 	file.Close()
 	return result, err
+}
+
+func (s *DiskStorage) Serve(path string, request *http.Request, writer http.ResponseWriter) {
+	fileName := s.BasePath + "/" + path
+	http.ServeFile(writer, request, fileName)
 }
 
 func (s *DiskStorage) Delete(path string) error {

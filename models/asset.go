@@ -9,6 +9,12 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	AssetTypeOther = 0
+	AssetTypeImage = 1
+	AssetTypeVideo = 2
+)
+
 type Asset struct {
 	ID        uint64 `gorm:"primaryKey"`
 	UserID    uint64 `gorm:"index:uniq_remote_id,unique,priority:1;not null;index:user_asset_created,priority:1"`

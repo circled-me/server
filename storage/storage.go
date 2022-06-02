@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"server/db"
 )
 
 type StorageAPI interface {
 	Save(path string, reader io.Reader) (int64, error)
 	Load(path string, writer io.Writer) (int64, error)
+	Serve(path string, request *http.Request, writer http.ResponseWriter)
 	Delete(path string) error
 	GetTotalSpace() uint64
 	GetFreeSpace() uint64

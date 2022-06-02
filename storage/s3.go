@@ -2,6 +2,7 @@ package storage
 
 import (
 	"io"
+	"net/http"
 )
 
 type S3Storage struct {
@@ -21,6 +22,10 @@ func (s *S3Storage) Save(path string, reader io.Reader) (int64, error) {
 func (s *S3Storage) Load(path string, writer io.Writer) (int64, error) {
 	// TODO
 	return 0, nil
+}
+
+func (s *S3Storage) Serve(path string, request *http.Request, writer http.ResponseWriter) {
+	// TODO
 }
 
 func (s *S3Storage) Delete(path string) error {

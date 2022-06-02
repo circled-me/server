@@ -9,6 +9,7 @@ import (
 	"server/db"
 	"server/models"
 	"server/storage"
+	"strings"
 
 	"image/jpeg"
 	_ "image/jpeg"
@@ -24,7 +25,19 @@ type AssetFetchRequest struct {
 }
 
 type AssetInfo struct {
-	ID uint64 `json:"id"`
+	ID   uint64 `json:"id"`
+	Type uint   `json:"type"`
+}
+
+// TODO: Move to before save in Asset
+func getTypeFrom(mimeType string) uint {
+	if strings.HasPrefix(mimeType, "image/") {
+		return models.AssetTypeImage
+	}
+	if strings.HasPrefix(mimeType, "video/") {
+		return models.AssetTypeVideo
+	}
+	return models.AssetTypeOther
 }
 
 func AssetList(c *gin.Context) {
@@ -34,19 +47,21 @@ func AssetList(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
-	rows, err := db.Instance.Table("assets").Select("id").Where("user_id = ?", userID).Order("created_at DESC").Rows()
+	rows, err := db.Instance.Table("assets").Select("id, mime_type").Where("user_id = ?", userID).Order("created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
 	}
 	defer rows.Close()
 	result := []AssetInfo{}
+	mimeType := ""
 	for rows.Next() {
 		assetInfo := AssetInfo{}
-		if err = rows.Scan(&assetInfo.ID); err != nil {
+		if err = rows.Scan(&assetInfo.ID, &mimeType); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
 		}
+		assetInfo.Type = getTypeFrom(mimeType)
 		result = append(result, assetInfo)
 	}
 	c.JSON(http.StatusOK, result)
@@ -99,7 +114,9 @@ func AssetFetch(c *gin.Context) {
 			}
 		}
 	} else {
-		_, err = storage.Load(asset.GetPath(), c.Writer)
+		// Handles Byte-ranges too
+		storage.Serve(asset.GetPath(), c.Request, c.Writer)
+		return
 	}
 	// Handle errors
 	if err != nil {
