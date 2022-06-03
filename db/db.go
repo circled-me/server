@@ -7,8 +7,7 @@ import (
 
 var Instance *gorm.DB
 
-func Init() {
-	dsn := "root:@tcp(127.0.0.1:3306)/circled?charset=utf8mb4&parseTime=True&loc=Local"
+func Init(dsn string) {
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil || db == nil {
 		panic(err)

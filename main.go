@@ -18,7 +18,7 @@ const (
 )
 
 func main() {
-	db.Init()
+	db.Init(GetMySQLDSN())
 	models.Init()
 	storage.Init()
 
@@ -37,5 +37,5 @@ func main() {
 	router.POST("/user/login", handlers.UserLogin)
 	router.GET("/asset/list", handlers.AssetList)
 	router.GET("/asset/fetch", handlers.AssetFetch)
-	router.Run("0.0.0.0:8080")
+	router.Run(GetBindAddress())
 }
