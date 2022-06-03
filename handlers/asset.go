@@ -9,6 +9,7 @@ import (
 	"server/db"
 	"server/models"
 	"server/storage"
+	"strconv"
 	"strings"
 
 	"image/jpeg"
@@ -67,13 +68,19 @@ func AssetList(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func createThumb(size uint, reader io.Reader, writer io.Writer) error {
+func createThumb(size uint, reader io.Reader, c *gin.Context) (err error) {
 	image, _, err := image.Decode(reader)
 	if err != nil {
 		return err
 	}
+	var newBuf bytes.Buffer
 	newImage := resize.Thumbnail(size, size, image, resize.Lanczos3)
-	return jpeg.Encode(writer, newImage, &jpeg.Options{Quality: 90})
+	if err = jpeg.Encode(&newBuf, newImage, &jpeg.Options{Quality: 90}); err != nil {
+		return
+	}
+	c.Header("content-length", strconv.Itoa(newBuf.Len()))
+	_, err = io.Copy(c.Writer, &newBuf)
+	return
 }
 
 func AssetFetch(c *gin.Context) {
@@ -101,8 +108,8 @@ func AssetFetch(c *gin.Context) {
 	if storage == nil {
 		panic("Storage is nil")
 	}
-	c.Header("content-type", asset.MimeType)
 	if r.Thumb == 1 {
+		c.Header("content-type", "image/jpeg")
 		if r.Size == 0 {
 			// Default big (1280) size
 			_, err = storage.Load(asset.GetThumbPath(), c.Writer)
@@ -110,10 +117,11 @@ func AssetFetch(c *gin.Context) {
 			// Custom size
 			var buf bytes.Buffer
 			if _, err = storage.Load(asset.GetThumbPath(), &buf); err == nil {
-				err = createThumb(r.Size, &buf, c.Writer)
+				err = createThumb(r.Size, &buf, c)
 			}
 		}
 	} else {
+		c.Header("content-type", asset.MimeType)
 		// Handles Byte-ranges too
 		storage.Serve(asset.GetPath(), c.Request, c.Writer)
 		return
