@@ -37,5 +37,7 @@ func main() {
 	router.POST("/user/login", handlers.UserLogin)
 	router.GET("/asset/list", handlers.AssetList)
 	router.GET("/asset/fetch", handlers.AssetFetch)
+	router.GET("/album/list", handlers.AlbumList)
+	router.GET("/album/create", handlers.AlbumCreate)
 	router.Run(GetBindAddress())
 }

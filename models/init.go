@@ -10,6 +10,7 @@ func Init() {
 	// Seed the random number generator - required for User.Salt
 	rand.Seed(time.Now().UnixNano())
 
+	db.Instance.AutoMigrate(&Album{})
 	db.Instance.AutoMigrate(&Asset{})
 	db.Instance.AutoMigrate(&User{})
 	db.Instance.AutoMigrate(&Comment{})
