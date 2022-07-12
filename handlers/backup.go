@@ -35,7 +35,7 @@ type BackupCheckRequest struct {
 func BackupAsset(c *gin.Context) {
 	session := auth.LoadSession(c)
 	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhoneBackup) {
+	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -98,7 +98,7 @@ func BackupAsset(c *gin.Context) {
 func BackupAssetThumb(c *gin.Context) {
 	session := auth.LoadSession(c)
 	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhoneBackup) {
+	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -132,7 +132,7 @@ func BackupAssetThumb(c *gin.Context) {
 func BackupCheck(c *gin.Context) {
 	session := auth.LoadSession(c)
 	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhoneBackup) {
+	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}

@@ -19,7 +19,7 @@ type Asset struct {
 	ID        uint64 `gorm:"primaryKey"`
 	UserID    uint64 `gorm:"index:uniq_remote_id,unique,priority:1;not null;index:user_asset_created,priority:1"`
 	RemoteID  string `gorm:"type:varchar(300);index:uniq_remote_id,unique,priority:2;not null"`
-	CreatedAt uint64 `gorm:"index:user_asset_created,priority:2"`
+	CreatedAt uint64 `gorm:"index:user_asset_created,priority:3"`
 	UpdatedAt uint64
 	Size      int64
 	ThumbSize int64
@@ -33,6 +33,7 @@ type Asset struct {
 	GpsLat    *float64       `gorm:"type:double"`
 	GpsLong   *float64       `gorm:"type:double"`
 	Favourite bool
+	Deleted   bool `gorm:"index:user_asset_created,priority:2;not null;default 0"`
 	Width     uint16
 	Height    uint16
 }

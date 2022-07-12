@@ -20,10 +20,15 @@ type AlbumCreateRequest struct {
 	Name string `form:"name"`
 }
 
+type AlbumAddRequest struct {
+	AlbumID uint64 `form:"album_id"`
+	AssetID uint64 `form:"asset_id"`
+}
+
 func AlbumList(c *gin.Context) {
 	session := auth.LoadSession(c)
 	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhoneBackup) {
+	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -48,7 +53,7 @@ func AlbumList(c *gin.Context) {
 func AlbumCreate(c *gin.Context) {
 	session := auth.LoadSession(c)
 	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhoneBackup) {
+	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -67,4 +72,29 @@ func AlbumCreate(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"id": asset.ID, "name": asset.Name})
+}
+
+func AlbumAddAsset(c *gin.Context) {
+	session := auth.LoadSession(c)
+	userID := session.UserID()
+	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+		return
+	}
+	r := AlbumAddRequest{}
+	err := c.ShouldBindQuery(&r)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	albumAsset := models.AlbumAsset{
+		AlbumID: r.AlbumID,
+		AssetID: r.AssetID,
+	}
+	result := db.Instance.Create(&albumAsset)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"error": ""})
 }

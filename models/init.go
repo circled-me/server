@@ -11,6 +11,7 @@ func Init() {
 	rand.Seed(time.Now().UnixNano())
 
 	db.Instance.AutoMigrate(&Album{})
+	db.Instance.AutoMigrate(&AlbumAsset{})
 	db.Instance.AutoMigrate(&Asset{})
 	db.Instance.AutoMigrate(&User{})
 	db.Instance.AutoMigrate(&Comment{})

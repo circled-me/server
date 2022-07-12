@@ -5,7 +5,7 @@ type Permission uint8
 const (
 	PermissionNone            Permission = 0
 	PermissionAdmin           Permission = 1
-	PermissionPhoneBackup     Permission = 2
+	PermissionPhotoBackup     Permission = 2
 	PermissionCanCreateGroups Permission = 3
 	PermissionCanInvite       Permission = 4
 )

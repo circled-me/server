@@ -31,8 +31,12 @@ func (s *DiskStorage) createDir(dir string) error {
 	return os.MkdirAll(dir, 0777)
 }
 
+func (s *DiskStorage) getFullPath(path string) string {
+	return s.BasePath + "/" + path
+}
+
 func (s *DiskStorage) Save(path string, reader io.Reader) (int64, error) {
-	fileName := s.BasePath + "/" + path
+	fileName := s.getFullPath(path)
 	if err := s.createDir(filepath.Dir(fileName)); err != nil {
 		return 0, err
 	}
@@ -46,7 +50,7 @@ func (s *DiskStorage) Save(path string, reader io.Reader) (int64, error) {
 }
 
 func (s *DiskStorage) Load(path string, writer io.Writer) (int64, error) {
-	fileName := s.BasePath + "/" + path
+	fileName := s.getFullPath(path)
 	file, err := os.Open(fileName)
 	if err != nil {
 		return 0, err
@@ -57,12 +61,12 @@ func (s *DiskStorage) Load(path string, writer io.Writer) (int64, error) {
 }
 
 func (s *DiskStorage) Serve(path string, request *http.Request, writer http.ResponseWriter) {
-	fileName := s.BasePath + "/" + path
+	fileName := s.getFullPath(path)
 	http.ServeFile(writer, request, fileName)
 }
 
 func (s *DiskStorage) Delete(path string) error {
-	return os.Remove(path)
+	return os.Remove(s.getFullPath(path))
 }
 
 func NewDiskStorage(bucket *Bucket) StorageAPI {
