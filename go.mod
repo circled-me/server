@@ -1,6 +1,6 @@
 module server
 
-go 1.17
+go 1.18
 
 require (
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
@@ -32,4 +32,5 @@ require (
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 	gorm.io/driver/mysql v1.3.3 // indirect
 	gorm.io/gorm v1.23.4 // indirect
+	github.com/Kagami/go-face v0.0.0-20210630145111-0c14797b4d0e // indirect
 )

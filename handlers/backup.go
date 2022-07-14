@@ -90,7 +90,7 @@ func BackupAsset(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "empty asset"})
 		return
 	}
-	// Re-save asset as we have new .Size (TODOD: .MimeType)
+	// Re-save asset as we have new .Size (TODO: .MimeType)
 	db.Instance.Updates(&asset)
 	c.JSON(200, gin.H{"error": "", "id": asset.ID})
 }
