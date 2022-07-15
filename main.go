@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"server/db"
 	"server/faces"
 	"server/handlers"
@@ -26,24 +25,24 @@ func main() {
 	faces.Init("/mnt/data1/models")
 
 	// One off
-	assets := []models.Asset{}
-	res := db.Instance.Table("assets").Where("deleted = 0").Find(&assets)
-	if res.Error != nil {
-		fmt.Println(res.Error)
-		return
-	}
-	for _, asset := range assets {
-		fmt.Printf("Processing Asset: %d\n", asset.ID)
-		foundFaces, err := faces.ProcessPhoto(asset.ID, "/mnt/data1/circled-data/"+asset.GetThumbPath())
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		fmt.Printf("Asset: %d, num faces: %d; saving...\n", asset.ID, len(foundFaces))
-		for _, face := range foundFaces {
-			db.Instance.Save(&face)
-		}
-	}
+	// assets := []models.Asset{}
+	// res := db.Instance.Table("assets").Where("deleted = 0").Find(&assets)
+	// if res.Error != nil {
+	// 	fmt.Println(res.Error)
+	// 	return
+	// }
+	// for _, asset := range assets {
+	// 	fmt.Printf("Processing Asset: %d\n", asset.ID)
+	// 	foundFaces, err := faces.ProcessPhoto(asset.ID, "/mnt/data1/circled-data/"+asset.GetThumbPath())
+	// 	if err != nil {
+	// 		fmt.Println(err)
+	// 		continue
+	// 	}
+	// 	fmt.Printf("Asset: %d, num faces: %d; saving...\n", asset.ID, len(foundFaces))
+	// 	for _, face := range foundFaces {
+	// 		db.Instance.Save(&face)
+	// 	}
+	// }
 
 	router := gin.Default()
 	router.SetTrustedProxies([]string{})

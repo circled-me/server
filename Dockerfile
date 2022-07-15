@@ -1,6 +1,13 @@
-FROM ubuntu:22.04
-RUN apt-get update
-RUN apt-get install -y git ca-certificates golang libdlib-dev libblas-dev libatlas-base-dev liblapack-dev libjpeg-turbo8-dev
+FROM golang:1.18-alpine
+RUN apk add dlib --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/
+RUN apk --no-cache add openblas openblas-dev lapack lapack-dev libjpeg-turbo-dev
+RUN apk add wget cmake make gcc libc-dev g++ unzip libx11-dev pkgconf jpeg jpeg-dev libpng libpng-dev
+# Some .so symlinks are missing, need this hack
+WORKDIR /usr/lib
+RUN ln -s libblas.so.3 libblas.so
+RUN ln -s libcblas.so.3 libcblas.so
+RUN ln -s liblapack.so.3 liblapack.so
+
 COPY go.mod /go/src/circled-server/
 COPY go.sum /go/src/circled-server/
 WORKDIR /go/src/circled-server/
@@ -9,9 +16,10 @@ COPY . /go/src/circled-server
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o circled-server .
 
 
-FROM ubuntu:22.04
-RUN apt-get update
-RUN apt-get install -y git ca-certificates libdlib-dev libblas-dev libatlas-base-dev liblapack-dev libjpeg-turbo8-dev
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+RUN apk add dlib --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/
+RUN apk --no-cache add openblas lapack libjpeg-turbo libstdc++ libgcc
 WORKDIR /root/
 COPY --from=0 /go/src/circled-server/circled-server .
-CMD ["/bin/sh", "-c", "GODEBUG=madvdontneed=1 /root/circled-server 1>>/var/log/circled-server.log 2>>/var/log/circled-server.log"]
+CMD ["/bin/sh", "-c", "GODEBUG=madvdontneed=1 ./circled-server 1>>/var/log/circled-server.log 2>>/var/log/circled-server.log"]

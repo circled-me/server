@@ -1,8 +1,12 @@
 package models
 
 import (
+	"log"
 	"path/filepath"
+	"server/db"
+	"server/faces"
 	"server/storage"
+	"server/utils"
 	"strconv"
 	"strings"
 
@@ -82,5 +86,31 @@ func (a *Asset) BeforeSave(tx *gorm.DB) (err error) {
 		}
 	}
 	a.Name = name.String()
+	return
+}
+
+func (a *Asset) AfterSave(tx *gorm.DB) (err error) {
+	// Scan the thumb for faces
+	if a.ThumbSize <= 0 {
+		return
+	}
+	foundFaces, err := faces.ProcessPhoto("/mnt/data1/circled-data/" + a.GetThumbPath())
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	//fmt.Printf("Asset: %d, num faces: %d; saving...\n", a.ID, len(foundFaces))
+	for _, face := range foundFaces {
+		desc := [128]float32(face.Descriptor)
+		faceObject := Face{
+			AssetID:    a.ID,
+			Descriptor: utils.Float32ArrayToByteArray(desc[:]),
+			RectX1:     uint16(face.Rectangle.Min.X),
+			RectY1:     uint16(face.Rectangle.Min.Y),
+			RectX2:     uint16(face.Rectangle.Max.X),
+			RectY2:     uint16(face.Rectangle.Max.Y),
+		}
+		db.Instance.Save(&faceObject)
+	}
 	return
 }
