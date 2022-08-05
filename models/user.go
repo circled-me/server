@@ -56,3 +56,11 @@ func UserLogin(email, plainTextPassword string) (u User, err error) {
 	}
 	return u, nil
 }
+
+func (u *User) GetPermissionsArray() []int {
+	permissions := []int{}
+	for _, grant := range u.Grants {
+		permissions = append(permissions, int(grant.Permission))
+	}
+	return permissions
+}

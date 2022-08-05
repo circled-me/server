@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"bytes"
+	"image"
+	"io"
 	"mime"
 	"net/http"
 	"path/filepath"
@@ -118,12 +121,21 @@ func BackupAssetThumb(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
 	}
-	asset.ThumbSize, err = storage.Save(asset.GetThumbPath(), c.Request.Body)
+	thumbContent := bytes.Buffer{}
+	reader := io.TeeReader(c.Request.Body, &thumbContent)
+	asset.ThumbSize, err = storage.Save(asset.GetThumbPath(), reader)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	// Re-save asset as we have new .Size (TODO: .MimeType)
+	thumb, _, err := image.Decode(&thumbContent)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	asset.ThumbWidth = uint16(thumb.Bounds().Dx())
+	asset.ThumbHeight = uint16(thumb.Bounds().Dy())
+	// Re-save asset as we have new .Size, .ThumbWidth, .ThumbHeight (TODO: .MimeType)
 	db.Instance.Updates(&asset)
 	c.JSON(200, gin.H{"error": "", "id": asset.ID})
 }

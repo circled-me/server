@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"server/auth"
+	"server/db"
 	"server/models"
 
 	"github.com/gin-gonic/gin"
@@ -31,10 +32,7 @@ func UserLogin(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
-	permissions := make([]int, 0)
-	for _, grant := range user.Grants {
-		permissions = append(permissions, int(grant.Permission))
-	}
+	permissions := user.GetPermissionsArray()
 	session := auth.LoadSession(c)
 	session.Set("id", user.ID)
 	session.Set("permissions", permissions)
@@ -55,4 +53,15 @@ func UserCreate(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"error": "", "user": user})
+}
+
+func UserGetPermissions(c *gin.Context) {
+	session := auth.LoadSession(c)
+	user := models.User{ID: session.UserID()}
+	db.Instance.Preload("Grants").First(&user)
+	if user.Name == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Not Found", "name": "", "permissions": []int{}})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"error": "", "name": user.Name, "permissions": user.GetPermissionsArray()})
 }

@@ -2,7 +2,7 @@ package main
 
 import (
 	"server/db"
-	"server/faces"
+	// "server/faces"
 	"server/handlers"
 	"server/models"
 	"server/storage"
@@ -22,7 +22,7 @@ func main() {
 	db.Init(GetMySQLDSN())
 	models.Init()
 	storage.Init()
-	faces.Init("/mnt/data1/models")
+	// faces.Init("/mnt/data1/models")
 
 	// One off
 	// assets := []models.Asset{}
@@ -57,11 +57,13 @@ func main() {
 	router.POST("/bucket/create", handlers.BucketCreate)
 	router.POST("/user/create", handlers.UserCreate)
 	router.POST("/user/login", handlers.UserLogin)
+	router.GET("/user/permissions", handlers.UserGetPermissions)
 	router.GET("/asset/list", handlers.AssetList)
 	router.GET("/asset/fetch", handlers.AssetFetch)
 	router.POST("/asset/delete", handlers.AssetDelete)
 	router.GET("/album/list", handlers.AlbumList)
 	router.GET("/album/create", handlers.AlbumCreate)
 	router.GET("/album/add", handlers.AlbumAddAsset)
+	// router.GET("/faces/get", handlers.GetFaces)
 	router.Run(GetBindAddress())
 }

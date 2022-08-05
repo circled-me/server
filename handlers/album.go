@@ -12,8 +12,9 @@ import (
 )
 
 type AlbumInfo struct {
-	ID   uint64 `json:"id"`
-	Name string `json:"name"`
+	ID          uint64 `json:"id"`
+	Name        string `json:"name"`
+	HeroAssetId uint64 `json:"hero_asset_id"`
 }
 
 type AlbumCreateRequest struct {
@@ -32,7 +33,7 @@ func AlbumList(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
-	rows, err := db.Instance.Table("albums").Select("id, name").Where("user_id = ?", userID).Order("created_at DESC").Rows()
+	rows, err := db.Instance.Table("albums").Select("id, name, hero_asset_id").Where("user_id = ?", userID).Order("created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
@@ -41,11 +42,24 @@ func AlbumList(c *gin.Context) {
 	result := []AlbumInfo{}
 	for rows.Next() {
 		albumInfo := AlbumInfo{}
-		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name); err != nil {
+		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name, &albumInfo.HeroAssetId); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
 		}
 		result = append(result, albumInfo)
+	}
+	for _, a := range result {
+		if a.HeroAssetId > 0 {
+			continue
+		}
+		// If we don't have default hero image, pick the first one in the album
+		rows, err = db.Instance.Table("album_assets").Select("asset_id").Where("album_id = ?", a.ID).Order("created_at DESC").Limit(1).Rows()
+		if err != nil {
+			continue
+		}
+		if rows.Next() {
+			_ = rows.Scan(&a.HeroAssetId)
+		}
 	}
 	c.JSON(http.StatusOK, result)
 }

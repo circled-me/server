@@ -1,12 +1,8 @@
 package models
 
 import (
-	"log"
 	"path/filepath"
-	"server/db"
-	"server/faces"
 	"server/storage"
-	"server/utils"
 	"strconv"
 	"strings"
 
@@ -20,26 +16,28 @@ const (
 )
 
 type Asset struct {
-	ID        uint64 `gorm:"primaryKey"`
-	UserID    uint64 `gorm:"index:uniq_remote_id,unique,priority:1;not null;index:user_asset_created,priority:1"`
-	RemoteID  string `gorm:"type:varchar(300);index:uniq_remote_id,unique,priority:2;not null"`
-	CreatedAt uint64 `gorm:"index:user_asset_created,priority:3"`
-	UpdatedAt uint64
-	Size      int64
-	ThumbSize int64
-	User      User    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	GroupID   *uint64 // can be null
-	Group     Group   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	BucketID  uint64
-	Bucket    storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	Name      string         `gorm:"type:varchar(300)"`
-	MimeType  string         `gorm:"type:varchar(50)"`
-	GpsLat    *float64       `gorm:"type:double"`
-	GpsLong   *float64       `gorm:"type:double"`
-	Favourite bool
-	Deleted   bool `gorm:"index:user_asset_created,priority:2;not null;default 0"`
-	Width     uint16
-	Height    uint16
+	ID          uint64 `gorm:"primaryKey"`
+	UserID      uint64 `gorm:"index:uniq_remote_id,unique,priority:1;not null;index:user_asset_created,priority:1"`
+	RemoteID    string `gorm:"type:varchar(300);index:uniq_remote_id,unique,priority:2;not null"`
+	CreatedAt   uint64 `gorm:"index:user_asset_created,priority:3"`
+	UpdatedAt   uint64
+	Size        int64
+	ThumbSize   int64
+	User        User    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	GroupID     *uint64 // can be null
+	Group       Group   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	BucketID    uint64
+	Bucket      storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Name        string         `gorm:"type:varchar(300)"`
+	MimeType    string         `gorm:"type:varchar(50)"`
+	GpsLat      *float64       `gorm:"type:double"`
+	GpsLong     *float64       `gorm:"type:double"`
+	Favourite   bool
+	Deleted     bool `gorm:"index:user_asset_created,priority:2;not null;default 0"`
+	Width       uint16
+	Height      uint16
+	ThumbWidth  uint16
+	ThumbHeight uint16
 }
 
 // GetPath returns the path of the asset. For example:
@@ -89,28 +87,28 @@ func (a *Asset) BeforeSave(tx *gorm.DB) (err error) {
 	return
 }
 
-func (a *Asset) AfterSave(tx *gorm.DB) (err error) {
-	// Scan the thumb for faces
-	if a.ThumbSize <= 0 {
-		return
-	}
-	foundFaces, err := faces.ProcessPhoto("/mnt/data1/circled-data/" + a.GetThumbPath())
-	if err != nil {
-		log.Print(err)
-		return
-	}
-	//fmt.Printf("Asset: %d, num faces: %d; saving...\n", a.ID, len(foundFaces))
-	for _, face := range foundFaces {
-		desc := [128]float32(face.Descriptor)
-		faceObject := Face{
-			AssetID:    a.ID,
-			Descriptor: utils.Float32ArrayToByteArray(desc[:]),
-			RectX1:     uint16(face.Rectangle.Min.X),
-			RectY1:     uint16(face.Rectangle.Min.Y),
-			RectX2:     uint16(face.Rectangle.Max.X),
-			RectY2:     uint16(face.Rectangle.Max.Y),
-		}
-		db.Instance.Save(&faceObject)
-	}
-	return
-}
+// func (a *Asset) AfterSave(tx *gorm.DB) (err error) {
+// 	// Scan the thumb for faces
+// 	if a.ThumbSize <= 0 {
+// 		return
+// 	}
+// 	foundFaces, err := faces.ProcessPhoto("/mnt/data1/circled-data/" + a.GetThumbPath())
+// 	if err != nil {
+// 		log.Print(err)
+// 		return
+// 	}
+// 	//fmt.Printf("Asset: %d, num faces: %d; saving...\n", a.ID, len(foundFaces))
+// 	for _, face := range foundFaces {
+// 		desc := [128]float32(face.Descriptor)
+// 		faceObject := Face{
+// 			AssetID:    a.ID,
+// 			Descriptor: utils.Float32ArrayToByteArray(desc[:]),
+// 			RectX1:     uint16(face.Rectangle.Min.X),
+// 			RectY1:     uint16(face.Rectangle.Min.Y),
+// 			RectX2:     uint16(face.Rectangle.Max.X),
+// 			RectY2:     uint16(face.Rectangle.Max.Y),
+// 		}
+// 		db.Instance.Save(&faceObject)
+// 	}
+// 	return
+// }
