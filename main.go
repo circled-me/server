@@ -62,7 +62,7 @@ func main() {
 	router.GET("/asset/fetch", handlers.AssetFetch)
 	router.POST("/asset/delete", handlers.AssetDelete)
 	router.GET("/album/list", handlers.AlbumList)
-	router.GET("/album/create", handlers.AlbumCreate)
+	router.POST("/album/create", handlers.AlbumCreate)
 	router.GET("/album/add", handlers.AlbumAddAsset)
 	// router.GET("/faces/get", handlers.GetFaces)
 	router.Run(GetBindAddress())

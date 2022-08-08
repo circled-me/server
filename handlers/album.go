@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"server/auth"
 	"server/db"
@@ -9,6 +10,7 @@ import (
 	_ "image/jpeg"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 type AlbumInfo struct {
@@ -18,12 +20,12 @@ type AlbumInfo struct {
 }
 
 type AlbumCreateRequest struct {
-	Name string `form:"name"`
+	Name string `form:"name" binding:"required"`
 }
 
 type AlbumAddRequest struct {
-	AlbumID uint64 `form:"album_id"`
-	AssetID uint64 `form:"asset_id"`
+	AlbumID uint64 `form:"album_id" binding:"required"`
+	AssetID uint64 `form:"asset_id" binding:"required"`
 }
 
 func AlbumList(c *gin.Context) {
@@ -42,7 +44,8 @@ func AlbumList(c *gin.Context) {
 	result := []AlbumInfo{}
 	for rows.Next() {
 		albumInfo := AlbumInfo{}
-		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name, &albumInfo.HeroAssetId); err != nil {
+		HeroAssetId := &albumInfo.HeroAssetId
+		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name, &HeroAssetId); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
 		}
@@ -55,10 +58,12 @@ func AlbumList(c *gin.Context) {
 		// If we don't have default hero image, pick the first one in the album
 		rows, err = db.Instance.Table("album_assets").Select("asset_id").Where("album_id = ?", a.ID).Order("created_at DESC").Limit(1).Rows()
 		if err != nil {
+			fmt.Println(err)
 			continue
 		}
 		if rows.Next() {
-			_ = rows.Scan(&a.HeroAssetId)
+			err = rows.Scan(&a.HeroAssetId)
+			fmt.Println(err)
 		}
 	}
 	c.JSON(http.StatusOK, result)
@@ -72,20 +77,25 @@ func AlbumCreate(c *gin.Context) {
 		return
 	}
 	r := AlbumCreateRequest{}
-	err := c.ShouldBindQuery(&r)
+	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	asset := models.Album{
-		Name: r.Name,
+		Name:   r.Name,
+		UserID: userID,
 	}
 	result := db.Instance.Create(&asset)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"id": asset.ID, "name": asset.Name})
+	c.JSON(http.StatusOK, AlbumInfo{
+		ID:          asset.ID,
+		Name:        asset.Name,
+		HeroAssetId: 0,
+	})
 }
 
 func AlbumAddAsset(c *gin.Context) {
@@ -105,7 +115,13 @@ func AlbumAddAsset(c *gin.Context) {
 		AlbumID: r.AlbumID,
 		AssetID: r.AssetID,
 	}
-	result := db.Instance.Create(&albumAsset)
+	result := db.Instance.Find(&albumAsset)
+	if result.Error == nil {
+		// We already have this record
+		c.JSON(http.StatusOK, gin.H{"error": ""})
+		return
+	}
+	result = db.Instance.Create(&albumAsset)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
