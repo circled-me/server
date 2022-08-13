@@ -25,6 +25,7 @@ type BackupRequest struct {
 	Favourite bool     `form:"favourite" binding:""`
 	Width     uint16   `form:"width" binding:""`
 	Height    uint16   `form:"height" binding:""`
+	Duration  uint16   `form:"duration"`
 }
 
 type BackupThumbRequest struct {
@@ -64,6 +65,7 @@ func BackupAsset(c *gin.Context) {
 		Favourite: r.Favourite,
 		Width:     r.Width,
 		Height:    r.Height,
+		Duration:  r.Duration,
 	}
 	if r.MimeType != "" {
 		asset.MimeType = r.MimeType

@@ -38,6 +38,7 @@ type Asset struct {
 	Height      uint16
 	ThumbWidth  uint16
 	ThumbHeight uint16
+	Duration    uint16
 }
 
 // GetPath returns the path of the asset. For example:

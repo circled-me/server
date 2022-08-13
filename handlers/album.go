@@ -67,10 +67,9 @@ func AlbumList(c *gin.Context) {
 			continue
 		}
 		if rows.Next() {
-			err = rows.Scan(&result[i].HeroAssetId)
-			fmt.Println(err)
-			fmt.Printf("elem: %+v\n", a)
+			_ = rows.Scan(&result[i].HeroAssetId)
 		}
+		rows.Close()
 	}
 	c.JSON(http.StatusOK, result)
 }
