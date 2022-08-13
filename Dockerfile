@@ -16,7 +16,7 @@ COPY . /go/src/circled-server
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o circled-server .
 
 
-FROM alpine:latest
+FROM alpine:3.16
 RUN apk --no-cache add ca-certificates
 # RUN apk add dlib --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/
 # RUN apk --no-cache add openblas lapack libjpeg-turbo libstdc++

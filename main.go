@@ -50,20 +50,25 @@ func main() {
 	cookieStore := gormsessions.NewStore(db.Instance, true, []byte(sessionStoreKey))
 	cookieStore.Options(sessions.Options{MaxAge: sessionExpirationTime})
 	router.Use(sessions.Sessions(sessionCookieName, cookieStore))
-
+	// Backup handlers
 	router.POST("/backup/check", handlers.BackupCheck)
 	router.POST("/backup/asset", handlers.BackupAsset)
 	router.POST("/backup/thumb", handlers.BackupAssetThumb)
+	// Bucket handlers
 	router.POST("/bucket/create", handlers.BucketCreate)
+	// User info handlers
 	router.POST("/user/create", handlers.UserCreate)
 	router.POST("/user/login", handlers.UserLogin)
 	router.GET("/user/permissions", handlers.UserGetPermissions)
+	// Asset handlers
 	router.GET("/asset/list", handlers.AssetList)
 	router.GET("/asset/fetch", handlers.AssetFetch)
 	router.POST("/asset/delete", handlers.AssetDelete)
+	// Album handlers
 	router.GET("/album/list", handlers.AlbumList)
 	router.POST("/album/create", handlers.AlbumCreate)
 	router.GET("/album/add", handlers.AlbumAddAsset)
+	router.GET("/album/assets", handlers.AlbumAssets)
 	// router.GET("/faces/get", handlers.GetFaces)
 	router.Run(GetBindAddress())
 }

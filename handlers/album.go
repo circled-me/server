@@ -28,6 +28,10 @@ type AlbumAddRequest struct {
 	AssetID uint64 `form:"asset_id" binding:"required"`
 }
 
+type AlbumViewRequest struct {
+	AlbumID uint64 `form:"album_id" binding:"required"`
+}
+
 func AlbumList(c *gin.Context) {
 	session := auth.LoadSession(c)
 	userID := session.UserID()
@@ -51,19 +55,21 @@ func AlbumList(c *gin.Context) {
 		}
 		result = append(result, albumInfo)
 	}
-	for _, a := range result {
+	for i, a := range result {
 		if a.HeroAssetId > 0 {
 			continue
 		}
 		// If we don't have default hero image, pick the first one in the album
+		// TODO: improve here
 		rows, err = db.Instance.Table("album_assets").Select("asset_id").Where("album_id = ?", a.ID).Order("created_at DESC").Limit(1).Rows()
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
 		if rows.Next() {
-			err = rows.Scan(&a.HeroAssetId)
+			err = rows.Scan(&result[i].HeroAssetId)
 			fmt.Println(err)
+			fmt.Printf("elem: %+v\n", a)
 		}
 	}
 	c.JSON(http.StatusOK, result)
@@ -115,16 +121,43 @@ func AlbumAddAsset(c *gin.Context) {
 		AlbumID: r.AlbumID,
 		AssetID: r.AssetID,
 	}
-	result := db.Instance.Find(&albumAsset)
-	if result.Error == nil {
-		// We already have this record
-		c.JSON(http.StatusOK, gin.H{"error": ""})
-		return
-	}
-	result = db.Instance.Create(&albumAsset)
+	result := db.Instance.FirstOrCreate(&albumAsset)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"error": ""})
+}
+
+func AlbumAssets(c *gin.Context) {
+	session := auth.LoadSession(c)
+	userID := session.UserID()
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+		return
+	}
+	r := AlbumViewRequest{}
+	err := c.ShouldBindQuery(&r)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	rows, err := db.Instance.Table("album_assets").Select("asset_id, mime_type").Where("album_id = ?", r.AlbumID).Joins("join assets on album_assets.asset_id = assets.id").Order("album_assets.created_at DESC").Rows()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		return
+	}
+	defer rows.Close()
+	result := []AssetInfo{}
+	mimeType := ""
+	for rows.Next() {
+		assetInfo := AssetInfo{}
+		if err = rows.Scan(&assetInfo.ID, &mimeType); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
+			return
+		}
+		assetInfo.Type = getTypeFrom(mimeType)
+		result = append(result, assetInfo)
+	}
+	c.JSON(http.StatusOK, result)
 }
