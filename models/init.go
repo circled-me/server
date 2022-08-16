@@ -12,6 +12,7 @@ func Init() {
 
 	db.Instance.AutoMigrate(&Album{})
 	db.Instance.AutoMigrate(&AlbumAsset{})
+	db.Instance.AutoMigrate(&AlbumShare{})
 	db.Instance.AutoMigrate(&Asset{})
 	// db.Instance.AutoMigrate(&AssetTag{})
 	db.Instance.AutoMigrate(&User{})

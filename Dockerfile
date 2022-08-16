@@ -22,4 +22,5 @@ RUN apk --no-cache add ca-certificates
 # RUN apk --no-cache add openblas lapack libjpeg-turbo libstdc++
 WORKDIR /root/
 COPY --from=0 /go/src/circled-server/circled-server .
+COPY --from=0 /go/src/circled-server/templates ./templates
 CMD ["/bin/sh", "-c", "GODEBUG=madvdontneed=1 ./circled-server 1>>/var/log/circled-server.log 2>>/var/log/circled-server.log"]

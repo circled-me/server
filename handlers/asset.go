@@ -35,7 +35,7 @@ type AssetDeleteRequest struct {
 }
 
 // TODO: Move to before save in Asset
-func getTypeFrom(mimeType string) uint {
+func GetTypeFrom(mimeType string) uint {
 	if strings.HasPrefix(mimeType, "image/") {
 		return models.AssetTypeImage
 	}
@@ -66,7 +66,7 @@ func AssetList(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
 		}
-		assetInfo.Type = getTypeFrom(mimeType)
+		assetInfo.Type = GetTypeFrom(mimeType)
 		result = append(result, assetInfo)
 	}
 	c.JSON(http.StatusOK, result)
@@ -94,6 +94,10 @@ func AssetFetch(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
+	RealAssetFetch(c, userID)
+}
+
+func RealAssetFetch(c *gin.Context, checkUser uint64) {
 	r := AssetFetchRequest{}
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
@@ -104,7 +108,7 @@ func AssetFetch(c *gin.Context) {
 		ID: r.ID,
 	}
 	db.Instance.Joins("Bucket").First(&asset)
-	if asset.ID != r.ID || asset.UserID != userID {
+	if checkUser > 0 && asset.UserID != checkUser {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 2"})
 		return
 	}
@@ -112,6 +116,7 @@ func AssetFetch(c *gin.Context) {
 	if storage == nil {
 		panic("Storage is nil")
 	}
+	c.Header("cache-control", "private, max-age=604800")
 	if r.Thumb == 1 {
 		c.Header("content-type", "image/jpeg")
 		if r.Size == 0 {

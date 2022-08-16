@@ -2,6 +2,8 @@ package main
 
 import (
 	"server/db"
+	"server/web"
+
 	// "server/faces"
 	"server/handlers"
 	"server/models"
@@ -47,6 +49,9 @@ func main() {
 	router := gin.Default()
 	router.SetTrustedProxies([]string{})
 
+	// HTML templates
+	router.LoadHTMLGlob("templates/*.tmpl")
+
 	cookieStore := gormsessions.NewStore(db.Instance, true, []byte(sessionStoreKey))
 	cookieStore.Options(sessions.Options{MaxAge: sessionExpirationTime})
 	router.Use(sessions.Sessions(sessionCookieName, cookieStore))
@@ -69,6 +74,11 @@ func main() {
 	router.POST("/album/create", handlers.AlbumCreate)
 	router.GET("/album/add", handlers.AlbumAddAsset)
 	router.GET("/album/assets", handlers.AlbumAssets)
+	router.GET("/album/share", handlers.AlbumShare)
 	// router.GET("/faces/get", handlers.GetFaces)
+	// Web interface
+	router.GET("/w/album/:token", web.AlbumView)
+	router.GET("/w/album/:token/asset", web.AlbumAssetView)
+
 	router.Run(GetBindAddress())
 }

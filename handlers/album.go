@@ -61,7 +61,7 @@ func AlbumList(c *gin.Context) {
 		}
 		// If we don't have default hero image, pick the first one in the album
 		// TODO: improve here
-		rows, err = db.Instance.Table("album_assets").Select("asset_id").Where("album_id = ?", a.ID).Order("created_at DESC").Limit(1).Rows()
+		rows, err := db.Instance.Table("album_assets").Select("asset_id").Where("album_id = ?", a.ID).Order("created_at DESC").Limit(1).Rows()
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -141,7 +141,7 @@ func AlbumAssets(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	rows, err := db.Instance.Table("album_assets").Select("asset_id, mime_type").Where("album_id = ?", r.AlbumID).Joins("join assets on album_assets.asset_id = assets.id").Order("album_assets.created_at DESC").Rows()
+	rows, err := db.Instance.Table("album_assets").Select("asset_id, mime_type").Where("album_id = ?", r.AlbumID).Joins("join assets on album_assets.asset_id = assets.id").Order("assets.created_at ASC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
@@ -155,8 +155,31 @@ func AlbumAssets(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
 		}
-		assetInfo.Type = getTypeFrom(mimeType)
+		assetInfo.Type = GetTypeFrom(mimeType)
 		result = append(result, assetInfo)
 	}
 	c.JSON(http.StatusOK, result)
+}
+
+func AlbumShare(c *gin.Context) {
+	session := auth.LoadSession(c)
+	userID := session.UserID()
+	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+		return
+	}
+	r := AlbumViewRequest{} // same for now
+	err := c.ShouldBindQuery(&r)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	shareInfo := models.NewAlbumShare(userID, r.AlbumID)
+	db.Instance.FirstOrCreate(&shareInfo, &shareInfo)
+	if db.Instance.Error != nil {
+		fmt.Println(db.Instance.Error)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"path": "/w/album/" + shareInfo.Token})
 }
