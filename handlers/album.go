@@ -175,9 +175,11 @@ func AlbumShare(c *gin.Context) {
 		return
 	}
 	shareInfo := models.NewAlbumShare(userID, r.AlbumID)
-	db.Instance.FirstOrCreate(&shareInfo, &shareInfo)
-	if db.Instance.Error != nil {
-		fmt.Println(db.Instance.Error)
+	shareInfoCond := shareInfo
+	shareInfoCond.Token = "" // Token should not be a condition
+	result := db.Instance.Where(shareInfoCond).FirstOrCreate(&shareInfo)
+	if result.Error != nil {
+		fmt.Println(result.Error)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
 		return
 	}
