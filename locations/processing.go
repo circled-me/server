@@ -38,13 +38,13 @@ func process(a *models.Asset) bool {
 		GpsLong: long,
 	}
 	db.Instance.Limit(1).Find(&location, location)
-	fmt.Printf("Location found: %+v\n\n", location)
+	// fmt.Printf("Location found: %+v\n\n", location)
 	a.PlaceID = location.GetPlaceID()
 	if a.PlaceID > 0 {
 		fmt.Printf("Place quickly found: %+v\n\n", a.PlaceID)
 		return db.Instance.Save(a).Error == nil
 	}
-	fmt.Printf("Location after: %+v\n\n", location)
+	// fmt.Printf("Location after: %+v\n\n", location)
 	// Try a Nominatim request
 	nominatim := getNominatimLocation(lat, long)
 	if nominatim == nil {
@@ -58,7 +58,7 @@ func process(a *models.Asset) bool {
 	location.Country = nominatim.Address.Country
 	location.CountryCode = nominatim.Address.CountryCode
 	res := db.Instance.Create(&location)
-	fmt.Printf("Created location: %+v\n\n", location)
+	// fmt.Printf("Created location: %+v\n\n", location)
 	if res.Error != nil {
 		fmt.Printf("DB error: %+v\n", res.Error)
 		return false

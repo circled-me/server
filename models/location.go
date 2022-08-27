@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"server/db"
 	"strings"
 )
@@ -40,6 +39,6 @@ func (location *Location) GetPlaceID() uint64 {
 	} else {
 		db.Instance.Debug().Where(&place, "area", "city", "country").Limit(1).Find(&place)
 	}
-	fmt.Printf("The place is: %+v\n", place)
+	// fmt.Printf("The place is: %+v\n", place)
 	return place.ID
 }

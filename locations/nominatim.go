@@ -67,7 +67,7 @@ func getNominatimLocation(lat, long float64) *NominatimLocation {
 	lastRequest = time.Now()
 
 	url := fmt.Sprintf("https://nominatim.openstreetmap.org/reverse?format=json&lat=%f&lon=%f", lat, long)
-	fmt.Printf("Making request to: %s\n\n", url)
+	// fmt.Printf("Making request to: %s\n\n", url)
 	req, _ := http.NewRequest("GET", url, nil)
 	// TODO: not only English?
 	req.Header.Set("accept-language", "en")
