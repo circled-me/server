@@ -28,10 +28,12 @@ type Asset struct {
 	Group       Group   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	BucketID    uint64
 	Bucket      storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	Name        string         `gorm:"type:varchar(300)"`
-	MimeType    string         `gorm:"type:varchar(50)"`
-	GpsLat      *float64       `gorm:"type:double"`
-	GpsLong     *float64       `gorm:"type:double"`
+	PlaceID     uint64
+	Place       Place    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Name        string   `gorm:"type:varchar(300)"`
+	MimeType    string   `gorm:"type:varchar(50)"`
+	GpsLat      *float64 `gorm:"type:double"`
+	GpsLong     *float64 `gorm:"type:double"`
 	Favourite   bool
 	Deleted     bool `gorm:"index:user_asset_created,priority:2;not null;default 0"`
 	Width       uint16

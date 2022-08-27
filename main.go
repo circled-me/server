@@ -2,6 +2,7 @@ package main
 
 import (
 	"server/db"
+	"server/locations"
 	"server/web"
 
 	// "server/faces"
@@ -24,6 +25,8 @@ func main() {
 	db.Init(GetMySQLDSN())
 	models.Init()
 	storage.Init()
+	go locations.StartProcessing()
+
 	// faces.Init("/mnt/data1/models")
 
 	// One off
