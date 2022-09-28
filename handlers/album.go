@@ -183,5 +183,5 @@ func AlbumShare(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"path": "/w/album/" + shareInfo.Token})
+	c.JSON(http.StatusOK, gin.H{"path": "/w/album/" + shareInfo.Token + "/"})
 }

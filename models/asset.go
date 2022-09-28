@@ -28,7 +28,7 @@ type Asset struct {
 	Group       Group   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	BucketID    uint64
 	Bucket      storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	PlaceID     uint64
+	PlaceID     *uint64
 	Place       Place    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	Name        string   `gorm:"type:varchar(300)"`
 	MimeType    string   `gorm:"type:varchar(50)"`
@@ -87,6 +87,15 @@ func (a *Asset) BeforeSave(tx *gorm.DB) (err error) {
 		}
 	}
 	a.Name = name.String()
+	return
+}
+
+func (a *Asset) GetRoughLocation() (location Location) {
+	if a.GpsLat != nil && a.GpsLong != nil {
+		// Truncate - only use 0.0001 of precision
+		location.GpsLat = float64(int(*a.GpsLat*10000)) / 10000
+		location.GpsLong = float64(int(*a.GpsLong*10000)) / 10000
+	}
 	return
 }
 

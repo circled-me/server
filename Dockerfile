@@ -16,11 +16,11 @@ COPY . /go/src/circled-server
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o circled-server .
 
 
-FROM alpine:3.16
+FROM jrottenberg/ffmpeg:4.1-alpine
 RUN apk --no-cache add ca-certificates
 # RUN apk add dlib --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/
 # RUN apk --no-cache add openblas lapack libjpeg-turbo libstdc++
 WORKDIR /root/
 COPY --from=0 /go/src/circled-server/circled-server .
 COPY --from=0 /go/src/circled-server/templates ./templates
-CMD ["/bin/sh", "-c", "GODEBUG=madvdontneed=1 ./circled-server 1>>/var/log/circled-server.log 2>>/var/log/circled-server.log"]
+ENTRYPOINT ["/bin/sh", "-c", "GODEBUG=madvdontneed=1 ./circled-server 1>>/var/log/circled-server.log 2>>/var/log/circled-server.log"]

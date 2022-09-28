@@ -29,6 +29,9 @@ func (n *Location) GetShortDisplay() string {
 }
 
 func (location *Location) GetPlaceID() uint64 {
+	if location.Area == "" && location.City == "" && location.Country == "" {
+		return 0
+	}
 	place := Place{
 		Area:    location.Area,
 		City:    location.City,

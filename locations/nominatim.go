@@ -19,6 +19,9 @@ const (
 )
 
 type NominatimAddress struct {
+	Aeroway       string `json:"aeroway"`
+	Railway       string `json:"railway"`
+	Place         string `json:"place"`
 	Neighbourhood string `json:"neighbourhood"`
 	City          string `json:"city"`
 	Municipality  string `json:"municipality"`
@@ -43,6 +46,18 @@ func (n *NominatimLocation) GetCity() string {
 }
 
 func (n *NominatimLocation) GetArea() string {
+	if n.Address.Aeroway != "" && len(n.Address.Aeroway) > 4 {
+		if n.Address.Neighbourhood != "" {
+			return n.Address.Aeroway + ", " + n.Address.Neighbourhood
+		}
+		return n.Address.Aeroway
+	}
+	if n.Address.Railway != "" {
+		return n.Address.Railway
+	}
+	if n.Address.Place != "" {
+		return n.Address.Place
+	}
 	if n.Address.Neighbourhood != "" {
 		return n.Address.Neighbourhood
 	}

@@ -9,6 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type AssetInfo struct {
+	ID       uint64
+	Type     uint
+	MimeType string
+}
+
 func AlbumView(c *gin.Context) {
 	token := c.Param("token")
 	rows, err := db.Instance.Table("album_shares").Select("album_id, name").Where("token = ?", token).
@@ -41,22 +47,20 @@ func AlbumView(c *gin.Context) {
 		return
 	}
 	defer rows.Close()
-	result := []handlers.AssetInfo{}
-	mimeType := ""
+	result := []AssetInfo{}
 	for rows.Next() {
-		assetInfo := handlers.AssetInfo{}
-		if err = rows.Scan(&assetInfo.ID, &mimeType); err != nil {
+		assetInfo := AssetInfo{}
+		if err = rows.Scan(&assetInfo.ID, &assetInfo.MimeType); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
 		}
-		assetInfo.Type = handlers.GetTypeFrom(mimeType)
+		assetInfo.Type = handlers.GetTypeFrom(assetInfo.MimeType)
 		result = append(result, assetInfo)
 	}
 
 	c.HTML(http.StatusOK, "album_view.tmpl", gin.H{
 		"title":  albumName,
 		"assets": result,
-		"token":  token,
 	})
 }
 

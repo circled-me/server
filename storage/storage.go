@@ -9,6 +9,7 @@ import (
 )
 
 type StorageAPI interface {
+	GetFullPath(path string) string
 	Save(path string, reader io.Reader) (int64, error)
 	Load(path string, writer io.Writer) (int64, error)
 	Serve(path string, request *http.Request, writer http.ResponseWriter)

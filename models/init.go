@@ -23,6 +23,8 @@ func Init() {
 	db.Instance.AutoMigrate(&Invitation{})
 	db.Instance.AutoMigrate(&Like{})
 	db.Instance.AutoMigrate(&Location{})
+	db.Instance.AutoMigrate(&Place{})
+	db.Instance.AutoMigrate(&FavouritePlace{})
 	db.Instance.AutoMigrate(&Post{})
 	db.Instance.AutoMigrate(&PostProcessing{})
 	// db.Instance.AutoMigrate(&Tag{})
