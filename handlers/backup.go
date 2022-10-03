@@ -21,7 +21,7 @@ type BackupRequest struct {
 	MimeType  string   `form:"mimetype" binding:""`
 	Lat       *float64 `form:"lat" binding:""`
 	Long      *float64 `form:"long" binding:""`
-	Created   uint64   `form:"created" binding:""`
+	Created   int64    `form:"created" binding:""`
 	Favourite bool     `form:"favourite" binding:""`
 	Width     uint16   `form:"width" binding:""`
 	Height    uint16   `form:"height" binding:""`

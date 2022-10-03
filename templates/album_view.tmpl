@@ -1,31 +1,39 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <style>
-        * {box-sizing: border-box;}
-        body {font-family: 'Noto Sans JP', sans-serif; background-color: #fef8f8;}
-        a {border: none; text-decoration: none;}
-        #lightgallery a { display: inline-block; width: 165px; height: 165px; background-size: cover; background-position: center;}
-    </style>
-    <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#000" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/2.6.1/css/lightgallery.min.css" integrity="sha512-F2E+YYE1gkt0T5TVajAslgDfTEUQKtlu4ralVq78ViNxhKXQLrgQLLie8u1tVdG2vWnB3ute4hcdbiBtvJQh0g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/2.6.1/css/lg-zoom.min.css" integrity="sha512-vIrTyLijDDcUJrQGs1jduUCSVa3+A2DaWpVfNyj4lmXkqURVQJ8LL62nebC388QV3P4yFBSt/ViDX8LRW0U6uw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/2.6.1/css/lg-thumbnail.min.css" integrity="sha512-GRxDpj/bx6/I4y6h2LE5rbGaqRcbTu4dYhaTewlS8Nh9hm/akYprvOTZD7GR+FRCALiKfe8u1gjvWEEGEtoR6g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/2.6.1/css/lg-video.min.css" integrity="sha512-89gDQOHnYjji90NPJ7+M5tgA/0E+fjL4KuSFhi6tjH6sZ54yUEogPMmOAgbI599fW1CtCyrsJbch8k/QzuoXzw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <title>{{ .title }}</title>
+    <style>
+        * {box-sizing: border-box;}
+        body {font-family: sans-serif; background-color: #fef8f8; margin: 0; padding: 0;}
+        h1, h2 {display: block; background-color: #000; color: #FFF; margin: 0; padding: 2px; font-size: 20px; text-align: center;}
+        h2 {font-size: 15px !important;}
+        a {border: none; text-decoration: none;}
+        #lightgallery a { display: inline-block; width: 165px; height: 165px; background-size: cover; background-position: center; float: left; margin: 2px; padding: 2px}
+        @media only screen and (max-device-width: 480px) {
+            #lightgallery a {width: 32vw; height: 32vw; margin: 0.25vw; padding: 0.25vw;}
+        }
+    </style>
   </head>
   <body>
+    <h2>{{ .subtitle }}</h2>
 	<h1>{{ .title }}</h1>
+    <h2>{{ .dates }}</h2>
 
     <div id="lightgallery">
     {{ range .assets }}
         {{ if eq .Type 1 }}
-            <a href="asset?id={{ .ID }}&thumb=1" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=220')"></a>
+            <a href="asset?id={{ .ID }}&thumb=1" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=220')" data-download-url="asset?id={{ .ID }}"></a>
         {{ else if eq .MimeType "video/mp4" }}
             <a data-video='{"source": [{"src":"asset?id={{ .ID }}", "type":"video/mp4"}], "attributes": {"preload": false, "playsinline": true, "controls": true}}'
-               data-poster="asset?id={{ .ID }}&thumb=1&size=220" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=220')"></a>
+               data-poster="asset?id={{ .ID }}&thumb=1&size=220" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=220')"
+               data-download-url="asset?id={{ .ID }}"></a>
         {{ end }}
     {{ end }}
     </div>    
@@ -37,6 +45,7 @@
     <script type="text/javascript">
         lightGallery(document.getElementById('lightgallery'), {
             plugins: [lgZoom, lgVideo],
+            mobileSettings: {controls: false, download: true},
             speed: 500,
         });
     </script>

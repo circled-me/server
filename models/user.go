@@ -1,8 +1,9 @@
 package models
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
-	"math/rand"
 	"server/db"
 	"server/utils"
 
@@ -18,7 +19,7 @@ type User struct {
 	Name        string        `gorm:"type:varchar(100)"`
 	Email       string        `gorm:"type:varchar(150);index:uniq_email,unique"`
 	Password    string        `gorm:"type:varchar(256)"` // actually with SHA512 - 128 hex chars is enough (64 bytes output)
-	PassSalt    string        `gorm:"type:varchar(100)"`
+	PassSalt    string        `gorm:"type:varchar(200)"`
 	TotpToken   string        `gorm:"type:varchar(200)"`
 	TotpAlgo    otp.Algorithm `gorm:"type:tinyint(1)"`
 	TotpXOR     uint32        `gorm:"type:int unsigned"`
@@ -26,22 +27,21 @@ type User struct {
 	// Buckets     []Bucket
 }
 
-var saltAlphabet = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+const saltSize = 60
 
-const saltSize = 100
-
-func randSalt(size int) string {
-	b := make([]rune, size)
-	for i := range b {
-		b[i] = saltAlphabet[rand.Intn(len(saltAlphabet))]
+func randSalt() string {
+	b := make([]byte, saltSize)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
 	}
-	return string(b)
+	return base64.StdEncoding.EncodeToString(b)
 }
 
 func UserCreate(name, email, plainTextPassword string) (u User, err error) {
 	u.Email = email
 	u.Name = name
-	u.PassSalt = randSalt(saltSize)
+	u.PassSalt = randSalt()
 	u.Password = utils.Sha512String(plainTextPassword + u.PassSalt)
 	return u, db.Instance.Create(&u).Error
 }

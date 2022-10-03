@@ -1,7 +1,7 @@
 package models
 
 type AssetTag struct {
-	CreatedAt int
+	CreatedAt int64
 	TagID     uint64 `gorm:"primaryKey;"`
 	Tag       Tag    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	AssetID   uint64 `gorm:"primaryKey"`

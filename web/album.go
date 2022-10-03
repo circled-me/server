@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"server/db"
 	"server/handlers"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,10 +16,19 @@ type AssetInfo struct {
 	MimeType string
 }
 
+func getDatesString(min, max int64) string {
+	minString := time.Unix(min, 0).Format("2 Jan 2006")
+	if max-min <= 86400 {
+		return minString
+	}
+	maxString := time.Unix(max, 0).Format("2 Jan 2006")
+	return minString + " - " + maxString
+}
+
 func AlbumView(c *gin.Context) {
 	token := c.Param("token")
-	rows, err := db.Instance.Table("album_shares").Select("album_id, name").Where("token = ?", token).
-		Joins("join albums on album_shares.album_id = albums.id").Rows()
+	rows, err := db.Instance.Table("album_shares").Select("album_id, albums.name, users.name").Where("token = ?", token).
+		Joins("join albums on album_shares.album_id = albums.id").Joins("join users on album_shares.user_id = users.id").Rows()
 
 	if err != nil {
 		fmt.Println(err)
@@ -29,8 +39,9 @@ func AlbumView(c *gin.Context) {
 	// Get album info
 	var albumId uint64
 	var albumName string
+	var userName string
 	if rows.Next() {
-		if err = rows.Scan(&albumId, &albumName); err != nil {
+		if err = rows.Scan(&albumId, &albumName, &userName); err != nil {
 			fmt.Println(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "something went really wrong"})
 			rows.Close()
@@ -40,7 +51,7 @@ func AlbumView(c *gin.Context) {
 	rows.Close()
 
 	// Get all assets for the album
-	rows, err = db.Instance.Table("album_assets").Select("asset_id, mime_type").Where("album_id = ?", albumId).Joins("join assets on album_assets.asset_id = assets.id").Order("assets.created_at DESC").Rows()
+	rows, err = db.Instance.Table("album_assets").Select("asset_id, mime_type, assets.created_at").Where("album_id = ?", albumId).Joins("join assets on album_assets.asset_id = assets.id").Order("assets.created_at ASC").Rows()
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
@@ -48,19 +59,29 @@ func AlbumView(c *gin.Context) {
 	}
 	defer rows.Close()
 	result := []AssetInfo{}
+	var created, createdMin, createdMax int64
+	createdMin = 100000000000
 	for rows.Next() {
 		assetInfo := AssetInfo{}
-		if err = rows.Scan(&assetInfo.ID, &assetInfo.MimeType); err != nil {
+		if err = rows.Scan(&assetInfo.ID, &assetInfo.MimeType, &created); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
 		}
 		assetInfo.Type = handlers.GetTypeFrom(assetInfo.MimeType)
 		result = append(result, assetInfo)
+		if createdMax < created {
+			createdMax = created
+		}
+		if createdMin > created {
+			createdMin = created
+		}
 	}
 
 	c.HTML(http.StatusOK, "album_view.tmpl", gin.H{
-		"title":  albumName,
-		"assets": result,
+		"subtitle": "@" + userName,
+		"dates":    getDatesString(createdMin, createdMax),
+		"title":    albumName,
+		"assets":   result,
 	})
 }
 

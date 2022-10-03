@@ -19,8 +19,8 @@ type Asset struct {
 	ID          uint64 `gorm:"primaryKey"`
 	UserID      uint64 `gorm:"index:uniq_remote_id,unique,priority:1;not null;index:user_asset_created,priority:1"`
 	RemoteID    string `gorm:"type:varchar(300);index:uniq_remote_id,unique,priority:2;not null"`
-	CreatedAt   uint64 `gorm:"index:user_asset_created,priority:3"`
-	UpdatedAt   uint64
+	CreatedAt   int64  `gorm:"index:user_asset_created,priority:3"`
+	UpdatedAt   int64
 	Size        int64
 	ThumbSize   int64
 	User        User    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`

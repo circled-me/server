@@ -6,6 +6,6 @@ type Album struct {
 	User        User   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	HeroAssetID *uint64
 	HeroAsset   Asset  `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	CreatedAt   uint64 `gorm:"index:user_album_created,priority:2"`
+	CreatedAt   int64  `gorm:"index:user_album_created,priority:2"`
 	Name        string `gorm:"type:varchar(300);index:uniq_user_album_name,unique,priority:2"`
 }

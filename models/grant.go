@@ -12,7 +12,7 @@ const (
 
 type Grant struct {
 	ID         uint64 `gorm:"primaryKey"`
-	CreatedAt  int
+	CreatedAt  int64
 	GrantorID  uint64
 	Grantor    User `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	UserID     uint64
