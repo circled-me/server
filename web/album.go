@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"server/db"
 	"server/handlers"
-	"time"
+	"server/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,15 +14,6 @@ type AssetInfo struct {
 	ID       uint64
 	Type     uint
 	MimeType string
-}
-
-func getDatesString(min, max int64) string {
-	minString := time.Unix(min, 0).Format("2 Jan 2006")
-	if max-min <= 86400 {
-		return minString
-	}
-	maxString := time.Unix(max, 0).Format("2 Jan 2006")
-	return minString + " - " + maxString
 }
 
 func AlbumView(c *gin.Context) {
@@ -79,7 +70,7 @@ func AlbumView(c *gin.Context) {
 
 	c.HTML(http.StatusOK, "album_view.tmpl", gin.H{
 		"subtitle": "@" + userName,
-		"dates":    getDatesString(createdMin, createdMax),
+		"dates":    utils.GetDatesString(createdMin, createdMax),
 		"title":    albumName,
 		"assets":   result,
 	})

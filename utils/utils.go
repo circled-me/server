@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"math"
+	"time"
 )
 
 // Sha512String hashes and encodes in hex the result
@@ -30,4 +31,13 @@ func ByteArrayToFloat32Array(b []byte) (result []float32) {
 		result = append(result, math.Float32frombits(ui32))
 	}
 	return
+}
+
+func GetDatesString(min, max int64) string {
+	minString := time.Unix(min, 0).Format("2 Jan 2006")
+	if max-min <= 86400 {
+		return minString
+	}
+	maxString := time.Unix(max, 0).Format("2 Jan 2006")
+	return minString + " - " + maxString
 }

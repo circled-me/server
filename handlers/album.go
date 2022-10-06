@@ -6,6 +6,7 @@ import (
 	"server/auth"
 	"server/db"
 	"server/models"
+	"server/utils"
 
 	_ "image/jpeg"
 
@@ -16,6 +17,7 @@ import (
 type AlbumInfo struct {
 	ID          uint64 `json:"id"`
 	Name        string `json:"name"`
+	Subtitle    string `json:"subtitle"`
 	HeroAssetId uint64 `json:"hero_asset_id"`
 }
 
@@ -39,20 +41,30 @@ func AlbumList(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
-	rows, err := db.Instance.Table("albums").Select("id, name, hero_asset_id").Where("user_id = ?", user.ID).Order("created_at DESC").Rows()
+	rows, err := db.Instance.
+		Table("albums").
+		Select("albums.id, albums.name, albums.hero_asset_id, min(assets.created_at), max(assets.created_at)").
+		Joins("join album_assets on album_id = albums.id").
+		Joins("join assets on asset_id = assets.id").
+		Where("albums.user_id = ?", user.ID).
+		Group("albums.id, albums.name, albums.hero_asset_id").
+		Order("albums.created_at DESC").
+		Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
 	}
 	defer rows.Close()
 	result := []AlbumInfo{}
+	var minDate, maxDate int64
 	for rows.Next() {
 		albumInfo := AlbumInfo{}
 		HeroAssetId := &albumInfo.HeroAssetId
-		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name, &HeroAssetId); err != nil {
+		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name, &HeroAssetId, &minDate, &maxDate); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
 		}
+		albumInfo.Subtitle = utils.GetDatesString(minDate, maxDate)
 		result = append(result, albumInfo)
 	}
 	for i, a := range result {
