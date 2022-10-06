@@ -48,12 +48,12 @@ func GetTypeFrom(mimeType string) uint {
 
 func AssetList(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
-	rows, err := db.Instance.Table("assets").Select("id, mime_type").Where("user_id = ? AND deleted = 0", userID).Order("created_at DESC").Rows()
+	rows, err := db.Instance.Table("assets").Select("id, mime_type").Where("user_id = ? AND deleted = 0", user.ID).Order("created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
@@ -90,12 +90,12 @@ func createThumb(size uint, reader io.Reader, c *gin.Context) (err error) {
 
 func AssetFetch(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
-	RealAssetFetch(c, userID)
+	RealAssetFetch(c, user.ID)
 }
 
 func RealAssetFetch(c *gin.Context, checkUser uint64) {
@@ -147,8 +147,8 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 
 func AssetDelete(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -162,7 +162,7 @@ func AssetDelete(c *gin.Context) {
 		ID: r.ID,
 	}
 	db.Instance.Joins("Bucket").First(&asset)
-	if asset.ID != r.ID || asset.UserID != userID {
+	if asset.ID != r.ID || asset.UserID != user.ID {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 2"})
 		return
 	}

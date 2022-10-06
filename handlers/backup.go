@@ -38,8 +38,8 @@ type BackupCheckRequest struct {
 
 func BackupAsset(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -54,7 +54,7 @@ func BackupAsset(c *gin.Context) {
 		panic("Storage is nil")
 	}
 	asset := models.Asset{
-		UserID:    userID,
+		UserID:    user.ID,
 		RemoteID:  r.ID,
 		Name:      r.Name,
 		GroupID:   nil,
@@ -102,8 +102,8 @@ func BackupAsset(c *gin.Context) {
 
 func BackupAssetThumb(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -118,7 +118,7 @@ func BackupAssetThumb(c *gin.Context) {
 		panic("Storage is nil")
 	}
 	asset := models.Asset{}
-	result := db.Instance.Where("user_id = ? AND remote_id = ?", userID, r.ID).Find(&asset)
+	result := db.Instance.Where("user_id = ? AND remote_id = ?", user.ID, r.ID).Find(&asset)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
@@ -145,8 +145,8 @@ func BackupAssetThumb(c *gin.Context) {
 // BackupCheck returns the ids of all assets that were already uploaded
 func BackupCheck(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -157,7 +157,7 @@ func BackupCheck(c *gin.Context) {
 		return
 	}
 	rows, err := db.Instance.Table("assets").Select("remote_id").
-		Where("user_id = ? AND remote_id IN (?) AND (thumb_size>0 OR (mime_type NOT LIKE 'image/%' AND mime_type NOT LIKE 'video/%'))", userID, r.IDs).Rows()
+		Where("user_id = ? AND remote_id IN (?) AND (thumb_size>0 OR (mime_type NOT LIKE 'image/%' AND mime_type NOT LIKE 'video/%'))", user.ID, r.IDs).Rows()
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})

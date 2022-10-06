@@ -23,13 +23,13 @@ type PlaceInfo struct {
 // - Popular places
 func PlaceList(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
 	result := make(map[string][]PlaceInfo)
-	if favourite := getFavouritePlaces(userID); len(favourite) > 0 {
+	if favourite := getFavouritePlaces(user.ID); len(favourite) > 0 {
 		result["Favourite"] = favourite
 	}
 	c.JSON(http.StatusOK, result)

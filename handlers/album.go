@@ -34,12 +34,12 @@ type AlbumViewRequest struct {
 
 func AlbumList(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
-	rows, err := db.Instance.Table("albums").Select("id, name, hero_asset_id").Where("user_id = ?", userID).Order("created_at DESC").Rows()
+	rows, err := db.Instance.Table("albums").Select("id, name, hero_asset_id").Where("user_id = ?", user.ID).Order("created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
@@ -76,8 +76,8 @@ func AlbumList(c *gin.Context) {
 
 func AlbumCreate(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -89,7 +89,7 @@ func AlbumCreate(c *gin.Context) {
 	}
 	album := models.Album{
 		Name:   r.Name,
-		UserID: userID,
+		UserID: user.ID,
 	}
 	result := db.Instance.Create(&album)
 	if result.Error != nil {
@@ -105,8 +105,8 @@ func AlbumCreate(c *gin.Context) {
 
 func AlbumAddAsset(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -130,8 +130,8 @@ func AlbumAddAsset(c *gin.Context) {
 
 func AlbumRemoveAsset(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -155,8 +155,8 @@ func AlbumRemoveAsset(c *gin.Context) {
 
 func AlbumAssets(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 {
+	user := session.User()
+	if user.ID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -194,8 +194,8 @@ func AlbumAssets(c *gin.Context) {
 
 func AlbumShare(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionPhotoBackup) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -205,7 +205,7 @@ func AlbumShare(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	shareInfo := models.NewAlbumShare(userID, r.AlbumID)
+	shareInfo := models.NewAlbumShare(user.ID, r.AlbumID)
 	shareInfoCond := shareInfo
 	shareInfoCond.Token = "" // Token should not be a condition
 	result := db.Instance.Where(shareInfoCond).FirstOrCreate(&shareInfo)

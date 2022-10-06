@@ -17,7 +17,8 @@ type BucketCreateRequest struct {
 
 func BucketCreate(c *gin.Context) {
 	session := auth.LoadSession(c)
-	if !session.HasPermission(models.PermissionAdmin) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionAdmin) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}

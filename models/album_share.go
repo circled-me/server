@@ -27,9 +27,9 @@ func rand16BytesToBase62() string {
 	return i.SetBytes(buf).Text(62)
 }
 
-func NewAlbumShare(user uint64, album uint64) AlbumShare {
+func NewAlbumShare(userID uint64, album uint64) AlbumShare {
 	return AlbumShare{
-		UserID:  user,
+		UserID:  userID,
 		AlbumID: album,
 		Token:   rand16BytesToBase62() + rand16BytesToBase62(),
 	}

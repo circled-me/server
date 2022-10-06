@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"server/db"
 	"server/models"
 
 	"github.com/gin-contrib/sessions"
@@ -17,27 +18,14 @@ func LoadSession(c *gin.Context) *Session {
 	}
 }
 
-func (s *Session) GetPermissions() []int {
-	permissions := s.Get("permissions")
-	if permissions == nil {
-		return []int{}
-	}
-	return permissions.([]int)
-}
-
-func (s *Session) HasPermission(required models.Permission) bool {
-	for _, permission := range s.GetPermissions() {
-		if permission == int(required) {
-			return true
-		}
-	}
-	return false
-}
-
-func (s *Session) UserID() uint64 {
+func (s *Session) User() (user models.User) {
 	id := s.Get("id")
 	if id == nil {
-		return 0
+		return
 	}
-	return id.(uint64)
+	user.ID = id.(uint64)
+	if db.Instance.Preload("Grants").First(&user).Error != nil {
+		user.ID = 0
+	}
+	return
 }

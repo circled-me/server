@@ -40,15 +40,15 @@ func InviteToGroup(c *gin.Context) {
 
 func GroupList(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 {
+	user := session.User()
+	if user.ID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
 	rows, err := db.Instance.
 		Table("group_users").
 		Joins("join `groups` on group_users.group_id = `groups`.id").
-		Select("group_id, name, colour, is_favourite, can_invite, is_admin").Where("user_id = ?", userID).
+		Select("group_id, name, colour, is_favourite, can_invite, is_admin").Where("user_id = ?", user.ID).
 		Order("is_favourite DESC, `groups`.updated_at DESC").Rows()
 
 	if err != nil {
@@ -57,11 +57,15 @@ func GroupList(c *gin.Context) {
 	}
 	defer rows.Close()
 	result := []GroupInfo{}
+	isGlobalAdmin := user.HasPermission(models.PermissionAdmin)
 	for rows.Next() {
 		groupInfo := GroupInfo{}
 		if err = rows.Scan(&groupInfo.ID, &groupInfo.Name, &groupInfo.Colour, &groupInfo.Favourite, &groupInfo.CanInvite, &groupInfo.IsAdmin); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
+		}
+		if isGlobalAdmin {
+			groupInfo.IsAdmin = true
 		}
 		// TODO: Members
 		result = append(result, groupInfo)
@@ -72,8 +76,8 @@ func GroupList(c *gin.Context) {
 // GroupCreate creates a Group object and also a GroupUser one for the current user
 func GroupCreate(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || (!session.HasPermission(models.PermissionAdmin) && !session.HasPermission(models.PermissionCanCreateGroups)) {
+	user := session.User()
+	if user.ID == 0 || (!user.HasPermission(models.PermissionAdmin) && !user.HasPermission(models.PermissionCanCreateGroups)) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -85,7 +89,7 @@ func GroupCreate(c *gin.Context) {
 	}
 	group := models.Group{
 		Name:        r.Name,
-		CreatedByID: userID,
+		CreatedByID: user.ID,
 	}
 	result := db.Instance.Create(&group)
 	if result.Error != nil {
@@ -95,7 +99,7 @@ func GroupCreate(c *gin.Context) {
 	// Now create the Group <-> User link
 	groupUser := models.GroupUser{
 		GroupID:   group.ID,
-		UserID:    userID,
+		UserID:    user.ID,
 		CanInvite: true,
 		IsAdmin:   true,
 	}
@@ -113,8 +117,8 @@ func GroupCreate(c *gin.Context) {
 // GroupSave updates the Group and GroupUser objects for the current user
 func GroupSave(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 {
+	user := session.User()
+	if user.ID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
@@ -127,7 +131,7 @@ func GroupSave(c *gin.Context) {
 	// Load the GroupUser object
 	groupUser := models.GroupUser{
 		GroupID: r.ID,
-		UserID:  userID,
+		UserID:  user.ID,
 	}
 	result := db.Instance.First(&groupUser)
 	if result.Error != nil {
@@ -149,7 +153,7 @@ func GroupSave(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
 	}
-	if (groupUser.IsAdmin || session.HasPermission(models.PermissionAdmin)) && group.Name != r.Name {
+	if (groupUser.IsAdmin || user.HasPermission(models.PermissionAdmin)) && group.Name != r.Name {
 		// We can edit the Group object
 		group.Name = r.Name
 		if result = db.Instance.Save(&group); result.Error != nil {
@@ -170,8 +174,8 @@ func GroupSave(c *gin.Context) {
 // GroupDelete deletes the Group and all of its dependants (via foreign keys)
 func GroupDelete(c *gin.Context) {
 	session := auth.LoadSession(c)
-	userID := session.UserID()
-	if userID == 0 || !session.HasPermission(models.PermissionAdmin) {
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionAdmin) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}

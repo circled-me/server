@@ -57,10 +57,19 @@ func UserLogin(email, plainTextPassword string) (u User, err error) {
 	return u, nil
 }
 
-func (u *User) GetPermissionsArray() []int {
+func (u *User) GetPermissions() []int {
 	permissions := []int{}
 	for _, grant := range u.Grants {
 		permissions = append(permissions, int(grant.Permission))
 	}
 	return permissions
+}
+
+func (u *User) HasPermission(required Permission) bool {
+	for _, permission := range u.Grants {
+		if permission.Permission == required {
+			return true
+		}
+	}
+	return false
 }
