@@ -20,9 +20,10 @@ import (
 )
 
 type AssetFetchRequest struct {
-	ID    uint64 `form:"id" binding:"required"`
-	Thumb uint   `form:"thumb"`
-	Size  uint   `form:"size"`
+	ID       uint64 `form:"id" binding:"required"`
+	Thumb    uint   `form:"thumb"`
+	Download uint   `form:"download"`
+	Size     uint   `form:"size"`
 }
 
 type AssetInfo struct {
@@ -131,6 +132,9 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 		}
 	} else {
 		c.Header("content-type", asset.MimeType)
+		if r.Download == 1 {
+			c.Header("content-disposition", "attachment; filename=\""+asset.Name+"\"")
+		}
 		// Handles Byte-ranges too
 		storage.Serve(asset.GetPath(), c.Request, c.Writer)
 		return

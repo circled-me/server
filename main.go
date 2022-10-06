@@ -82,6 +82,14 @@ func main() {
 	router.GET("/album/remove", handlers.AlbumRemoveAsset)
 	router.GET("/album/assets", handlers.AlbumAssets)
 	router.GET("/album/share", handlers.AlbumShare)
+	// Group handlers
+	router.GET("/group/list", handlers.GroupList)
+	router.POST("/group/create", handlers.GroupCreate)
+	router.POST("/group/save", handlers.GroupSave)
+	router.POST("/group/delete", handlers.GroupDelete)
+	// router.POST("/group/members", handlers.GroupMembers)
+
+	// Face recognition related
 	// router.GET("/faces/get", handlers.GetFaces)
 	// Web interface
 	router.GET("/w/album/:token/", web.AlbumView)

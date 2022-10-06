@@ -6,5 +6,5 @@ type Group struct {
 	UpdatedAt   int64
 	CreatedByID uint64
 	CreatedBy   User   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	Name        string `gorm:"type:varchar(300)"`
+	Name        string `gorm:"type:varchar(300);unique"`
 }

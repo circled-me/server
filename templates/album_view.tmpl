@@ -16,8 +16,8 @@
         h2 {font-size: 15px !important;}
         a {border: none; text-decoration: none;}
         #lightgallery a { display: inline-block; width: 165px; height: 165px; background-size: cover; background-position: center; float: left; margin: 2px; padding: 2px}
-        @media only screen and (max-device-width: 480px) {
-            #lightgallery a {width: 32vw; height: 32vw; margin: 0.25vw; padding: 0.25vw;}
+        @media only screen and (max-device-width: 660px) {
+            #lightgallery a {width: 32.8vw; height: 32.8vw; margin: 0.25vw; padding: 0.25vw;}
         }
     </style>
   </head>
@@ -29,11 +29,11 @@
     <div id="lightgallery">
     {{ range .assets }}
         {{ if eq .Type 1 }}
-            <a href="asset?id={{ .ID }}&thumb=1" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=220')" data-download-url="asset?id={{ .ID }}"></a>
+            <a href="asset?id={{ .ID }}&thumb=1" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=220')" data-download-url="asset?id={{ .ID }}&download=1"></a>
         {{ else if eq .MimeType "video/mp4" }}
             <a data-video='{"source": [{"src":"asset?id={{ .ID }}", "type":"video/mp4"}], "attributes": {"preload": false, "playsinline": true, "controls": true}}'
                data-poster="asset?id={{ .ID }}&thumb=1&size=220" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=220')"
-               data-download-url="asset?id={{ .ID }}"></a>
+               data-download-url="asset?id={{ .ID }}&download=1"></a>
         {{ end }}
     {{ end }}
     </div>    

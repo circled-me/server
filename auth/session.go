@@ -17,12 +17,16 @@ func LoadSession(c *gin.Context) *Session {
 	}
 }
 
-func (s *Session) HasPermission(required models.Permission) bool {
+func (s *Session) GetPermissions() []int {
 	permissions := s.Get("permissions")
 	if permissions == nil {
-		return false
+		return []int{}
 	}
-	for _, permission := range permissions.([]int) {
+	return permissions.([]int)
+}
+
+func (s *Session) HasPermission(required models.Permission) bool {
+	for _, permission := range s.GetPermissions() {
 		if permission == int(required) {
 			return true
 		}

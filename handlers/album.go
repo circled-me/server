@@ -87,18 +87,18 @@ func AlbumCreate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	asset := models.Album{
+	album := models.Album{
 		Name:   r.Name,
 		UserID: userID,
 	}
-	result := db.Instance.Create(&asset)
+	result := db.Instance.Create(&album)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, AlbumInfo{
-		ID:          asset.ID,
-		Name:        asset.Name,
+		ID:          album.ID,
+		Name:        album.Name,
 		HeroAssetId: 0,
 	})
 }
@@ -166,7 +166,13 @@ func AlbumAssets(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	rows, err := db.Instance.Table("album_assets").Select("asset_id, mime_type").Where("album_id = ?", r.AlbumID).Joins("join assets on album_assets.asset_id = assets.id").Order("assets.created_at ASC").Rows()
+	rows, err := db.Instance.
+		Table("album_assets").
+		Select("asset_id, mime_type").
+		Where("album_id = ?", r.AlbumID).
+		Joins("join assets on album_assets.asset_id = assets.id").
+		Order("assets.created_at ASC").Rows()
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
