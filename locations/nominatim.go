@@ -3,6 +3,7 @@ package locations
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"server/models"
 	"strings"
@@ -82,13 +83,13 @@ func getNominatimLocation(lat, long float64) *NominatimLocation {
 	lastRequest = time.Now()
 
 	url := fmt.Sprintf("https://nominatim.openstreetmap.org/reverse?format=json&lat=%f&lon=%f", lat, long)
-	// fmt.Printf("Making request to: %s\n\n", url)
+	log.Printf("Making request to: %s", url)
 	req, _ := http.NewRequest("GET", url, nil)
 	// TODO: not only English?
 	req.Header.Set("accept-language", "en")
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Failed request to:", url, err)
+		log.Println("Failed request to:", url, err)
 		return nil
 	}
 	result := &NominatimLocation{}
@@ -96,7 +97,7 @@ func getNominatimLocation(lat, long float64) *NominatimLocation {
 	defer resp.Body.Close()
 
 	if err = decoder.Decode(result); err != nil {
-		fmt.Println(url, err)
+		log.Println(url, err)
 		return nil
 	}
 	return result

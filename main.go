@@ -2,6 +2,7 @@ package main
 
 import (
 	"server/db"
+	"server/locations"
 	"server/video"
 	"server/web"
 
@@ -25,9 +26,7 @@ func main() {
 	db.Init(GetMySQLDSN())
 	models.Init()
 	storage.Init()
-	// go locations.StartProcessing()
-	// fix [0.948ms] [rows:0] INSERT INTO `locations` (`gps_lat`,`gps_long`,`display`,`area`,`city`,`country`,`country_code`) VALUES (-180.000000,-180.000000,'','','','','')
-	// DB error: Error 1062: Duplicate entry '-180--180' for key 'locations.PRIMARY'
+	go locations.StartProcessing()
 	go video.StartProcessing()
 
 	// faces.Init("/mnt/data1/models")
@@ -82,6 +81,9 @@ func main() {
 	router.GET("/album/remove", handlers.AlbumRemoveAsset)
 	router.GET("/album/assets", handlers.AlbumAssets)
 	router.GET("/album/share", handlers.AlbumShare)
+	// Moment handlers
+	router.GET("/moment/list", handlers.MomentList)
+	router.GET("/moment/assets", handlers.MomentAssets)
 	// Group handlers
 	router.GET("/group/list", handlers.GroupList)
 	router.POST("/group/create", handlers.GroupCreate)

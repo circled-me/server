@@ -29,19 +29,11 @@ func (n *Location) GetShortDisplay() string {
 }
 
 func (location *Location) GetPlaceID() uint64 {
-	if location.Area == "" && location.City == "" && location.Country == "" {
-		return 0
-	}
 	place := Place{
 		Area:    location.Area,
 		City:    location.City,
 		Country: location.Country,
 	}
-	if (location.Area != "" || location.City != "") && location.Country != "" {
-		db.Instance.Debug().Where(&place).FirstOrCreate(&place)
-	} else {
-		db.Instance.Debug().Where(&place, "area", "city", "country").Limit(1).Find(&place)
-	}
-	// fmt.Printf("The place is: %+v\n", place)
+	db.Instance.Where(&place, "area", "city", "country").FirstOrCreate(&place)
 	return place.ID
 }

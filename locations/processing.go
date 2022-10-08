@@ -1,7 +1,7 @@
 package locations
 
 import (
-	"fmt"
+	"log"
 	"server/db"
 	"server/models"
 	"time"
@@ -19,7 +19,7 @@ func StartProcessing() {
 		asset := getNextForProcessing(lastProcessedID)
 		if asset.ID == 0 {
 			// Nothing to process...
-			time.Sleep(30 * time.Second)
+			time.Sleep(60 * time.Second)
 			lastProcessedID = 0
 			continue
 		}
@@ -31,19 +31,19 @@ func StartProcessing() {
 func process(a *models.Asset) bool {
 	// Try first local DB
 	location := a.GetRoughLocation()
-	db.Instance.Limit(1).Find(&location, location)
-	// fmt.Printf("Location found: %+v\n\n", location)
-	placeID := location.GetPlaceID()
-	if placeID > 0 {
-		a.PlaceID = &placeID
-		fmt.Printf("Place quickly found: %+v\n\n", a.PlaceID)
-		return db.Instance.Save(a).Error == nil
+	var locations []models.Location
+	db.Instance.Where("gps_lat=? and gps_long=?", location.GpsLat, location.GpsLong).Find(&locations)
+	if len(locations) > 0 {
+		placeID := locations[0].GetPlaceID()
+		if placeID > 0 {
+			a.PlaceID = &placeID
+			return db.Instance.Save(a).Error == nil
+		}
 	}
-	// fmt.Printf("Location after: %+v\n\n", location)
 	// Try a Nominatim request
 	nominatim := getNominatimLocation(location.GpsLat, location.GpsLong)
 	if nominatim == nil {
-		fmt.Printf("No location found for: %d, %f, %f\n\n", a.ID, location.GpsLat, location.GpsLong)
+		log.Printf("No location found for: %d, %f, %f", a.ID, location.GpsLat, location.GpsLong)
 		return false
 	}
 	// Create local DB record
@@ -53,13 +53,12 @@ func process(a *models.Asset) bool {
 	location.Country = nominatim.Address.Country
 	location.CountryCode = nominatim.Address.CountryCode
 	res := db.Instance.Create(&location)
-	// fmt.Printf("Created location: %+v\n\n", location)
 	if res.Error != nil {
-		fmt.Printf("DB error: %+v\n", res.Error)
+		log.Printf("DB error: %+v", res.Error)
 		return false
 	}
 	// Do we have a corresponding place already in our DB?
-	placeID = location.GetPlaceID()
+	placeID := location.GetPlaceID()
 	if placeID == 0 {
 		return false
 	}
