@@ -32,4 +32,5 @@ func Init() {
 	// db.Instance.AutoMigrate(&Tag{})
 	db.Instance.AutoMigrate(&GroupPost{})
 	db.Instance.AutoMigrate(&GroupUser{})
+	db.Instance.AutoMigrate(&UploadRequest{})
 }

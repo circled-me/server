@@ -18,7 +18,7 @@ func convertVideo(inFile, outFile string) error {
 
 func getNextForProcessing(lastProcessedID uint64) (result models.Asset) {
 	// select video assets that are not MP4
-	db.Instance.Where("deleted=0 AND mime_type LIKE 'video/%' AND mime_type != 'video/mp4' AND unix_timestamp()-assets.created_at>30 AND assets.id>?",
+	db.Instance.Where("deleted=0 AND size > 0 AND mime_type LIKE 'video/%' AND mime_type != 'video/mp4' AND unix_timestamp()-assets.created_at>30 AND assets.id>?",
 		lastProcessedID).Limit(1).Joins("Bucket").Find(&result)
 	return
 }

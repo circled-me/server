@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#fff" />
+    <title>circled.me uploader</title>
+    <link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet" />
+    <link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css" rel="stylesheet" />
+    <script src="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.js"></script>
+    <script src="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.js"></script>
+    <script src="https://unpkg.com/filepond/dist/filepond.js"></script>
+    <script>
+        FilePond.registerPlugin(FilePondPluginImagePreview);
+        FilePond.registerPlugin(FilePondPluginFileValidateType);
+    </script>
+    <style>
+        * {box-sizing: border-box;}
+        body {font-family: sans-serif; color: #666; margin: 0; padding: 0;}
+        h2 {display: block; padding: 2px; font-size: 20px; text-align: center;}
+        div#content {
+            max-width: 640px;
+            margin: 30px auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="content">
+        <h2>{{ .who }}'s upload</h2>
+        <input type="file" multiple class="filepond">
+        <script>
+            FilePond.setOptions({
+                acceptedFileTypes: ['image/*','video/*'],
+                server: {
+                    process: './',
+                    fetch: null,
+                    revert: null,
+                    restore: null,
+                    load: null,
+                },
+            });
+            FilePond.parse(document.body);
+        </script>
+    </div>
+</body>
+</html>

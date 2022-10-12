@@ -1,10 +1,6 @@
 package models
 
-import (
-	"crypto/rand"
-	"fmt"
-	"math/big"
-)
+import "server/utils"
 
 type AlbumShare struct {
 	ID        uint64 `gorm:"primaryKey"`
@@ -16,21 +12,10 @@ type AlbumShare struct {
 	Token     string `gorm:"type:varchar(100);index:uniq_token,unique"`
 }
 
-func rand16BytesToBase62() string {
-	buf := make([]byte, 16)
-	_, err := rand.Read(buf)
-	if err != nil {
-		fmt.Println("error:", err)
-		panic(err)
-	}
-	var i big.Int
-	return i.SetBytes(buf).Text(62)
-}
-
 func NewAlbumShare(userID uint64, album uint64) AlbumShare {
 	return AlbumShare{
 		UserID:  userID,
 		AlbumID: album,
-		Token:   rand16BytesToBase62() + rand16BytesToBase62(),
+		Token:   utils.Rand16BytesToBase62() + utils.Rand16BytesToBase62(),
 	}
 }

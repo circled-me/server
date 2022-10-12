@@ -2,10 +2,13 @@ package utils
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"math"
+	"math/big"
 	"time"
 )
 
@@ -40,4 +43,15 @@ func GetDatesString(min, max int64) string {
 	}
 	maxString := time.Unix(max, 0).Format("2 Jan 2006")
 	return minString + " - " + maxString
+}
+
+func Rand16BytesToBase62() string {
+	buf := make([]byte, 16)
+	_, err := rand.Read(buf)
+	if err != nil {
+		fmt.Println("error:", err)
+		panic(err)
+	}
+	var i big.Int
+	return i.SetBytes(buf).Text(62)
 }

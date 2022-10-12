@@ -90,12 +90,18 @@ func main() {
 	router.POST("/group/save", handlers.GroupSave)
 	router.POST("/group/delete", handlers.GroupDelete)
 	// router.POST("/group/members", handlers.GroupMembers)
-
 	// Face recognition related
 	// router.GET("/faces/get", handlers.GetFaces)
-	// Web interface
+
+	/*
+	 *	Web interface
+	 */
+	// Albums
 	router.GET("/w/album/:token/", web.AlbumView)
 	router.GET("/w/album/:token/asset", web.AlbumAssetView)
+	// File uploads
+	router.GET("/w/upload/:token/", web.UploadRequestView)
+	router.POST("/w/upload/:token/", web.UploadRequestProcess)
 
 	router.Run(GetBindAddress())
 }

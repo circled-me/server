@@ -11,6 +11,7 @@ import (
 	"server/db"
 	"server/models"
 	"server/storage"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -49,6 +50,10 @@ func BackupAsset(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	UploadAsset(c, &user, &r, c.Request.Body)
+}
+
+func UploadAsset(c *gin.Context, user *models.User, r *BackupRequest, reader io.Reader) {
 	storage := storage.GetDefaultStorage()
 	if storage == nil {
 		panic("Storage is nil")
@@ -73,6 +78,12 @@ func BackupAsset(c *gin.Context) {
 		// Guess the mime type from the extension
 		asset.MimeType = mime.TypeByExtension(filepath.Ext(asset.Name))
 	}
+	// For now, only allow image and video
+	if !strings.HasPrefix(asset.MimeType, "image/") && !strings.HasPrefix(asset.MimeType, "video/") {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "this file type is not allowed"})
+		return
+	}
+
 	result := db.Instance.Create(&asset)
 	if result.Error != nil {
 		// Try loading the asset by RemoteID, maybe it exists and we should overwrite it
@@ -83,7 +94,8 @@ func BackupAsset(c *gin.Context) {
 			return
 		}
 	}
-	asset.Size, err = storage.Save(asset.GetPath(), c.Request.Body)
+	var err error
+	asset.Size, err = storage.Save(asset.GetPath(), reader)
 	if err != nil {
 		// We couldn't save the file, delete the DB record too
 		db.Instance.Delete(asset)
