@@ -41,11 +41,12 @@ type Asset struct {
 	ThumbWidth  uint16
 	ThumbHeight uint16
 	Duration    uint16
+	Processed   bool `gorm:"not null;default 0"`
 }
 
 // GetPath returns the path of the asset. For example:
-//  - group/56/image.jpg
-//  - user/3/file.xls
+//   - group/56/image.jpg
+//   - user/3/file.xls
 func (a *Asset) GetPath() string {
 	return a.GetPathOrThumb(false)
 }

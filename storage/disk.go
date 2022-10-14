@@ -31,6 +31,14 @@ func (s *DiskStorage) createDir(dir string) error {
 	return os.MkdirAll(dir, 0777)
 }
 
+func (s *DiskStorage) GetSize(path string) int64 {
+	fi, err := os.Stat(s.GetFullPath(path))
+	if err != nil {
+		return -1
+	}
+	return fi.Size()
+}
+
 func (s *DiskStorage) GetFullPath(path string) string {
 	return s.BasePath + "/" + path
 }

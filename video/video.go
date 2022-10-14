@@ -2,11 +2,14 @@ package video
 
 import (
 	"fmt"
+	"log"
 	"os/exec"
 	"path/filepath"
 	"server/db"
 	"server/models"
 	"server/storage"
+	"server/utils"
+	"strings"
 	"time"
 )
 
@@ -17,8 +20,10 @@ func convertVideo(inFile, outFile string) error {
 }
 
 func getNextForProcessing(lastProcessedID uint64) (result models.Asset) {
-	// select video assets that are not MP4
-	db.Instance.Where("deleted=0 AND size > 0 AND mime_type LIKE 'video/%' AND mime_type != 'video/mp4' AND unix_timestamp()-assets.created_at>30 AND assets.id>?",
+	// select video assets that are not MP4 OR have been manually uploaded so don't have much meta data
+	db.Instance.Where("deleted=0 AND size>0 AND mime_type LIKE 'video/%' AND unix_timestamp()-assets.created_at>30 AND assets.id>? AND "+
+		"(mime_type!='video/mp4' OR width=0 OR height=0 OR thumb_width=0 OR thumb_height=0 OR duration=0)",
+
 		lastProcessedID).Limit(1).Joins("Bucket").Find(&result)
 	return
 }
@@ -34,19 +39,58 @@ func StartProcessing() {
 			continue
 		}
 		storage := storage.StorageFrom(&asset.Bucket)
-		oldPath := asset.GetPath()
-		ext := filepath.Ext(asset.Name)
-		asset.Name = asset.Name[:len(asset.Name)-len(ext)-1] + ".mp4"
-		err := convertVideo(storage.GetFullPath(oldPath), storage.GetFullPath(asset.GetPath()))
-		if err == nil {
-			fmt.Println("DONE video processing for:", asset.GetPath())
-			asset.MimeType = "video/mp4"
-			if storage.Delete(oldPath) == nil {
+		// convert the video to mp4 if necessary
+		if asset.MimeType != "video/mp4" {
+			oldPath := asset.GetPath()
+			ext := filepath.Ext(asset.Name)
+			asset.Name = asset.Name[:len(asset.Name)-len(ext)] + ".mp4"
+			err := convertVideo(storage.GetFullPath(oldPath), storage.GetFullPath(asset.GetPath()))
+			if err == nil {
+				log.Print("DONE video processing for:", asset.GetPath())
+				asset.MimeType = "video/mp4"
+				asset.Size = storage.GetSize(oldPath)
+				if storage.Delete(oldPath) == nil && asset.Size > 0 {
+					db.Instance.Save(&asset)
+				}
+			} else {
+				fmt.Printf("ERROR in video processing for:%s, %v\n", asset.GetPath(), err)
+			}
+		}
+		// we need to get video metadata?
+		if asset.Width == 0 || asset.Height == 0 || asset.Duration == 0 {
+			cmd := exec.Command("exiftool", "-n", "-T", "-gpslatitude", "-gpslongitude", "-imagewidth", "-imageheight", "-duration", storage.GetFullPath(asset.GetPath()))
+			output, err := cmd.Output()
+			if err == nil {
+				result := strings.Split(strings.Trim(string(output), "\n\t\r "), "\t")
+				log.Printf("%+v", result)
+				if len(result) == 5 {
+					if result[0] != "-" {
+						asset.GpsLat = utils.StringToFloat64Ptr(result[0])
+					}
+					if result[1] != "-" {
+						asset.GpsLong = utils.StringToFloat64Ptr(result[1])
+					}
+					if result[2] != "-" {
+						asset.Width = utils.StringToUInt16(result[2])
+					}
+					if result[3] != "-" {
+						asset.Height = utils.StringToUInt16(result[3])
+					}
+					if result[4] != "-" {
+						d := utils.StringToFloat64Ptr(result[4])
+						if *d == 0 {
+							*d = 1
+						}
+						asset.Duration = uint16(*d)
+					}
+					log.Printf("%+v", asset)
+				}
+				// finally - save it
 				db.Instance.Save(&asset)
 			}
-		} else {
-			fmt.Printf("ERROR in video processing for:%s, %v\n", asset.GetPath(), err)
 		}
+		// TODO: create thumb
+
 		lastProcessedID = asset.ID
 	}
 }

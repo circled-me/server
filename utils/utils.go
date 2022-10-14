@@ -7,9 +7,17 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"image"
+	_ "image/gif"
+	"image/jpeg"
+	_ "image/png"
+	"io"
 	"math"
 	"math/big"
+	"strconv"
 	"time"
+
+	"github.com/nfnt/resize"
 )
 
 // Sha512String hashes and encodes in hex the result
@@ -54,4 +62,44 @@ func Rand16BytesToBase62() string {
 	}
 	var i big.Int
 	return i.SetBytes(buf).Text(62)
+}
+
+type ImageThumbConverted struct {
+	ThumbSize int64
+	NewX      uint16
+	NewY      uint16
+	OldX      uint16
+	OldY      uint16
+}
+
+func CreateThumb(size uint, reader io.Reader, writer io.Writer) (result ImageThumbConverted, err error) {
+	image, _, err := image.Decode(reader)
+	if err != nil {
+		return result, err
+	}
+	var newBuf bytes.Buffer
+	newImage := resize.Thumbnail(size, size, image, resize.Lanczos3)
+	if err = jpeg.Encode(&newBuf, newImage, &jpeg.Options{Quality: 90}); err != nil {
+		return
+	}
+	imageRect := newImage.Bounds().Size()
+	result.NewX = uint16(imageRect.X)
+	result.NewY = uint16(imageRect.Y)
+
+	imageRect = image.Bounds().Size()
+	result.OldX = uint16(imageRect.X)
+	result.OldY = uint16(imageRect.Y)
+
+	result.ThumbSize, err = io.Copy(writer, &newBuf)
+	return
+}
+
+func StringToFloat64Ptr(in string) *float64 {
+	f, _ := strconv.ParseFloat(in, 64)
+	return &f
+}
+
+func StringToUInt16(in string) uint16 {
+	i, _ := strconv.ParseUint(in, 10, 16)
+	return uint16(i)
 }

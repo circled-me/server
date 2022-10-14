@@ -2,21 +2,18 @@ package handlers
 
 import (
 	"bytes"
-	"image"
-	"io"
 	"net/http"
 	"server/auth"
 	"server/db"
 	"server/models"
 	"server/storage"
+	"server/utils"
 	"strconv"
 	"strings"
 
-	"image/jpeg"
 	_ "image/jpeg"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nfnt/resize"
 )
 
 type AssetFetchRequest struct {
@@ -73,21 +70,6 @@ func AssetList(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func createThumb(size uint, reader io.Reader, c *gin.Context) (err error) {
-	image, _, err := image.Decode(reader)
-	if err != nil {
-		return err
-	}
-	var newBuf bytes.Buffer
-	newImage := resize.Thumbnail(size, size, image, resize.Lanczos3)
-	if err = jpeg.Encode(&newBuf, newImage, &jpeg.Options{Quality: 90}); err != nil {
-		return
-	}
-	c.Header("content-length", strconv.Itoa(newBuf.Len()))
-	_, err = io.Copy(c.Writer, &newBuf)
-	return
-}
-
 func AssetFetch(c *gin.Context) {
 	session := auth.LoadSession(c)
 	user := session.User()
@@ -127,7 +109,9 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 			// Custom size
 			var buf bytes.Buffer
 			if _, err = storage.Load(asset.GetThumbPath(), &buf); err == nil {
-				err = createThumb(r.Size, &buf, c)
+				var imageThumbInfo utils.ImageThumbConverted
+				imageThumbInfo, err = utils.CreateThumb(r.Size, &buf, c.Writer)
+				c.Header("content-length", strconv.FormatInt(imageThumbInfo.ThumbSize, 10))
 			}
 		}
 	} else {

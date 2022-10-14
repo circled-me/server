@@ -50,10 +50,10 @@ func BackupAsset(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	UploadAsset(c, &user, &r, c.Request.Body)
+	_ = UploadAsset(c, &user, &r, c.Request.Body)
 }
 
-func UploadAsset(c *gin.Context, user *models.User, r *BackupRequest, reader io.Reader) {
+func UploadAsset(c *gin.Context, user *models.User, r *BackupRequest, reader io.Reader) *models.Asset {
 	storage := storage.GetDefaultStorage()
 	if storage == nil {
 		panic("Storage is nil")
@@ -79,9 +79,13 @@ func UploadAsset(c *gin.Context, user *models.User, r *BackupRequest, reader io.
 		asset.MimeType = mime.TypeByExtension(filepath.Ext(asset.Name))
 	}
 	// For now, only allow image and video
-	if !strings.HasPrefix(asset.MimeType, "image/") && !strings.HasPrefix(asset.MimeType, "video/") {
+	if asset.MimeType != "image/jpeg" &&
+		asset.MimeType != "image/png" &&
+		asset.MimeType != "image/gif" &&
+		!strings.HasPrefix(asset.MimeType, "video/") {
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "this file type is not allowed"})
-		return
+		return nil
 	}
 
 	result := db.Instance.Create(&asset)
@@ -91,7 +95,7 @@ func UploadAsset(c *gin.Context, user *models.User, r *BackupRequest, reader io.
 		if result.Error != nil {
 			// Now give up...
 			c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
-			return
+			return nil
 		}
 	}
 	var err error
@@ -100,16 +104,17 @@ func UploadAsset(c *gin.Context, user *models.User, r *BackupRequest, reader io.
 		// We couldn't save the file, delete the DB record too
 		db.Instance.Delete(asset)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return nil
 	} else if asset.Size <= 0 {
 		db.Instance.Delete(asset)
 		storage.Delete(asset.GetPath())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "empty asset"})
-		return
+		return nil
 	}
 	// Re-save asset as we have new .Size (TODO: .MimeType)
 	db.Instance.Updates(&asset)
 	c.JSON(200, gin.H{"error": "", "id": asset.ID})
+	return &asset
 }
 
 func BackupAssetThumb(c *gin.Context) {
@@ -125,15 +130,15 @@ func BackupAssetThumb(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	storage := storage.GetDefaultStorage()
-	if storage == nil {
-		panic("Storage is nil")
-	}
 	asset := models.Asset{}
 	result := db.Instance.Where("user_id = ? AND remote_id = ?", user.ID, r.ID).Find(&asset)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
+	}
+	storage := storage.StorageFrom(&asset.Bucket)
+	if storage == nil {
+		panic("Storage is nil")
 	}
 	thumbContent := bytes.Buffer{}
 	reader := io.TeeReader(c.Request.Body, &thumbContent)

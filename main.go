@@ -81,6 +81,8 @@ func main() {
 	router.GET("/album/remove", handlers.AlbumRemoveAsset)
 	router.GET("/album/assets", handlers.AlbumAssets)
 	router.GET("/album/share", handlers.AlbumShare)
+	// Upload Request
+	router.GET("/upload/share", handlers.UploadShare)
 	// Moment handlers
 	router.GET("/moment/list", handlers.MomentList)
 	router.GET("/moment/assets", handlers.MomentAssets)

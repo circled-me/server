@@ -226,5 +226,10 @@ func AlbumShare(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"path": "/w/album/" + shareInfo.Token + "/"})
+	db.Instance.Preload("Album").Find(&shareInfo)
+	// TODO: Make below configurable
+	c.JSON(http.StatusOK, gin.H{
+		"title": "[ " + shareInfo.Album.Name + " ]",
+		"path":  "/w/album/" + shareInfo.Token + "/",
+	})
 }

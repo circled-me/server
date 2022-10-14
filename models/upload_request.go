@@ -11,7 +11,7 @@ type UploadRequest struct {
 	Token     string `gorm:"type:varchar(100);index:uniq_token,unique"`
 }
 
-func NewUploadRequest(userID uint64, album uint64) UploadRequest {
+func NewUploadRequest(userID uint64) UploadRequest {
 	return UploadRequest{
 		UserID: userID,
 		Token:  utils.Rand16BytesToBase62() + utils.Rand16BytesToBase62(),

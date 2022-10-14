@@ -1,12 +1,17 @@
 package web
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"server/db"
 	"server/handlers"
 	"server/models"
+	"server/storage"
+	"server/utils"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -38,7 +43,6 @@ func UploadRequestProcess(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went totally wrong"})
 		return
 	}
-	// fmt.Printf("File: %+v", file)
 	prefix := req.Token
 	if len(prefix) > 10 {
 		prefix = prefix[:10]
@@ -54,7 +58,38 @@ func UploadRequestProcess(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong here"})
 		return
 	}
-	handlers.UploadAsset(c, &req.User, &backuprequest, fileReader)
+	asset := handlers.UploadAsset(c, &req.User, &backuprequest, fileReader)
+	if asset == nil || !strings.HasPrefix(asset.MimeType, "image/") {
+		return
+	}
+	// create thumbnail
+	bucket := storage.Bucket{ID: asset.BucketID}
+	if db.Instance.Find(&bucket).Error != nil {
+		log.Printf("missing storage")
+		return
+	}
+	storage := storage.StorageFrom(&bucket)
+	var buf, thumb bytes.Buffer
+	if _, err = storage.Load(asset.GetPath(), &buf); err != nil {
+		log.Printf("missing file or other error: %s", err.Error())
+		return
+	}
+	// TODO: hard-coded
+	imageThumbInfo, err := utils.CreateThumb(1280, &buf, &thumb)
+	if err != nil {
+		log.Printf("CreateThumb error: %s", err.Error())
+		return
+	}
+	asset.ThumbWidth = imageThumbInfo.NewX
+	asset.ThumbHeight = imageThumbInfo.NewY
+	asset.Width = imageThumbInfo.OldX
+	asset.Height = imageThumbInfo.OldY
+	asset.ThumbSize, err = storage.Save(asset.GetThumbPath(), &thumb)
+	if err != nil {
+		log.Printf("canno save thumb file or other error: %s", err.Error())
+		return
+	}
+	db.Instance.Save(asset)
 }
 
 func UploadRequestView(c *gin.Context) {
