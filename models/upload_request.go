@@ -14,6 +14,6 @@ type UploadRequest struct {
 func NewUploadRequest(userID uint64) UploadRequest {
 	return UploadRequest{
 		UserID: userID,
-		Token:  utils.Rand16BytesToBase62() + utils.Rand16BytesToBase62(),
+		Token:  utils.Rand16BytesToBase62(),
 	}
 }

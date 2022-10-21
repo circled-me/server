@@ -16,6 +16,6 @@ func NewAlbumShare(userID uint64, album uint64) AlbumShare {
 	return AlbumShare{
 		UserID:  userID,
 		AlbumID: album,
-		Token:   utils.Rand16BytesToBase62() + utils.Rand16BytesToBase62(),
+		Token:   utils.Rand16BytesToBase62(),
 	}
 }

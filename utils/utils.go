@@ -45,6 +45,9 @@ func ByteArrayToFloat32Array(b []byte) (result []float32) {
 }
 
 func GetDatesString(min, max int64) string {
+	if min == 0 || max == 0 {
+		return "empty :("
+	}
 	minString := time.Unix(min, 0).Format("2 Jan 2006")
 	if max-min <= 86400 {
 		return minString

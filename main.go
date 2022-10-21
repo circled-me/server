@@ -70,6 +70,7 @@ func main() {
 	router.POST("/user/create", handlers.UserCreate)
 	router.POST("/user/login", handlers.UserLogin)
 	router.GET("/user/permissions", handlers.UserGetPermissions)
+	router.GET("/user/list", handlers.UserList)
 	// Asset handlers
 	router.GET("/asset/list", handlers.AssetList)
 	router.GET("/asset/fetch", handlers.AssetFetch)
@@ -81,13 +82,16 @@ func main() {
 	router.GET("/album/remove", handlers.AlbumRemoveAsset)
 	router.GET("/album/assets", handlers.AlbumAssets)
 	router.GET("/album/share", handlers.AlbumShare)
+	// TODO: there should be a way to list and remove controbutors too
+	router.POST("/album/contributor", handlers.AlbumContributor)
+
 	// Upload Request
 	router.GET("/upload/share", handlers.UploadShare)
 	// Moment handlers
 	router.GET("/moment/list", handlers.MomentList)
 	router.GET("/moment/assets", handlers.MomentAssets)
 	// Group handlers
-	router.GET("/group/list", handlers.GroupList)
+	// router.GET("/group/list", handlers.GroupList)
 	router.POST("/group/create", handlers.GroupCreate)
 	router.POST("/group/save", handlers.GroupSave)
 	router.POST("/group/delete", handlers.GroupDelete)

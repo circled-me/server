@@ -14,9 +14,8 @@ type Grant struct {
 	ID         uint64 `gorm:"primaryKey"`
 	CreatedAt  int64
 	GrantorID  uint64
-	Grantor    User `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	UserID     uint64
-	User       User `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Permission Permission
-	Subject    uint64 // The object that this permission is valid for (can be 0/nil, e.g. for PermissionAdmin)
+	Grantor    User       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	UserID     uint64     `gorm:"index:user_permission,unique"`
+	User       User       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Permission Permission `gorm:"index:user_permission,unique"`
 }

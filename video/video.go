@@ -1,7 +1,9 @@
 package video
 
 import (
+	"bytes"
 	"fmt"
+	"image"
 	"log"
 	"os/exec"
 	"path/filepath"
@@ -22,7 +24,7 @@ func convertVideo(inFile, outFile string) error {
 func getNextForProcessing(lastProcessedID uint64) (result models.Asset) {
 	// select video assets that are not MP4 OR have been manually uploaded so don't have much meta data
 	db.Instance.Where("deleted=0 AND size>0 AND mime_type LIKE 'video/%' AND unix_timestamp()-assets.created_at>30 AND assets.id>? AND "+
-		"(mime_type!='video/mp4' OR width=0 OR height=0 OR thumb_width=0 OR thumb_height=0 OR duration=0)",
+		"(mime_type!='video/mp4' OR width=0 OR height=0 OR thumb_width=0 OR thumb_height=0 OR thumb_size=0 OR duration=0)",
 
 		lastProcessedID).Limit(1).Joins("Bucket").Find(&result)
 	return
@@ -89,8 +91,26 @@ func StartProcessing() {
 				db.Instance.Save(&asset)
 			}
 		}
-		// TODO: create thumb
-
+		// create thumbnail if missing
+		if asset.ThumbHeight == 0 || asset.ThumbWidth == 0 || asset.ThumbSize == 0 {
+			cmd := exec.Command("ffmpeg", "-y", "-i", storage.GetFullPath(asset.GetPath()), "-ss", "00:00:01.000", "-vframes", "1", storage.GetFullPath(asset.GetThumbPath()))
+			err := cmd.Run()
+			if err != nil {
+				log.Print("Error creating thumbnail for "+asset.GetPath(), err.Error())
+			} else {
+				buf := bytes.Buffer{}
+				storage.Load(asset.GetThumbPath(), &buf)
+				asset.ThumbSize = int64(buf.Len())
+				thumb, _, err := image.Decode(&buf)
+				if err != nil {
+					log.Print("Error reading thumbnail for " + asset.GetThumbPath() + ": " + err.Error())
+				} else {
+					asset.ThumbWidth = uint16(thumb.Bounds().Dx())
+					asset.ThumbHeight = uint16(thumb.Bounds().Dy())
+					db.Instance.Save(&asset)
+				}
+			}
+		}
 		lastProcessedID = asset.ID
 	}
 }

@@ -82,6 +82,8 @@ func UploadAsset(c *gin.Context, user *models.User, r *BackupRequest, reader io.
 	if asset.MimeType != "image/jpeg" &&
 		asset.MimeType != "image/png" &&
 		asset.MimeType != "image/gif" &&
+		asset.MimeType != "image/heic" && // TODO: which?
+		asset.MimeType != "image/heif" &&
 		!strings.HasPrefix(asset.MimeType, "video/") {
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "this file type is not allowed"})
@@ -131,7 +133,7 @@ func BackupAssetThumb(c *gin.Context) {
 		return
 	}
 	asset := models.Asset{}
-	result := db.Instance.Where("user_id = ? AND remote_id = ?", user.ID, r.ID).Find(&asset)
+	result := db.Instance.Joins("Bucket").Where("user_id = ? AND remote_id = ?", user.ID, r.ID).Find(&asset)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return

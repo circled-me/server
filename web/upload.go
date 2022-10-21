@@ -22,9 +22,9 @@ func getUploadRequest(c *gin.Context) (req models.UploadRequest, err error) {
 	// TODO: secure it more - need to make sure we have the client ip (proxy protocol?)
 	// ip := c.ClientIP()
 
-	// Valid for 1 hour
+	// Valid for 3 hours
 	err = db.Instance.
-		Where("token = ? and created_at >= unix_timestamp()-3600", token).
+		Where("token = ? and created_at >= unix_timestamp()-3*3600", token).
 		Preload("User").
 		Find(&req).Error
 	return
@@ -68,13 +68,14 @@ func UploadRequestProcess(c *gin.Context) {
 		log.Printf("missing storage")
 		return
 	}
+	// TODO: move this to photo fix post-processing
 	storage := storage.StorageFrom(&bucket)
 	var buf, thumb bytes.Buffer
 	if _, err = storage.Load(asset.GetPath(), &buf); err != nil {
 		log.Printf("missing file or other error: %s", err.Error())
 		return
 	}
-	// TODO: hard-coded
+	// TODO: hard-coded?
 	imageThumbInfo, err := utils.CreateThumb(1280, &buf, &thumb)
 	if err != nil {
 		log.Printf("CreateThumb error: %s", err.Error())
