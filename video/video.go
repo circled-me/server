@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"log"
+	"math"
 	"os/exec"
 	"path/filepath"
 	"server/db"
@@ -80,10 +81,7 @@ func StartProcessing() {
 					}
 					if result[4] != "-" {
 						d := utils.StringToFloat64Ptr(result[4])
-						if *d == 0 {
-							*d = 1
-						}
-						asset.Duration = uint16(*d)
+						asset.Duration = uint32(math.Ceil(*d))
 					}
 					log.Printf("%+v", asset)
 				}

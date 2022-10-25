@@ -40,7 +40,7 @@ type Asset struct {
 	Height      uint16
 	ThumbWidth  uint16
 	ThumbHeight uint16
-	Duration    uint16
+	Duration    uint32
 	Processed   bool `gorm:"not null;default 0"`
 }
 

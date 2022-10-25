@@ -26,7 +26,7 @@ type BackupRequest struct {
 	Favourite bool     `form:"favourite" binding:""`
 	Width     uint16   `form:"width" binding:""`
 	Height    uint16   `form:"height" binding:""`
-	Duration  uint16   `form:"duration"`
+	Duration  uint32   `form:"duration"`
 }
 
 type BackupThumbRequest struct {
