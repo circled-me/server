@@ -92,8 +92,16 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 	}
 	db.Instance.Joins("Bucket").First(&asset)
 	if checkUser > 0 && asset.UserID != checkUser {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 2"})
-		return
+		// Check if we have access via a Shared Album
+		result := db.Instance.Raw("select 1 from album_asset where asset_id=? and exists(select 1 from album_contributors where album_contributors.album_id = album_asset.album_id and album_contributors.user_id=?)", r.ID, checkUser)
+		if result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+			return
+		}
+		if result.RowsAffected == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 2"})
+			return
+		}
 	}
 	storage := storage.StorageFrom(&asset.Bucket)
 	if storage == nil {

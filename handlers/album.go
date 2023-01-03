@@ -135,8 +135,8 @@ func AlbumAddAsset(c *gin.Context) {
 		return
 	}
 	// Check if this is our album or we are added as a contributor
-	album := models.Album{}
-	result := db.Instance.Joins("left join album_contributors on album_contributors.album_id = albums.id and album_contributors.user_id=?", user.ID).Where("albums.id=?", r.AlbumID).Find(&album)
+	// TODO: Test below
+	result := db.Instance.Raw("select 1 from albums where albums.user_id=? OR exists(select 1 from album_contributors where album_contributors.album_id = albums.id and album_contributors.user_id=?)", user.ID, user.ID)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
@@ -246,8 +246,7 @@ func AlbumShare(c *gin.Context) {
 		return
 	}
 	// Check if this is our album or we are added as a contributor
-	album := models.Album{}
-	result := db.Instance.Joins("left join album_contributors on album_contributors.album_id = albums.id and album_contributors.user_id=?", user.ID).Where("albums.id=?", r.AlbumID).Find(&album)
+	result := db.Instance.Raw("select 1 from albums where id=? and (user_id=? OR exists(select 1 from album_contributors where album_contributors.album_id = albums.id and album_contributors.user_id=?))", r.AlbumID, user.ID, user.ID)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
