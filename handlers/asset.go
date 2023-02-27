@@ -93,12 +93,13 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 	db.Instance.Joins("Bucket").First(&asset)
 	if checkUser > 0 && asset.UserID != checkUser {
 		// Check if we have access via a Shared Album
-		result := db.Instance.Raw("select 1 from album_asset where asset_id=? and exists(select 1 from album_contributors where album_contributors.album_id = album_asset.album_id and album_contributors.user_id=?)", r.ID, checkUser)
+		var count int64
+		result := db.Instance.Raw("select 1 from album_asset where asset_id=? and exists(select 1 from album_contributors where album_contributors.album_id = album_asset.album_id and album_contributors.user_id=?)", r.ID, checkUser).Scan(&count)
 		if result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 			return
 		}
-		if result.RowsAffected == 0 {
+		if count == 0 {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 2"})
 			return
 		}
@@ -111,7 +112,7 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 	if r.Thumb == 1 {
 		c.Header("content-type", "image/jpeg")
 		if r.Size == 0 {
-			// Default big (1280) size
+			// Default big (1280) thumb size
 			_, err = storage.Load(asset.GetThumbPath(), c.Writer)
 		} else {
 			// Custom size

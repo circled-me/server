@@ -101,7 +101,7 @@ func UploadRequestView(c *gin.Context) {
 		return
 	}
 	// Some cleanup
-	db.Instance.Raw("delete from upload_requests where created_at < unix_timestamp()-7200")
+	db.Instance.Exec("delete from upload_requests where created_at < unix_timestamp()-7200")
 
 	c.HTML(http.StatusOK, "upload_files.tmpl", gin.H{
 		"who": "@" + req.User.Name,

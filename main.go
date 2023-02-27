@@ -78,8 +78,9 @@ func main() {
 	// Album handlers
 	router.GET("/album/list", handlers.AlbumList)
 	router.POST("/album/create", handlers.AlbumCreate)
-	router.GET("/album/add", handlers.AlbumAddAsset)
-	router.GET("/album/remove", handlers.AlbumRemoveAsset)
+	router.POST("/album/delete", handlers.AlbumDelete)
+	router.POST("/album/add", handlers.AlbumAddAsset)
+	router.POST("/album/remove", handlers.AlbumRemoveAsset)
 	router.GET("/album/assets", handlers.AlbumAssets)
 	router.GET("/album/share", handlers.AlbumShare)
 	// TODO: there should be a way to list and remove controbutors too

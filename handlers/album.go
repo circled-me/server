@@ -16,6 +16,7 @@ import (
 
 type AlbumInfo struct {
 	ID          uint64 `json:"id"`
+	Owner       uint64 `json:"owner"`
 	Name        string `json:"name"`
 	Subtitle    string `json:"subtitle"`
 	HeroAssetId uint64 `json:"hero_asset_id"`
@@ -30,7 +31,7 @@ type AlbumAssetRequest struct {
 	AssetID uint64 `form:"asset_id" binding:"required"`
 }
 
-type AlbumViewRequest struct {
+type AlbumIDRequest struct {
 	AlbumID uint64 `form:"album_id" binding:"required"`
 }
 
@@ -48,7 +49,7 @@ func AlbumList(c *gin.Context) {
 	}
 	rows, err := db.Instance.
 		Table("albums").
-		Select("albums.id, albums.name, albums.hero_asset_id, ifnull(min(assets.created_at), 0), ifnull(max(assets.created_at), 0)").
+		Select("albums.id, albums.name, albums.user_id, albums.hero_asset_id, ifnull(min(assets.created_at), 0), ifnull(max(assets.created_at), 0)").
 		Joins("left join album_contributors on album_contributors.album_id = albums.id").
 		Joins("left join album_assets on album_assets.album_id = albums.id").
 		Joins("left join assets on asset_id = assets.id").
@@ -66,7 +67,7 @@ func AlbumList(c *gin.Context) {
 	for rows.Next() {
 		albumInfo := AlbumInfo{}
 		HeroAssetId := &albumInfo.HeroAssetId
-		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name, &HeroAssetId, &minDate, &maxDate); err != nil {
+		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name, &albumInfo.Owner, &HeroAssetId, &minDate, &maxDate); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
 		}
@@ -121,6 +122,27 @@ func AlbumCreate(c *gin.Context) {
 	})
 }
 
+func AlbumDelete(c *gin.Context) {
+	session := auth.LoadSession(c)
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+		return
+	}
+	r := AlbumIDRequest{}
+	err := c.ShouldBindWith(&r, binding.Form)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	result := db.Instance.Delete(&models.Album{}, "id=? and user_id=?", r.AlbumID, user.ID)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, "OK")
+}
+
 func AlbumAddAsset(c *gin.Context) {
 	session := auth.LoadSession(c)
 	user := session.User()
@@ -129,20 +151,20 @@ func AlbumAddAsset(c *gin.Context) {
 		return
 	}
 	r := AlbumAssetRequest{}
-	err := c.ShouldBindQuery(&r)
+	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	// Check if this is our album or we are added as a contributor
-	// TODO: Test below
-	result := db.Instance.Raw("select 1 from albums where albums.user_id=? OR exists(select 1 from album_contributors where album_contributors.album_id = albums.id and album_contributors.user_id=?)", user.ID, user.ID)
+	var count int64
+	result := db.Instance.Raw("select 1 from albums where id=? and (user_id=? OR exists(select 1 from album_contributors where album_contributors.album_id = albums.id and album_contributors.user_id=?))", r.AlbumID, user.ID, user.ID).Scan(&count)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
 	}
-	if result.RowsAffected != 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no!"})
+	if count != 1 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "no!"})
 		return
 	}
 	albumAsset := models.AlbumAsset{
@@ -165,7 +187,7 @@ func AlbumRemoveAsset(c *gin.Context) {
 		return
 	}
 	r := AlbumAssetRequest{}
-	err := c.ShouldBindQuery(&r)
+	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -200,7 +222,7 @@ func AlbumAssets(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
-	r := AlbumViewRequest{}
+	r := AlbumIDRequest{}
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -239,20 +261,21 @@ func AlbumShare(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
-	r := AlbumViewRequest{} // same for now
+	r := AlbumIDRequest{} // same for now
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	// Check if this is our album or we are added as a contributor
-	result := db.Instance.Raw("select 1 from albums where id=? and (user_id=? OR exists(select 1 from album_contributors where album_contributors.album_id = albums.id and album_contributors.user_id=?))", r.AlbumID, user.ID, user.ID)
+	var count int64
+	result := db.Instance.Raw("select 1 from albums where id=? and (user_id=? OR exists(select 1 from album_contributors where album_contributors.album_id = albums.id and album_contributors.user_id=?))", r.AlbumID, user.ID, user.ID).Scan(&count)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
 	}
-	if result.RowsAffected != 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no!"})
+	if count != 1 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "no!"})
 		return
 	}
 	shareInfo := models.NewAlbumShare(user.ID, r.AlbumID)

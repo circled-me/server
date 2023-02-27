@@ -41,7 +41,12 @@ func UserLogin(c *gin.Context) {
 	session.Set("id", user.ID)
 	session.Set("permissions", permissions)
 	session.Save()
-	c.JSON(http.StatusOK, gin.H{"error": "", "name": user.Name, "permissions": permissions})
+	c.JSON(http.StatusOK, gin.H{
+		"error":       "",
+		"name":        user.Name,
+		"user_id":     user.ID,
+		"permissions": permissions,
+	})
 }
 
 func UserCreate(c *gin.Context) {
