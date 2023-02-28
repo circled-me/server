@@ -8,8 +8,8 @@ import (
 type StorageType uint8
 
 const (
-	StorageTypeFile StorageType = iota
-	StorageTypeS3   StorageType = iota + 1
+	StorageTypeFile StorageType = 0
+	StorageTypeS3   StorageType = 1
 )
 const (
 	StorageLocationUser  = "/user"
@@ -23,6 +23,7 @@ type Bucket struct {
 	Name        string `gorm:"type:varchar(200)"`
 	StorageType StorageType
 	Path        string // Path on a drive or a prefix in a S3 bucket
+	AuthDetails string // Authentication details. In case of S3 bucket - "key:secret"
 }
 
 func (b *Bucket) Create() error {

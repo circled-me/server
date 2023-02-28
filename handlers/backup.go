@@ -54,7 +54,7 @@ func BackupAsset(c *gin.Context) {
 }
 
 func UploadAsset(c *gin.Context, user *models.User, r *BackupRequest, reader io.Reader) *models.Asset {
-	storage := storage.GetDefaultStorage()
+	storage := storage.StorageFrom(&user.Bucket)
 	if storage == nil {
 		panic("Storage is nil")
 	}

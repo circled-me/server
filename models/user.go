@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"server/db"
+	"server/storage"
 	"server/utils"
 
 	"github.com/pquerna/otp"
@@ -24,7 +25,8 @@ type User struct {
 	TotpAlgo    otp.Algorithm `gorm:"type:tinyint(1)"`
 	TotpXOR     uint32        `gorm:"type:int unsigned"`
 	Grants      []Grant
-	// Buckets     []Bucket
+	BucketID    uint64
+	Bucket      storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
 const saltSize = 60
@@ -43,6 +45,7 @@ func UserCreate(name, email, plainTextPassword string) (u User, err error) {
 	u.Name = name
 	u.PassSalt = randSalt()
 	u.Password = utils.Sha512String(plainTextPassword + u.PassSalt)
+	u.Bucket = *storage.GetDefaultStorage().GetBucket() // TODO: pass BucketID
 	return u, db.Instance.Create(&u).Error
 }
 
