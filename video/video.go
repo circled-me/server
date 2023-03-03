@@ -23,11 +23,11 @@ func convertVideo(inFile, outFile string) error {
 }
 
 func getNextForProcessing(lastProcessedID uint64) (result models.Asset) {
-	// select video assets that are not MP4 OR have been manually uploaded so don't have much meta data
+	// select video assets that are not MP4 OR have been manually uploaded so don't have enough meta data
 	db.Instance.Where("deleted=0 AND size>0 AND mime_type LIKE 'video/%' AND unix_timestamp()-assets.created_at>30 AND assets.id>? AND "+
 		"(mime_type!='video/mp4' OR width=0 OR height=0 OR thumb_width=0 OR thumb_height=0 OR thumb_size=0 OR duration=0)",
 
-		lastProcessedID).Limit(1).Joins("Bucket").Find(&result)
+		lastProcessedID).Order("id ASC").Limit(1).Joins("Bucket").Find(&result)
 	return
 }
 
@@ -40,6 +40,11 @@ func StartProcessing() {
 			time.Sleep(30 * time.Second)
 			lastProcessedID = 0
 			continue
+		}
+		if asset.Bucket.IsS3() {
+			time.Sleep(3 * time.Second)
+			lastProcessedID = asset.ID // skip it for now
+			continue                   // TODO
 		}
 		storage := storage.StorageFrom(&asset.Bucket)
 		// convert the video to mp4 if necessary

@@ -39,11 +39,11 @@ func BucketCreate(c *gin.Context) {
 		bucket.StorageType = storage.StorageTypeS3
 		bucket.AuthDetails = postReq.Auth // TODO: validation + test request
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "'type' must be one of 'file' or 's3'; if 'type' is 's3', then 'auth' details must be provided too ('key:secret')"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "'type' must be one of 'file' or 's3'; if 'type' is 's3', then 'auth' details must be provided too ('region:key:secret')"})
 		return
 	}
 	if err = bucket.Create(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	// Re-initialize storage

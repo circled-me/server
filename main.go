@@ -63,6 +63,9 @@ func main() {
 	// Backup handlers
 	router.POST("/backup/check", handlers.BackupCheck)
 	router.POST("/backup/asset", handlers.BackupAsset)
+	router.POST("/backup/upload", handlers.BackupUpload)
+	router.POST("/backup/meta-data", handlers.BackupMetaData)
+	router.POST("/backup/confirm", handlers.BackupConfirm)
 	router.POST("/backup/thumb", handlers.BackupAssetThumb)
 	// Bucket handlers
 	router.POST("/bucket/create", handlers.BucketCreate)
@@ -74,7 +77,7 @@ func main() {
 	// Asset handlers
 	router.GET("/asset/list", handlers.AssetList)
 	router.GET("/asset/fetch", handlers.AssetFetch)
-	router.POST("/asset/delete", handlers.AssetDelete)
+	router.POST("/asset/delete", handlers.AssetDelete) // TODO: S3
 	// Album handlers
 	router.GET("/album/list", handlers.AlbumList)
 	router.POST("/album/create", handlers.AlbumCreate)
@@ -108,6 +111,8 @@ func main() {
 	router.GET("/w/album/:token/asset", web.AlbumAssetView)
 	// File uploads
 	router.GET("/w/upload/:token/", web.UploadRequestView)
+	router.GET("/w/upload/:token/new-url/", web.UploadRequestNewURL)
+	router.POST("/w/upload/:token/confirm/", web.UploadRequestConfirm)
 	router.POST("/w/upload/:token/", web.UploadRequestProcess)
 
 	router.Run(GetBindAddress())

@@ -10,6 +10,7 @@ import (
 	"server/utils"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "image/jpeg"
 
@@ -50,7 +51,7 @@ func AssetList(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
-	rows, err := db.Instance.Table("assets").Select("id, mime_type").Where("user_id = ? AND deleted = 0", user.ID).Order("created_at DESC").Rows()
+	rows, err := db.Instance.Table("assets").Select("id, mime_type").Where("user_id = ? AND deleted = 0 AND size > 0 AND thumb_size > 0", user.ID).Order("created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
@@ -107,6 +108,18 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 	storage := storage.StorageFrom(&asset.Bucket)
 	if storage == nil {
 		panic("Storage is nil")
+	}
+	if asset.Bucket.IsS3() {
+		isThumb := false
+		if r.Thumb == 1 {
+			isThumb = true
+		}
+		// Redirect to the S3 location
+		url, expires := asset.GetS3DownloadURL(isThumb)
+		maxAge := expires - time.Now().Unix()
+		c.Header("cache-control", "private, max-age="+strconv.FormatInt(maxAge, 10))
+		c.Redirect(302, url)
+		return
 	}
 	c.Header("cache-control", "private, max-age=604800")
 	if r.Thumb == 1 {

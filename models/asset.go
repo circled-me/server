@@ -2,9 +2,11 @@ package models
 
 import (
 	"path/filepath"
+	"server/db"
 	"server/storage"
 	"strconv"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -13,35 +15,42 @@ const (
 	AssetTypeOther = 0
 	AssetTypeImage = 1
 	AssetTypeVideo = 2
+
+	presignViewURLFor      = time.Hour * 24 * 7
+	presignValidAtLeastFor = time.Minute * 30
 )
 
 type Asset struct {
-	ID          uint64 `gorm:"primaryKey"`
-	UserID      uint64 `gorm:"index:uniq_remote_id,unique,priority:1;not null;index:user_asset_created,priority:1"`
-	RemoteID    string `gorm:"type:varchar(300);index:uniq_remote_id,unique,priority:2;not null"`
-	CreatedAt   int64  `gorm:"index:user_asset_created,priority:3"`
-	UpdatedAt   int64
-	Size        int64
-	ThumbSize   int64
-	User        User    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	GroupID     *uint64 // can be null
-	Group       Group   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	BucketID    uint64
-	Bucket      storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	PlaceID     *uint64
-	Place       Place    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	Name        string   `gorm:"type:varchar(300)"`
-	MimeType    string   `gorm:"type:varchar(50)"`
-	GpsLat      *float64 `gorm:"type:double"`
-	GpsLong     *float64 `gorm:"type:double"`
-	Favourite   bool
-	Deleted     bool `gorm:"index:user_asset_created,priority:2;not null;default 0"`
-	Width       uint16
-	Height      uint16
-	ThumbWidth  uint16
-	ThumbHeight uint16
-	Duration    uint32
-	Processed   bool `gorm:"not null;default 0"`
+	ID                  uint64 `gorm:"primaryKey"`
+	UserID              uint64 `gorm:"index:uniq_remote_id,unique,priority:1;not null;index:user_asset_created,priority:1"`
+	RemoteID            string `gorm:"type:varchar(300);index:uniq_remote_id,unique,priority:2;not null"`
+	CreatedAt           int64  `gorm:"index:user_asset_created,priority:3"`
+	UpdatedAt           int64
+	Size                int64
+	ThumbSize           int64
+	User                User    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	GroupID             *uint64 // can be null
+	Group               Group   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	BucketID            uint64
+	Bucket              storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	PlaceID             *uint64
+	Place               Place    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Name                string   `gorm:"type:varchar(300)"`
+	MimeType            string   `gorm:"type:varchar(50)"`
+	GpsLat              *float64 `gorm:"type:double"`
+	GpsLong             *float64 `gorm:"type:double"`
+	Favourite           bool
+	Deleted             bool `gorm:"index:user_asset_created,priority:2;not null;default 0"`
+	Width               uint16
+	Height              uint16
+	ThumbWidth          uint16
+	ThumbHeight         uint16
+	Duration            uint32
+	Processed           bool `gorm:"not null;default 0"`
+	PresignedUntil      int64
+	PresignedURL        string `gorm:"type:varchar(2000)"`
+	PresignedThumbUntil int64
+	PresignedThumbURL   string `gorm:"type:varchar(2000)"`
 }
 
 // GetPath returns the path of the asset. For example:
@@ -98,6 +107,49 @@ func (a *Asset) GetRoughLocation() (location Location) {
 		location.GpsLong = float64(int(*a.GpsLong*10000)) / 10000
 	}
 	return
+}
+
+// CreateUploadURI creates a URI that is then to be called by the App
+// The URI could be either:
+//  1. local (i.e. starting with /..)
+//  2. Pre-signed remote S3 upload URI
+//
+// TODO: Add error response
+func (a *Asset) CreateUploadURI(thumb bool) string {
+	// TODO: Better way?
+	if a.Bucket.ID != a.BucketID {
+		db.Instance.Preload("Bucket").First(a)
+	}
+	if a.Bucket.IsS3() {
+		return a.Bucket.CreateS3UploadURI(a.GetPathOrThumb(thumb))
+	}
+	if thumb {
+		return "/backup/thumb?id=" + strconv.FormatUint(a.ID, 10)
+	}
+	return "/backup/upload?id=" + strconv.FormatUint(a.ID, 10)
+}
+
+// NOTE: a.Bucket must be preloaded
+func (a *Asset) GetS3DownloadURL(thumb bool) (string, int64) {
+	// Separatel fields for thumb...
+	if thumb {
+		if a.PresignedThumbURL == "" || a.PresignedThumbUntil < time.Now().Add(presignValidAtLeastFor).Unix() {
+			// Need to sign again..
+			a.PresignedThumbURL = a.Bucket.CreateS3DownloadURI(a.GetPathOrThumb(thumb), presignViewURLFor)
+			a.PresignedThumbUntil = time.Now().Add(presignViewURLFor).Unix()
+			db.Instance.Updates(a)
+		}
+		return a.PresignedThumbURL, a.PresignedThumbUntil
+	}
+
+	// Valid at least for another 30 minutes?
+	if a.PresignedURL == "" || a.PresignedUntil < time.Now().Add(presignValidAtLeastFor).Unix() {
+		// Need to sign again..
+		a.PresignedURL = a.Bucket.CreateS3DownloadURI(a.GetPathOrThumb(thumb), presignViewURLFor)
+		a.PresignedUntil = time.Now().Add(presignViewURLFor).Unix()
+		db.Instance.Updates(a)
+	}
+	return a.PresignedURL, a.PresignedUntil
 }
 
 // func (a *Asset) AfterSave(tx *gorm.DB) (err error) {
