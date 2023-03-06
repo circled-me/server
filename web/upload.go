@@ -1,17 +1,12 @@
 package web
 
 import (
-	"bytes"
 	"fmt"
-	"log"
 	"net/http"
 	"server/db"
 	"server/handlers"
 	"server/models"
-	"server/storage"
-	"server/utils"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -43,60 +38,7 @@ func UploadRequestProcess(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
 		return
 	}
-	file, err := c.FormFile("filepond")
-	if err != nil {
-		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went totally wrong"})
-		return
-	}
-	prefix := req.Token
-	if len(prefix) > 10 {
-		prefix = prefix[:10]
-	}
-	backuprequest := handlers.BackupRequest{
-		ID:       prefix + "_" + strconv.FormatInt(time.Now().UnixNano(), 10), // TODO: something more unique?
-		Name:     file.Filename,
-		MimeType: file.Header.Get("content-type"),
-	}
-	fileReader, err := file.Open()
-	if err != nil {
-		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong here"})
-		return
-	}
-	asset := handlers.UploadAsset(c, &req.User, &backuprequest, fileReader)
-	if asset == nil || !strings.HasPrefix(asset.MimeType, "image/") {
-		return
-	}
-	// create thumbnail
-	bucket := storage.Bucket{ID: asset.BucketID}
-	if db.Instance.Find(&bucket).Error != nil {
-		log.Printf("missing storage")
-		return
-	}
-	// TODO: move this to photo fix post-processing
-	storage := storage.StorageFrom(&bucket)
-	var buf, thumb bytes.Buffer
-	if _, err = storage.Load(asset.GetPath(), &buf); err != nil {
-		log.Printf("missing file or other error: %s", err.Error())
-		return
-	}
-	// TODO: hard-coded?
-	imageThumbInfo, err := utils.CreateThumb(1280, &buf, &thumb)
-	if err != nil {
-		log.Printf("CreateThumb error: %s", err.Error())
-		return
-	}
-	asset.ThumbWidth = imageThumbInfo.NewX
-	asset.ThumbHeight = imageThumbInfo.NewY
-	asset.Width = imageThumbInfo.OldX
-	asset.Height = imageThumbInfo.OldY
-	asset.ThumbSize, err = storage.Save(asset.GetThumbPath(), &thumb)
-	if err != nil {
-		log.Printf("canno save thumb file or other error: %s", err.Error())
-		return
-	}
-	db.Instance.Save(asset)
+	handlers.BackupLocalAsset(req.UserID, c)
 }
 
 func UploadRequestView(c *gin.Context) {

@@ -36,27 +36,12 @@ type BackupConfirmation struct {
 }
 
 type BackupUploadRequest struct {
-	ID uint64 `form:"id" binding:"required"` // Local DB ID
+	ID    uint64 `form:"id" binding:"required"` // Local DB ID
+	Thumb bool   `form:"thumb"`
 }
 
 type BackupCheckRequest struct {
 	IDs []string `binding:"required"`
-}
-
-func BackupAsset(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
-	var r BackupRequest
-	err := c.ShouldBindQuery(&r)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	_ = UploadAsset(c, &user, &r, c.Request.Body)
 }
 
 func BackupMetaData(c *gin.Context) {
@@ -159,89 +144,17 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 	return &asset
 }
 
-// TODO: DEPRECATE
-func UploadAsset(c *gin.Context, user *models.User, r *BackupRequest, reader io.Reader) *models.Asset {
-	db.Instance.Preload("Bucket").First(&user)
-	storage := storage.StorageFrom(&user.Bucket)
-	if storage == nil {
-		panic("Storage is nil")
-	}
-	asset := models.Asset{
-		UserID:    user.ID,
-		RemoteID:  r.ID,
-		Name:      r.Name,
-		GroupID:   nil,
-		BucketID:  storage.GetBucket().ID,
-		GpsLat:    r.Lat,
-		GpsLong:   r.Long,
-		CreatedAt: r.Created,
-		Favourite: r.Favourite,
-		Width:     r.Width,
-		Height:    r.Height,
-		Duration:  r.Duration,
-	}
-	if r.MimeType != "" {
-		asset.MimeType = r.MimeType
-	} else {
-		// Guess the mime type from the extension
-		asset.MimeType = mime.TypeByExtension(filepath.Ext(asset.Name))
-	}
-	// For now, only allow image and video
-	if asset.MimeType != "image/jpeg" &&
-		asset.MimeType != "image/png" &&
-		asset.MimeType != "image/gif" &&
-		asset.MimeType != "image/heic" && // TODO: which?
-		asset.MimeType != "image/heif" &&
-		!strings.HasPrefix(asset.MimeType, "video/") {
-
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "this file type is not allowed"})
-		return nil
-	}
-
-	result := db.Instance.Create(&asset)
-	if result.Error != nil {
-		// Try loading the asset by RemoteID, maybe it exists and we should overwrite it
-		result = db.Instance.First(&asset, "remote_id = ?", r.ID)
-		if result.Error != nil {
-			// Now give up...
-			c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
-			return nil
-		}
-	}
-	var err error
-	asset.Size, err = storage.Save(asset.GetPath(), reader)
-	if err != nil {
-		// We couldn't save the file, delete the DB record too
-		db.Instance.Delete(asset)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return nil
-	} else if asset.Size <= 0 {
-		db.Instance.Delete(asset)
-		storage.Delete(asset.GetPath())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "empty asset"})
-		return nil
-	}
-	// Re-save asset as we have new .Size (TODO: .MimeType)
-	db.Instance.Updates(&asset)
-	c.JSON(http.StatusOK, gin.H{"error": "", "id": asset.ID})
-	return &asset
-}
-
 func BackupUpload(c *gin.Context) {
-	backupLocalAsset(false, c)
-}
-
-func BackupAssetThumb(c *gin.Context) {
-	backupLocalAsset(true, c)
-}
-
-func backupLocalAsset(isThumb bool, c *gin.Context) {
 	session := auth.LoadSession(c)
 	user := session.User()
 	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
+	BackupLocalAsset(user.ID, c)
+}
+
+func BackupLocalAsset(userID uint64, c *gin.Context) {
 	var r BackupUploadRequest
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
@@ -249,7 +162,7 @@ func backupLocalAsset(isThumb bool, c *gin.Context) {
 		return
 	}
 	asset := models.Asset{}
-	result := db.Instance.Joins("Bucket").Where("user_id = ? AND id = ?", user.ID, r.ID).Find(&asset)
+	result := db.Instance.Joins("Bucket").Where("user_id = ? AND id = ?", userID, r.ID).Find(&asset)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
@@ -260,12 +173,12 @@ func backupLocalAsset(isThumb bool, c *gin.Context) {
 	}
 	thumbContent := bytes.Buffer{}
 	reader := io.TeeReader(c.Request.Body, &thumbContent)
-	size, err := storage.Save(asset.GetPathOrThumb(isThumb), reader)
+	size, err := storage.Save(asset.GetPathOrThumb(r.Thumb), reader)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	if isThumb {
+	if r.Thumb {
 		asset.ThumbSize = size
 		thumb, _, err := image.Decode(&thumbContent)
 		if err != nil {

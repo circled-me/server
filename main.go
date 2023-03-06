@@ -62,11 +62,9 @@ func main() {
 	router.Use(sessions.Sessions(sessionCookieName, cookieStore))
 	// Backup handlers
 	router.POST("/backup/check", handlers.BackupCheck)
-	router.POST("/backup/asset", handlers.BackupAsset)
 	router.POST("/backup/upload", handlers.BackupUpload)
 	router.POST("/backup/meta-data", handlers.BackupMetaData)
 	router.POST("/backup/confirm", handlers.BackupConfirm)
-	router.POST("/backup/thumb", handlers.BackupAssetThumb)
 	// Bucket handlers
 	router.POST("/bucket/create", handlers.BucketCreate)
 	// User info handlers

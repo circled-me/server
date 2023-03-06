@@ -123,10 +123,7 @@ func (a *Asset) CreateUploadURI(thumb bool) string {
 	if a.Bucket.IsS3() {
 		return a.Bucket.CreateS3UploadURI(a.GetPathOrThumb(thumb))
 	}
-	if thumb {
-		return "/backup/thumb?id=" + strconv.FormatUint(a.ID, 10)
-	}
-	return "/backup/upload?id=" + strconv.FormatUint(a.ID, 10)
+	return "/backup/upload?id=" + strconv.FormatUint(a.ID, 10) + "thumb=" + strconv.FormatBool(thumb)
 }
 
 // NOTE: a.Bucket must be preloaded
