@@ -9,10 +9,13 @@ import (
 )
 
 type BucketCreateRequest struct {
-	Name string `form:"name" binding:"required"`
-	Path string `form:"path" binding:"required"`
-	Type string `form:"type" binding:"required"` // 'file' or 's3'
-	Auth string `form:"auth"`
+	Name     string `form:"name" binding:"required"`
+	Type     string `form:"type" binding:"required"` // 'file' or 's3'
+	Path     string `form:"path" binding:"required"`
+	Endpoint string `form:"endpoint"`
+	S3Key    string `form:"s3key"`
+	S3Secret string `form:"s3secret"`
+	Region   string `form:"region"`
 }
 
 func BucketCreate(c *gin.Context) {
@@ -35,11 +38,18 @@ func BucketCreate(c *gin.Context) {
 	}
 	if postReq.Type == "file" {
 		bucket.StorageType = storage.StorageTypeFile
-	} else if postReq.Type == "s3" && postReq.Auth != "" {
+	} else if postReq.Type == "s3" && postReq.S3Key != "" && postReq.S3Secret != "" {
 		bucket.StorageType = storage.StorageTypeS3
-		bucket.AuthDetails = postReq.Auth // TODO: validation + test request
+		bucket.S3Key = postReq.S3Key
+		bucket.S3Secret = postReq.S3Secret
+		bucket.Endpoint = postReq.Endpoint
+		bucket.Region = postReq.Region
+		if bucket.Region == "" {
+			bucket.Region = "us-east-1"
+		}
+		// TODO: validation + test request
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "'type' must be one of 'file' or 's3'; if 'type' is 's3', then 'auth' details must be provided too ('region:key:secret')"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "'type' must be one of 'file' or 's3'; if 'type' is 's3', then 's3key', 's3secret' must be provided too ('region' and 'endpoint' also configurable)"})
 		return
 	}
 	if err = bucket.Create(); err != nil {

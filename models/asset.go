@@ -129,10 +129,10 @@ func (a *Asset) CreateUploadURI(thumb bool) string {
 // NOTE: a.Bucket must be preloaded
 func (a *Asset) GetS3DownloadURL(thumb bool) (string, int64) {
 	// Separatel fields for thumb...
-	if thumb {
+	if thumb && a.ThumbSize > 0 {
 		if a.PresignedThumbURL == "" || a.PresignedThumbUntil < time.Now().Add(presignValidAtLeastFor).Unix() {
 			// Need to sign again..
-			a.PresignedThumbURL = a.Bucket.CreateS3DownloadURI(a.GetPathOrThumb(thumb), presignViewURLFor)
+			a.PresignedThumbURL = a.Bucket.CreateS3DownloadURI(a.GetPathOrThumb(true), presignViewURLFor)
 			a.PresignedThumbUntil = time.Now().Add(presignViewURLFor).Unix()
 			db.Instance.Updates(a)
 		}
@@ -142,7 +142,7 @@ func (a *Asset) GetS3DownloadURL(thumb bool) (string, int64) {
 	// Valid at least for another 30 minutes?
 	if a.PresignedURL == "" || a.PresignedUntil < time.Now().Add(presignValidAtLeastFor).Unix() {
 		// Need to sign again..
-		a.PresignedURL = a.Bucket.CreateS3DownloadURI(a.GetPathOrThumb(thumb), presignViewURLFor)
+		a.PresignedURL = a.Bucket.CreateS3DownloadURI(a.GetPathOrThumb(false), presignViewURLFor)
 		a.PresignedUntil = time.Now().Add(presignViewURLFor).Unix()
 		db.Instance.Updates(a)
 	}

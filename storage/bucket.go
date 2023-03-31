@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"os"
 	"server/db"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -31,8 +30,11 @@ type Bucket struct {
 	UpdatedAt   int
 	Name        string `gorm:"type:varchar(200)"`
 	StorageType StorageType
-	Path        string // Path on a drive or a URL with prefix (for S3 buckets)
-	AuthDetails string // Authentication details. In case of S3 bucket - "region:key:secret"
+	Path        string `gorm:"type:varchar(300)"` // Path on a drive or a prefix (for S3 buckets)
+	Endpoint    string `gorm:"type:varchar(300)"` // URL for S3 buckets; if empty - defaults to AWS S3
+	S3Key       string `gorm:"type:varchar(200)"`
+	S3Secret    string `gorm:"type:varchar(200)"`
+	Region      string `gorm:"type:varchar(20)"` // Defaults to us-east-1
 }
 
 func (b *Bucket) IsS3() bool {
@@ -60,27 +62,10 @@ func (b *Bucket) Create() (err error) {
 
 // TODO: Do not create session, etc twice (for main and thumb separately)
 func (b *Bucket) CreateS3UploadURI(path string) string {
-	auth := strings.SplitN(b.AuthDetails, ":", 3)
-	if len(auth) != 3 {
-		log.Printf("Invalid auth details for bucket: %d", b.ID)
-		return "Invalid auth details"
-	}
-	if auth[0] == "" {
-		auth[0] = "us-east-1"
-	}
-	u, _ := url.Parse(b.Path)
-	//prefix := strings.Trim(u.Path, "/")
-	sess, _ := session.NewSession(&aws.Config{
-		Region: &auth[0],
-		//S3ForcePathStyle: aws.Bool(false), // TODO: Should be flexible
-		Endpoint:    aws.String(u.String()),
-		Credentials: credentials.NewStaticCredentials(auth[1], auth[2], ""),
-	})
-	u.Path = ""
-	svc := s3.New(sess)
+	svc := b.CreateSVC()
 	req, _ := svc.PutObjectRequest(&s3.PutObjectInput{
-		Bucket: aws.String("nik-test-1"),
-		Key:    aws.String(path),
+		Bucket: &b.Name,
+		Key:    aws.String(b.Path + "/" + path),
 	})
 	out, err := req.Presign(15 * time.Minute)
 	if err != nil {
@@ -91,33 +76,28 @@ func (b *Bucket) CreateS3UploadURI(path string) string {
 }
 
 func (b *Bucket) CreateS3DownloadURI(path string, expiry time.Duration) string {
-	// TODO: Improve this below and above
-	auth := strings.SplitN(b.AuthDetails, ":", 3)
-	if len(auth) != 3 {
-		log.Printf("Invalid auth details for bucket: %d", b.ID)
-		return "Invalid auth details"
-	}
-	if auth[0] == "" {
-		auth[0] = "us-east-1"
-	}
-	u, _ := url.Parse(b.Path)
-	//prefix := strings.Trim(u.Path, "/")
-	sess, _ := session.NewSession(&aws.Config{
-		Region:      &auth[0],
-		Endpoint:    aws.String(u.String()),
-		Credentials: credentials.NewStaticCredentials(auth[1], auth[2], ""),
-	})
-	u.Path = ""
-	log.Print("Get URL: " + u.String())
-	svc := s3.New(sess)
+	svc := b.CreateSVC()
 	req, _ := svc.GetObjectRequest(&s3.GetObjectInput{
-		Bucket: aws.String("nik-test-1"),
-		Key:    aws.String(path),
+		Bucket: &b.Name,
+		Key:    aws.String(b.Path + "/" + path),
 	})
 	out, err := req.Presign(expiry)
+	log.Printf("Download URI: %v, %v\n", err, out)
 	if err != nil {
 		log.Printf("Cannot sign request 2: %v", err)
 		return err.Error()
 	}
 	return out
+}
+
+func (b *Bucket) CreateSVC() *s3.S3 {
+	config := &aws.Config{
+		Region:      &b.Region,
+		Credentials: credentials.NewStaticCredentials(b.S3Key, b.S3Secret, ""),
+	}
+	if b.Endpoint != "" {
+		config.Endpoint = &b.Endpoint
+	}
+	sess, _ := session.NewSession(config)
+	return s3.New(sess)
 }
