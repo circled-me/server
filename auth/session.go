@@ -24,7 +24,7 @@ func (s *Session) User() (user models.User) {
 		return
 	}
 	user.ID = id.(uint64)
-	if db.Instance.Preload("Grants").First(&user).Error != nil {
+	if db.Instance.Preload("Grants").Preload("Bucket").First(&user).Error != nil {
 		user.ID = 0
 	}
 	return

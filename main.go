@@ -3,7 +3,7 @@ package main
 import (
 	"server/db"
 	"server/locations"
-	"server/video"
+	"server/processing"
 	"server/web"
 
 	// "server/faces"
@@ -27,7 +27,8 @@ func main() {
 	models.Init()
 	storage.Init()
 	go locations.StartProcessing()
-	go video.StartProcessing()
+	go processing.StartProcessingImages()
+	go processing.StartProcessingVideos()
 
 	// faces.Init("/mnt/data1/models")
 
@@ -62,7 +63,7 @@ func main() {
 	router.Use(sessions.Sessions(sessionCookieName, cookieStore))
 	// Backup handlers
 	router.POST("/backup/check", handlers.BackupCheck)
-	router.POST("/backup/upload", handlers.BackupUpload)
+	router.PUT("/backup/upload", handlers.BackupUpload)
 	router.POST("/backup/meta-data", handlers.BackupMetaData)
 	router.POST("/backup/confirm", handlers.BackupConfirm)
 	// Bucket handlers

@@ -60,12 +60,16 @@ func (b *Bucket) Create() (err error) {
 	return
 }
 
+func (b *Bucket) GetRemotePath(path string) string {
+	return b.Path + "/" + path
+}
+
 // TODO: Do not create session, etc twice (for main and thumb separately)
 func (b *Bucket) CreateS3UploadURI(path string) string {
 	svc := b.CreateSVC()
 	req, _ := svc.PutObjectRequest(&s3.PutObjectInput{
 		Bucket: &b.Name,
-		Key:    aws.String(b.Path + "/" + path),
+		Key:    aws.String(b.GetRemotePath(path)),
 	})
 	out, err := req.Presign(15 * time.Minute)
 	if err != nil {

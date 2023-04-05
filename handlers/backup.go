@@ -162,7 +162,7 @@ func BackupLocalAsset(userID uint64, c *gin.Context) {
 		return
 	}
 	asset := models.Asset{}
-	result := db.Instance.Joins("Bucket").Where("user_id = ? AND id = ?", userID, r.ID).Find(&asset)
+	result := db.Instance.Joins("Bucket").Where("user_id = ? AND assets.id = ?", userID, r.ID).Find(&asset)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
