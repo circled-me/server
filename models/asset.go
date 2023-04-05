@@ -100,6 +100,10 @@ func (a *Asset) BeforeSave(tx *gorm.DB) (err error) {
 	return
 }
 
+func (a *Asset) IsVideo() bool {
+	return strings.HasPrefix(strings.ToLower(a.MimeType), "video/")
+}
+
 func (a *Asset) GetRoughLocation() (location Location) {
 	if a.GpsLat != nil && a.GpsLong != nil {
 		// Truncate - only use 0.0001 of precision

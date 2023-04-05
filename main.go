@@ -27,8 +27,7 @@ func main() {
 	models.Init()
 	storage.Init()
 	go locations.StartProcessing()
-	go processing.StartProcessingImages()
-	go processing.StartProcessingVideos()
+	go processing.StartProcessing()
 
 	// faces.Init("/mnt/data1/models")
 

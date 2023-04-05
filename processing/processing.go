@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+// TODO: This file has too many nested statements
+
 // convertVideo uses hard-coded options
 func convertVideo(inFile, outFile string) error {
 	log.Printf("Converting file %s to %s", inFile, outFile)
@@ -23,17 +25,21 @@ func convertVideo(inFile, outFile string) error {
 	return cmd.Run()
 }
 
-func getNextVideoForProcessing(lastProcessedID uint64) (result models.Asset) {
-	// select video assets that are not MP4 OR have been manually uploaded so don't have enough meta data
-	db.Instance.Where("deleted=0 AND size>0 AND mime_type LIKE 'video/%' AND unix_timestamp()-assets.created_at>30 AND assets.id>? AND "+
-		"(mime_type!='video/mp4' OR width=0 OR height=0 OR thumb_size=0 OR duration=0)",
+func getNextForProcessing(lastProcessedID uint64) (result models.Asset) {
+	// Select video assets that are not MP4 OR have been manually uploaded so don't have enough meta data
+	videoCondition := "(  mime_type LIKE 'video/%' AND (mime_type!='video/mp4' OR width=0 OR height=0 OR thumb_size=0 OR duration=0)  )"
+	// Select image assets that are don't have thumbnail or enough meta data
+	imageCondition := "(  mime_type LIKE 'image/%' AND (width=0 OR height=0 OR thumb_size=0)  )"
+
+	db.Instance.Where("deleted=0 AND size>0 AND unix_timestamp()-assets.created_at>30 AND assets.id>? AND "+
+		"("+videoCondition+" OR "+imageCondition+" )",
 
 		lastProcessedID).Order("id ASC").Limit(1).Joins("Bucket").Find(&result)
 	return
 }
 
-// processOneVideo return the asset.ID on success and 0 on error
-func processOneVideo(asset *models.Asset) uint64 {
+// processOne return the asset.ID on success and 0 on error
+func processOne(asset *models.Asset) uint64 {
 	storage := storage.StorageFrom(&asset.Bucket)
 	if storage == nil {
 		log.Println("video-processing.go, StartProcessing: Storage is nil")
@@ -45,8 +51,9 @@ func processOneVideo(asset *models.Asset) uint64 {
 	}
 	defer storage.ReleaseLocalFile(asset.GetPath())
 
+	isVideo := asset.IsVideo()
 	// Convert the video to mp4 if necessary
-	if asset.MimeType != "video/mp4" {
+	if isVideo && asset.MimeType != "video/mp4" {
 		oldPath := asset.GetPath()
 		ext := filepath.Ext(asset.Name)
 		asset.Name = asset.Name[:len(asset.Name)-len(ext)] + ".mp4"
@@ -73,12 +80,11 @@ func processOneVideo(asset *models.Asset) uint64 {
 		}
 	}
 	// We need to get video metadata?
-	if asset.Width == 0 || asset.Height == 0 || asset.Duration == 0 {
+	if asset.Width == 0 || asset.Height == 0 || (isVideo && asset.Duration == 0) {
 		cmd := exec.Command("exiftool", "-n", "-T", "-gpslatitude", "-gpslongitude", "-imagewidth", "-imageheight", "-duration", storage.GetFullPath(asset.GetPath()))
 		output, err := cmd.Output()
 		if err == nil {
 			result := strings.Split(strings.Trim(string(output), "\n\t\r "), "\t")
-			log.Printf("%+v", result)
 			if len(result) == 5 {
 				if result[0] != "-" {
 					asset.GpsLat = utils.StringToFloat64Ptr(result[0])
@@ -96,7 +102,6 @@ func processOneVideo(asset *models.Asset) uint64 {
 					d := utils.StringToFloat64Ptr(result[4])
 					asset.Duration = uint32(math.Ceil(*d))
 				}
-				log.Printf("%+v", asset)
 			}
 			// finally - save it
 			db.Instance.Save(&asset)
@@ -121,11 +126,15 @@ func processOneVideo(asset *models.Asset) uint64 {
 				asset.ThumbWidth = uint16(thumb.Bounds().Dx())
 				asset.ThumbHeight = uint16(thumb.Bounds().Dy())
 				asset.MimeType = "image/jpeg"
-				db.Instance.Save(&asset)
-				err := storage.UpdateFile(asset.GetThumbPath(), asset.MimeType)
-				if err != nil {
-					log.Println(err.Error())
-					return 0
+				asset.PresignedThumbUntil = 0 // Clear S3 URL cache
+				if db.Instance.Save(&asset).Error == nil {
+					err := storage.UpdateFile(asset.GetThumbPath(), asset.MimeType)
+					if err != nil {
+						asset.ThumbSize = 0 // Revert
+						db.Instance.Save(&asset)
+						log.Println(err.Error())
+						return 0
+					}
 				}
 			}
 		}
@@ -133,17 +142,17 @@ func processOneVideo(asset *models.Asset) uint64 {
 	return asset.ID
 }
 
-func StartProcessingVideos() {
+func StartProcessing() {
 	lastProcessedID := uint64(0)
 	for {
-		asset := getNextVideoForProcessing(lastProcessedID)
+		asset := getNextForProcessing(lastProcessedID)
 		if asset.ID == 0 {
 			// Nothing to process...
 			time.Sleep(30 * time.Second)
 			lastProcessedID = 0
 			continue
 		}
-		lastProcessedID = processOneVideo(&asset)
+		lastProcessedID = processOne(&asset)
 		if lastProcessedID == 0 {
 			// An error occurred, wait a bit
 			time.Sleep(30 * time.Second)
