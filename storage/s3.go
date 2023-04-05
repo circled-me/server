@@ -77,8 +77,9 @@ func (s *S3Storage) UpdateFile(path, mimeType string) error {
 		ContentType: &mimeType,
 		Body:        data,
 	}
-	// TODO: Option for SSE
-	// input.ServerSideEncryption = &config.S3Encryption
+	if s.Bucket.SSEEncryption != "" {
+		input.ServerSideEncryption = &s.Bucket.SSEEncryption
+	}
 	_, err = uploader.Upload(&input)
 
 	return err

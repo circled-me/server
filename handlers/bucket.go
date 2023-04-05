@@ -9,13 +9,14 @@ import (
 )
 
 type BucketCreateRequest struct {
-	Name     string `form:"name" binding:"required"`
-	Type     string `form:"type" binding:"required"` // 'file' or 's3'
-	Path     string `form:"path" binding:"required"`
-	Endpoint string `form:"endpoint"`
-	S3Key    string `form:"s3key"`
-	S3Secret string `form:"s3secret"`
-	Region   string `form:"region"`
+	Name          string `form:"name" binding:"required"`
+	Type          string `form:"type" binding:"required"` // 'file' or 's3'
+	Path          string `form:"path" binding:"required"`
+	Endpoint      string `form:"endpoint"`
+	S3Key         string `form:"s3key"`
+	S3Secret      string `form:"s3secret"`
+	Region        string `form:"region"`
+	SSEEncryption string `form:"sseEncryption"`
 }
 
 func BucketCreate(c *gin.Context) {
@@ -44,6 +45,7 @@ func BucketCreate(c *gin.Context) {
 		bucket.S3Secret = postReq.S3Secret
 		bucket.Endpoint = postReq.Endpoint
 		bucket.Region = postReq.Region
+		bucket.SSEEncryption = postReq.SSEEncryption
 		if bucket.Region == "" {
 			bucket.Region = "us-east-1"
 		}
