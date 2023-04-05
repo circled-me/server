@@ -68,10 +68,14 @@ func (b *Bucket) GetRemotePath(path string) string {
 // TODO: Do not create session, etc twice (for main and thumb separately)
 func (b *Bucket) CreateS3UploadURI(path string) string {
 	svc := b.CreateSVC()
-	req, _ := svc.PutObjectRequest(&s3.PutObjectInput{
+	input := &s3.PutObjectInput{
 		Bucket: &b.Name,
 		Key:    aws.String(b.GetRemotePath(path)),
-	})
+	}
+	if b.SSEEncryption != "" {
+		input.ServerSideEncryption = &b.SSEEncryption
+	}
+	req, _ := svc.PutObjectRequest(input)
 	out, err := req.Presign(15 * time.Minute)
 	if err != nil {
 		log.Printf("Cannot sign request: %v", err)

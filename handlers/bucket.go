@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"net/http"
+	"server/auth"
+	"server/models"
 	"server/storage"
 
 	"github.com/gin-gonic/gin"
@@ -20,13 +22,12 @@ type BucketCreateRequest struct {
 }
 
 func BucketCreate(c *gin.Context) {
-	// TODO: this should be TOKEN protected
-	// session := auth.LoadSession(c)
-	// user := session.User()
-	// if user.ID == 0 || !user.HasPermission(models.PermissionAdmin) {
-	// 	c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-	// 	return
-	// }
+	session := auth.LoadSession(c)
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionAdmin) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+		return
+	}
 	postReq := BucketCreateRequest{}
 	err := c.ShouldBindWith(&postReq, binding.Form)
 	if err != nil {

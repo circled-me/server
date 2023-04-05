@@ -86,7 +86,7 @@ func BackupConfirm(c *gin.Context) {
 }
 
 func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.Asset {
-	if user.BucketID == 0 {
+	if user.BucketID == nil {
 		panic("Bucket is nil")
 	}
 	asset := models.Asset{
@@ -94,7 +94,7 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 		RemoteID:  r.ID,
 		Name:      r.Name,
 		GroupID:   nil,
-		BucketID:  user.BucketID,
+		BucketID:  *user.BucketID,
 		GpsLat:    r.Lat,
 		GpsLong:   r.Long,
 		CreatedAt: r.Created,

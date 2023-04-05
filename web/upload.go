@@ -69,7 +69,7 @@ func UploadRequestNewURL(c *gin.Context) {
 	}
 	asset := models.Asset{
 		UserID:   req.UserID,
-		BucketID: req.User.BucketID,
+		BucketID: *req.User.BucketID,
 		RemoteID: prefix + "_" + strconv.FormatInt(time.Now().UnixNano(), 10),
 		Name:     c.Query("name"),
 	}
@@ -81,7 +81,6 @@ func UploadRequestNewURL(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"id":  asset.ID,
 		"url": asset.CreateUploadURI(false),
-		// "thumb": asset.CreateUploadURI(true),
 	})
 }
 

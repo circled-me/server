@@ -25,7 +25,7 @@ type User struct {
 	TotpAlgo    otp.Algorithm `gorm:"type:tinyint(1)"`
 	TotpXOR     uint32        `gorm:"type:int unsigned"`
 	Grants      []Grant
-	BucketID    uint64
+	BucketID    *uint64
 	Bucket      storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
@@ -41,11 +41,16 @@ func randSalt() string {
 }
 
 func UserCreate(name, email, plainTextPassword string) (u User, err error) {
+	// TODO: Be able to pass different storage bucket
+	storage := storage.GetDefaultStorage()
+
 	u.Email = email
 	u.Name = name
 	u.PassSalt = randSalt()
 	u.Password = utils.Sha512String(plainTextPassword + u.PassSalt)
-	u.Bucket = *storage.GetDefaultStorage().GetBucket() // TODO: pass BucketID
+	if storage != nil {
+		u.BucketID = &storage.GetBucket().ID
+	}
 	return u, db.Instance.Create(&u).Error
 }
 

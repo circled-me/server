@@ -31,6 +31,31 @@ func UserLogin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// Check if we have a brand new instance
+	var count int64
+	result := db.Instance.Raw("select 1 where exists(select 1 from users)").Scan(&count)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		return
+	}
+	if count == 0 {
+		// No users exist - create one with the provided details (name defaults to email)
+		user, err := models.UserCreate(postReq.Email, postReq.Email, postReq.Password)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		err = db.Instance.Save(&models.Grant{
+			GrantorID:  user.ID,
+			UserID:     user.ID,
+			Permission: models.PermissionAdmin,
+		}).Error
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	// Proceed with standard login
 	user, err := models.UserLogin(postReq.Email, postReq.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -50,18 +75,18 @@ func UserLogin(c *gin.Context) {
 }
 
 func UserCreate(c *gin.Context) {
-	postReq := UserCreateRequest{}
-	err := c.ShouldBindWith(&postReq, binding.Form)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	user, err := models.UserCreate(postReq.Name, postReq.Email, postReq.Password)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"error": "", "user": user})
+	// postReq := UserCreateRequest{}
+	// err := c.ShouldBindWith(&postReq, binding.Form)
+	// if err != nil {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 	return
+	// }
+	// user, err := models.UserCreate(postReq.Name, postReq.Email, postReq.Password)
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// 	return
+	// }
+	// c.JSON(http.StatusOK, gin.H{"error": "", "user": user})
 }
 
 func UserGetPermissions(c *gin.Context) {

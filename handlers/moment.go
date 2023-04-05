@@ -47,6 +47,7 @@ func MomentList(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
+	// TODO: Minimum number of assets for a location should be configurable (now 6 below)
 	rows, err := db.Instance.Raw(`
 	select date,
 		if(city = '', area, city),
@@ -64,7 +65,7 @@ func MomentList(c *gin.Context) {
 		where  user_id = ?
 				and place_id is not null
 		group  by 2, 1
-		having cnt > 10
+		having cnt > 6
 		order  by 2, 1 desc) t
 		join places
 		on id = place_id

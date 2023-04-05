@@ -17,6 +17,8 @@ type StorageSpecificAPI interface {
 	ReleaseLocalFile(path string)
 	DeleteRemoteFile(path string)
 	UpdateFile(path, mimeType string) error
+
+	CreateUploadURI(thumb bool) string
 }
 
 type StorageAPI interface {
@@ -90,9 +92,6 @@ func StorageFrom(bucket *Bucket) StorageAPI {
 }
 
 func GetDefaultStorage() StorageAPI {
-	if len(cachedStorage) == 0 {
-		panic("no storage available")
-	}
 	for _, s := range cachedStorage {
 		if s.GetBucket().StorageType == StorageTypeFile {
 			return s
@@ -101,7 +100,7 @@ func GetDefaultStorage() StorageAPI {
 	for _, s := range cachedStorage {
 		return s
 	}
-	return nil // Cannot reach here
+	return nil
 }
 
 //

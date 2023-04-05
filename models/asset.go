@@ -116,7 +116,7 @@ func (a *Asset) GetRoughLocation() (location Location) {
 // CreateUploadURI creates a URI that is then to be called by the App
 // The URI could be either:
 //  1. local (i.e. starting with /..)
-//  2. Pre-signed remote S3 upload URI
+//  2. Pre-signed remote S3 upload URL
 //
 // TODO: Add error response
 func (a *Asset) CreateUploadURI(thumb bool) string {
