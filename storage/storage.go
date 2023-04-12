@@ -17,8 +17,6 @@ type StorageSpecificAPI interface {
 	ReleaseLocalFile(path string)
 	DeleteRemoteFile(path string)
 	UpdateFile(path, mimeType string) error
-
-	CreateUploadURI(thumb bool) string
 }
 
 type StorageAPI interface {
@@ -56,17 +54,20 @@ func Init() {
 		panic(err)
 	}
 	log.Printf("Storage Buckets found: %d\n", len(buckets))
-	var storage StorageAPI
 	for _, bucket := range buckets {
 		log.Printf("Bucket: %+v\n", bucket)
-		if bucket.StorageType == StorageTypeFile {
-			storage = NewDiskStorage(&bucket)
-		} else if bucket.StorageType == StorageTypeS3 {
-			storage = NewS3Storage(&bucket)
-		} else {
-			panic(fmt.Sprintf("Storage type unavailable for Bucket %d", bucket.ID))
-		}
+		storage := NewStorage(&bucket)
 		cachedStorage = append(cachedStorage, storage)
+	}
+}
+
+func NewStorage(bucket *Bucket) StorageAPI {
+	if bucket.StorageType == StorageTypeFile {
+		return NewDiskStorage(bucket)
+	} else if bucket.StorageType == StorageTypeS3 {
+		return NewS3Storage(bucket)
+	} else {
+		panic(fmt.Sprintf("Storage type unavailable for Bucket %d", bucket.ID))
 	}
 }
 

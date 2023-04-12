@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
-	"os"
 	"server/auth"
 	"server/models"
 	"server/storage"
@@ -23,14 +23,25 @@ type BucketCreateRequest struct {
 	SSEEncryption string `form:"sseEncryption"`
 }
 
-func hasWriteAccess(path string) bool {
-	fname := path + "/tmp.file"
-	file, err := os.Create(fname)
+func hasWriteAccess(bucket *storage.Bucket) error {
+	storage := storage.NewStorage(bucket)
+	testPath := "tmp/path"
+	_, err := storage.Save(testPath, strings.NewReader("some-content"))
 	if err != nil {
-		return false
+		log.Printf("Cannot save to bucket: %+v", bucket)
+		return err
 	}
-	file.Close()
-	return os.Remove(fname) == nil
+	err = storage.UpdateFile(testPath, "text/plain")
+	if err != nil {
+		log.Printf("Cannot update bucket: %+v", bucket)
+		return err
+	}
+	err = storage.Delete(testPath)
+	if err != nil {
+		log.Printf("Cannot delete from bucket: %+v", bucket)
+		return err
+	}
+	return nil
 }
 
 func cleanupPath(in *BucketCreateRequest) {
@@ -71,10 +82,6 @@ func BucketCreate(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Path must be absolute and start with / (slash)"})
 			return
 		}
-		if !hasWriteAccess(postReq.Path) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "No write access to path '" + postReq.Path + "'"})
-			return
-		}
 	} else if postReq.Type == "s3" && postReq.S3Key != "" && postReq.S3Secret != "" {
 		bucket.StorageType = storage.StorageTypeS3
 		bucket.S3Key = postReq.S3Key
@@ -85,9 +92,12 @@ func BucketCreate(c *gin.Context) {
 		if bucket.Region == "" {
 			bucket.Region = "us-east-1"
 		}
-		// TODO: validation + test request
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "'type' must be one of 'file' or 's3'; if 'type' is 's3', then 's3key', 's3secret' must be provided too ('region' and 'endpoint' also configurable)"})
+		return
+	}
+	if err := hasWriteAccess(&bucket); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No access to bucket: " + err.Error()})
 		return
 	}
 	if err = bucket.Create(); err != nil {
