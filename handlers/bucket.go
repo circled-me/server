@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"server/auth"
+	"server/db"
 	"server/models"
 	"server/storage"
 	"strings"
@@ -107,4 +108,20 @@ func BucketCreate(c *gin.Context) {
 	// Re-initialize storage
 	storage.Init()
 	c.JSON(http.StatusOK, gin.H{"error": ""})
+}
+
+func BucketList(c *gin.Context) {
+	// session := auth.LoadSession(c)
+	// user := session.User()
+	// if user.ID == 0 || !user.HasPermission(models.PermissionAdmin) {
+	// 	c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+	// 	return
+	// }
+	buckets := []storage.Bucket{}
+	result := db.Instance.Find(&buckets)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		return
+	}
+	c.JSON(http.StatusOK, buckets)
 }

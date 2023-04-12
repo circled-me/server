@@ -25,17 +25,17 @@ const (
 )
 
 type Bucket struct {
-	ID            uint64 `gorm:"primaryKey"`
-	CreatedAt     int
-	UpdatedAt     int
-	Name          string `gorm:"type:varchar(200)"`
-	StorageType   StorageType
-	Path          string `gorm:"type:varchar(300)"` // Path on a drive or a prefix (for S3 buckets)
-	Endpoint      string `gorm:"type:varchar(300)"` // URL for S3 buckets; if empty - defaults to AWS S3
-	S3Key         string `gorm:"type:varchar(200)"`
-	S3Secret      string `gorm:"type:varchar(200)"`
-	Region        string `gorm:"type:varchar(20)"` // Defaults to us-east-1
-	SSEEncryption string `gorm:"type:varchar(20)"` // Server-side encryption (or empty for no encryption)
+	ID            uint64      `gorm:"primaryKey" json:"id"`
+	CreatedAt     int         `json:"-"`
+	UpdatedAt     int         `json:"-"`
+	Name          string      `gorm:"type:varchar(200)" json:"name"`
+	StorageType   StorageType `json:"storage_type"`
+	Path          string      `gorm:"type:varchar(300)" json:"path"`     // Path on a drive or a prefix (for S3 buckets)
+	Endpoint      string      `gorm:"type:varchar(300)" json:"endpoint"` // URL for S3 buckets; if empty - defaults to AWS S3
+	S3Key         string      `gorm:"type:varchar(200)" json:"s3key"`
+	S3Secret      string      `gorm:"type:varchar(200)" json:"s3secret"`
+	Region        string      `gorm:"type:varchar(20)" json:"s3region"`     // Defaults to us-east-1
+	SSEEncryption string      `gorm:"type:varchar(20)" json:"s3encryption"` // Server-side encryption (or empty for no encryption)
 }
 
 func (b *Bucket) IsS3() bool {

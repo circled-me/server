@@ -66,6 +66,7 @@ func main() {
 	router.POST("/backup/meta-data", handlers.BackupMetaData)
 	router.POST("/backup/confirm", handlers.BackupConfirm)
 	// Bucket handlers
+	router.GET("/bucket/list", handlers.BucketList)
 	router.POST("/bucket/create", handlers.BucketCreate)
 	// User info handlers
 	router.POST("/user/create", handlers.UserCreate)
