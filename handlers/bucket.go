@@ -13,17 +13,6 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
-type BucketCreateRequest struct {
-	Name          string `form:"name" binding:"required"`
-	Type          string `form:"type" binding:"required"` // 'file' or 's3'
-	Path          string `form:"path"`
-	Endpoint      string `form:"endpoint"`
-	S3Key         string `form:"s3key"`
-	S3Secret      string `form:"s3secret"`
-	Region        string `form:"region"`
-	SSEEncryption string `form:"sseEncryption"`
-}
-
 func hasWriteAccess(bucket *storage.Bucket) error {
 	storage := storage.NewStorage(bucket)
 	testPath := "tmp/path"
@@ -45,7 +34,7 @@ func hasWriteAccess(bucket *storage.Bucket) error {
 	return nil
 }
 
-func cleanupPath(in *BucketCreateRequest) {
+func cleanupPath(in *storage.Bucket) {
 	for strings.Contains(in.Path, "..") {
 		in.Path = strings.ReplaceAll(in.Path, "..", "")
 	}
@@ -54,47 +43,40 @@ func cleanupPath(in *BucketCreateRequest) {
 	}
 }
 
-func BucketCreate(c *gin.Context) {
+func BucketSave(c *gin.Context) {
 	session := auth.LoadSession(c)
 	user := session.User()
 	if user.ID == 0 || !user.HasPermission(models.PermissionAdmin) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
-	postReq := BucketCreateRequest{}
-	err := c.ShouldBindWith(&postReq, binding.Form)
+	bucket := storage.Bucket{}
+	err := c.ShouldBindWith(&bucket, binding.JSON)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	cleanupPath(&postReq)
+	cleanupPath(&bucket)
 
-	bucket := storage.Bucket{
-		Name: postReq.Name,
-		Path: postReq.Path,
-	}
-	if postReq.Type == "file" {
-		bucket.StorageType = storage.StorageTypeFile
-		if postReq.Path == "" {
+	if bucket.StorageType == storage.StorageTypeFile {
+		if bucket.Path == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Empty bucket path"})
 			return
 		}
-		if postReq.Path[0] != '/' {
+		if bucket.Path[0] != '/' {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Path must be absolute and start with / (slash)"})
 			return
 		}
-	} else if postReq.Type == "s3" && postReq.S3Key != "" && postReq.S3Secret != "" {
-		bucket.StorageType = storage.StorageTypeS3
-		bucket.S3Key = postReq.S3Key
-		bucket.S3Secret = postReq.S3Secret
-		bucket.Endpoint = postReq.Endpoint
-		bucket.Region = postReq.Region
-		bucket.SSEEncryption = postReq.SSEEncryption
+	} else if bucket.StorageType == storage.StorageTypeS3 {
+		if bucket.S3Key == "" || bucket.S3Secret == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "'S3 Key' and 'S3 Secret' must be provided"})
+			return
+		}
 		if bucket.Region == "" {
 			bucket.Region = "us-east-1"
 		}
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "'type' must be one of 'file' or 's3'; if 'type' is 's3', then 's3key', 's3secret' must be provided too ('region' and 'endpoint' also configurable)"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "'type' must be one of 'file' or 's3'"})
 		return
 	}
 	if err := hasWriteAccess(&bucket); err != nil {
@@ -111,12 +93,12 @@ func BucketCreate(c *gin.Context) {
 }
 
 func BucketList(c *gin.Context) {
-	// session := auth.LoadSession(c)
-	// user := session.User()
-	// if user.ID == 0 || !user.HasPermission(models.PermissionAdmin) {
-	// 	c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-	// 	return
-	// }
+	session := auth.LoadSession(c)
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionAdmin) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+		return
+	}
 	buckets := []storage.Bucket{}
 	result := db.Instance.Find(&buckets)
 	if result.Error != nil {

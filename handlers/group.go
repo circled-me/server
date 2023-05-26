@@ -123,7 +123,7 @@ func GroupSave(c *gin.Context) {
 		return
 	}
 	r := GroupInfo{}
-	err := c.ShouldBindWith(&r, binding.JSON)
+	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

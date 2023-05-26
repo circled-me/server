@@ -117,7 +117,7 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 		asset.MimeType != "image/heif" &&
 		!strings.HasPrefix(asset.MimeType, "video/") {
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "this file type is not allowed"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "this file type is not allowed"})
 		return nil
 	}
 

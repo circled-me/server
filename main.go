@@ -5,12 +5,14 @@ import (
 	"server/locations"
 	"server/processing"
 	"server/web"
+	"time"
 
 	// "server/faces"
 	"server/handlers"
 	"server/models"
 	"server/storage"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	gormsessions "github.com/gin-contrib/sessions/gorm"
 	"github.com/gin-gonic/gin"
@@ -53,6 +55,17 @@ func main() {
 
 	router := gin.Default()
 	router.SetTrustedProxies([]string{})
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"PUT", "POST", "DELETE"},
+		AllowHeaders:     []string{"Origin"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		// AllowOriginFunc: func(origin string) bool {
+		// 	return origin == "https://github.com"
+		// },
+		MaxAge: 30 * 24 * time.Hour,
+	}))
 
 	// HTML templates
 	router.LoadHTMLGlob("templates/*.tmpl")
@@ -67,7 +80,7 @@ func main() {
 	router.POST("/backup/confirm", handlers.BackupConfirm)
 	// Bucket handlers
 	router.GET("/bucket/list", handlers.BucketList)
-	router.POST("/bucket/create", handlers.BucketCreate)
+	router.POST("/bucket/save", handlers.BucketSave)
 	// User info handlers
 	router.POST("/user/create", handlers.UserCreate)
 	router.POST("/user/login", handlers.UserLogin)
