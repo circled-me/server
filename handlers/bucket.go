@@ -58,6 +58,10 @@ func BucketSave(c *gin.Context) {
 	}
 	cleanupPath(&bucket)
 
+	if bucket.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Empty bucket name"})
+		return
+	}
 	if bucket.StorageType == storage.StorageTypeFile {
 		if bucket.Path == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Empty bucket path"})

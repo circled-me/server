@@ -20,8 +20,11 @@ type UserLoginRequest struct {
 	Password string `form:"password" binding:"required"`
 }
 type UserInfo struct {
-	ID   uint64 `json:"id"`
-	Name string `json:"name"`
+	ID          uint64 `json:"id"`
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	Permissions []int  `json:"permissions"`
+	Bucket      uint64 `json:"bucket"`
 }
 
 func UserLogin(c *gin.Context) {
@@ -106,18 +109,20 @@ func UserList(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Not Found", "name": "", "permissions": []int{}})
 		return
 	}
-	rows, err := db.Instance.Table("users").Select("id, name").Where("id != ?", user.ID).Order("created_at DESC").Rows()
+	users := []models.User{}
+	err := db.Instance.Preload("Grants").Order("created_at ASC").Find(&users).Error
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
 	}
-	defer rows.Close()
 	result := []UserInfo{}
-	for rows.Next() {
-		userInfo := UserInfo{}
-		if err = rows.Scan(&userInfo.ID, &userInfo.Name); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
-			return
+	for _, u := range users {
+		userInfo := UserInfo{
+			ID:          u.ID,
+			Name:        u.Name,
+			Email:       u.Email,
+			Bucket:      *u.BucketID,
+			Permissions: u.GetPermissions(),
 		}
 		result = append(result, userInfo)
 	}
