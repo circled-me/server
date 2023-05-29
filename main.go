@@ -82,7 +82,7 @@ func main() {
 	router.GET("/bucket/list", handlers.BucketList)
 	router.POST("/bucket/save", handlers.BucketSave)
 	// User info handlers
-	router.POST("/user/create", handlers.UserCreate)
+	router.POST("/user/save", handlers.UserSave)
 	router.POST("/user/login", handlers.UserLogin)
 	router.GET("/user/permissions", handlers.UserGetPermissions)
 	router.GET("/user/list", handlers.UserList)
@@ -108,9 +108,9 @@ func main() {
 	router.GET("/moment/assets", handlers.MomentAssets)
 	// Group handlers
 	// router.GET("/group/list", handlers.GroupList)
-	router.POST("/group/create", handlers.GroupCreate)
-	router.POST("/group/save", handlers.GroupSave)
-	router.POST("/group/delete", handlers.GroupDelete)
+	// router.POST("/group/create", handlers.GroupCreate)
+	// router.POST("/group/save", handlers.GroupSave)
+	// router.POST("/group/delete", handlers.GroupDelete)
 	// router.POST("/group/members", handlers.GroupMembers)
 	// Face recognition related
 	// router.GET("/faces/get", handlers.GetFaces)

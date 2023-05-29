@@ -10,15 +10,12 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
-type UserCreateRequest struct {
-	Name     string `form:"name" binding:"required"`
-	Email    string `form:"email" binding:"required"`
-	Password string `form:"password" binding:"required"`
-}
 type UserLoginRequest struct {
 	Email    string `form:"email" binding:"required"`
 	Password string `form:"password" binding:"required"`
+	Token    string `form:"token"`
 }
+
 type UserInfo struct {
 	ID          uint64 `json:"id"`
 	Name        string `json:"name"`
@@ -34,6 +31,29 @@ func UserLogin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// New user has been invited
+	if postReq.Token != "" {
+		invite := models.Invitation{
+			Token: postReq.Token,
+		}
+		if err = db.Instance.Find(&invite).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "no such token"})
+			return
+		}
+		user := models.User{ID: invite.UserID}
+		if err = db.Instance.Find(&user).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "no such user"})
+			return
+		}
+		user.Email = postReq.Email
+		if err = models.UserSetPassword(user, postReq.Password); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "cannot save user"})
+			return
+		}
+		// Not needed any more...
+		_ = db.Instance.Delete(&invite)
+	}
+	// TODO: change this
 	// Check if we have a brand new instance
 	var count int64
 	result := db.Instance.Raw("select 1 where exists(select 1 from users)").Scan(&count)
@@ -71,25 +91,73 @@ func UserLogin(c *gin.Context) {
 	session.Save()
 	c.JSON(http.StatusOK, gin.H{
 		"error":       "",
-		"name":        user.Name,
+		"name":        user.Email,
 		"user_id":     user.ID,
 		"permissions": permissions,
 	})
 }
 
-func UserCreate(c *gin.Context) {
-	// postReq := UserCreateRequest{}
-	// err := c.ShouldBindWith(&postReq, binding.Form)
-	// if err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	// 	return
-	// }
-	// user, err := models.UserCreate(postReq.Name, postReq.Email, postReq.Password)
-	// if err != nil {
-	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-	// 	return
-	// }
-	// c.JSON(http.StatusOK, gin.H{"error": "", "user": user})
+func UserSave(c *gin.Context) {
+	session := auth.LoadSession(c)
+	currentUser := session.User()
+	if currentUser.ID == 0 || !currentUser.HasPermission(models.PermissionAdmin) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+		return
+	}
+	req := UserInfo{}
+	err := c.ShouldBindWith(&req, binding.JSON)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.Bucket == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "select storage bucket"})
+		return
+	}
+	if req.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "empty name"})
+		return
+	}
+	user := models.User{ID: req.ID}
+	if user.ID > 0 {
+		if err = db.Instance.Preload("Grants").Find(&user).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		// New user
+		user.Email = req.Email
+	}
+	user.BucketID = &req.Bucket
+	user.Name = req.Name
+	for _, g := range user.Grants {
+		db.Instance.Delete(&g)
+	}
+	user.Grants = []models.Grant{}
+	for _, p := range req.Permissions {
+		user.Grants = append(user.Grants, models.Grant{
+			GrantorID:  currentUser.ID,
+			Permission: models.Permission(p),
+		})
+	}
+	if err = db.Instance.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	token := ""
+	if req.ID == 0 {
+		// This was a new user - create invitation token
+		invite := models.NewInvitation(user.ID)
+		if err = db.Instance.Save(&invite).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		token = invite.Token
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"error": "",
+		"token": token,
+	})
 }
 
 func UserGetPermissions(c *gin.Context) {
