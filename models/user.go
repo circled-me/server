@@ -63,10 +63,10 @@ func UserSetPassword(u User, plainTextPassword string) (err error) {
 func UserLogin(email, plainTextPassword string) (u User, err error) {
 	result := db.Instance.Preload("Grants").First(&u, "email = ?", email)
 	if result.Error != nil {
-		return User{}, errors.New("incorrect email or password")
+		return User{}, errors.New("Incorrect email or password")
 	}
 	if u.Password != utils.Sha512String(plainTextPassword+u.PassSalt) {
-		return User{}, errors.New("incorrect email or password")
+		return User{}, errors.New("Incorrect email or password")
 	}
 	return u, nil
 }

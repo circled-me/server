@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"server/auth"
 	"server/db"
@@ -14,6 +15,7 @@ type UserLoginRequest struct {
 	Email    string `form:"email" binding:"required"`
 	Password string `form:"password" binding:"required"`
 	Token    string `form:"token"`
+	New      bool   `form:"new"`
 }
 
 type UserInfo struct {
@@ -24,6 +26,42 @@ type UserInfo struct {
 	Bucket      uint64 `json:"bucket"`
 }
 
+func createFromToken(postReq *UserLoginRequest) (err error) {
+	invite := models.Invitation{
+		Token: postReq.Token,
+	}
+	if err = db.Instance.Find(&invite).Error; err != nil {
+		return errors.New("Invalid token")
+	}
+	user := models.User{ID: invite.UserID}
+	if err = db.Instance.Find(&user).Error; err != nil {
+		return errors.New("Invalid user")
+	}
+	user.Email = postReq.Email
+	if err = models.UserSetPassword(user, postReq.Password); err != nil {
+		return errors.New("Cannot save user")
+	}
+	// Not needed any more...
+	_ = db.Instance.Delete(&invite)
+	return nil
+}
+
+func createFirstUser(postReq *UserLoginRequest) (err error) {
+	user, err := models.UserCreate(postReq.Email, postReq.Email, postReq.Password)
+	if err != nil {
+		return errors.New("DB error 2")
+	}
+	err = db.Instance.Save(&models.Grant{
+		GrantorID:  user.ID,
+		UserID:     user.ID,
+		Permission: models.PermissionAdmin,
+	}).Error
+	if err != nil {
+		return errors.New("DB error 3")
+	}
+	return nil
+}
+
 func UserLogin(c *gin.Context) {
 	postReq := UserLoginRequest{}
 	err := c.ShouldBindWith(&postReq, binding.Form)
@@ -31,50 +69,16 @@ func UserLogin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// New user has been invited
 	if postReq.Token != "" {
-		invite := models.Invitation{
-			Token: postReq.Token,
-		}
-		if err = db.Instance.Find(&invite).Error; err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "no such token"})
+		// New user has been invited
+		if err = createFromToken(&postReq); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		user := models.User{ID: invite.UserID}
-		if err = db.Instance.Find(&user).Error; err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "no such user"})
-			return
-		}
-		user.Email = postReq.Email
-		if err = models.UserSetPassword(user, postReq.Password); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "cannot save user"})
-			return
-		}
-		// Not needed any more...
-		_ = db.Instance.Delete(&invite)
-	}
-	// TODO: change this
-	// Check if we have a brand new instance
-	var count int64
-	result := db.Instance.Raw("select 1 where exists(select 1 from users)").Scan(&count)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
-		return
-	}
-	if count == 0 {
-		// No users exist - create one with the provided details (name defaults to email)
-		user, err := models.UserCreate(postReq.Email, postReq.Email, postReq.Password)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		err = db.Instance.Save(&models.Grant{
-			GrantorID:  user.ID,
-			UserID:     user.ID,
-			Permission: models.PermissionAdmin,
-		}).Error
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	} else if postReq.New {
+		// Check if we have a brand new instance
+		if err = createFirstUser(&postReq); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 	}
