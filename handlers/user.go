@@ -41,7 +41,6 @@ func createFromToken(postReq *UserLoginRequest) (err error) {
 	user.SetPassword(postReq.Password)
 	err = db.Instance.Where("id = ?", invite.UserID).Updates(&models.User{
 		Email:    user.Email,
-		Name:     user.Email, // For now...
 		Password: user.Password,
 		PassSalt: user.PassSalt,
 	}).Error
