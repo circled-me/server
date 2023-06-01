@@ -34,7 +34,7 @@ func isValidLogin(l string) bool {
 
 func createFromToken(postReq *UserLoginRequest) (err error) {
 	user := models.User{}
-	if err = db.Instance.Where("email = ?", postReq.Token).Find(&user).Error; err != nil {
+	if db.Instance.Where("email = ?", postReq.Token).Find(&user).Error != nil || user.ID == 0 {
 		return errors.New("Invalid token")
 	}
 	if !isValidLogin(postReq.Email) {
