@@ -6,6 +6,8 @@ import (
 	"server/auth"
 	"server/db"
 	"server/models"
+	"server/utils"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -26,20 +28,21 @@ type UserInfo struct {
 	Bucket      uint64 `json:"bucket"`
 }
 
+func isValidLogin(l string) bool {
+	return !strings.ContainsAny(l, " \t\n\r")
+}
+
 func createFromToken(postReq *UserLoginRequest) (err error) {
-	invite := models.Invitation{
-		Token: postReq.Token,
-	}
-	if err = db.Instance.Find(&invite).Error; err != nil {
+	user := models.User{}
+	if err = db.Instance.Where("email = ?", postReq.Token).Find(&user).Error; err != nil {
 		return errors.New("Invalid token")
 	}
-	user := models.User{ID: invite.UserID}
-	if err = db.Instance.Find(&user).Error; err != nil {
-		return errors.New("Invalid user")
+	if !isValidLogin(postReq.Email) {
+		return errors.New("Login cannot contain empty spaces")
 	}
 	user.Email = postReq.Email
 	user.SetPassword(postReq.Password)
-	err = db.Instance.Where("id = ?", invite.UserID).Updates(&models.User{
+	err = db.Instance.Where("id = ?", user.ID).Updates(&models.User{
 		Email:    user.Email,
 		Password: user.Password,
 		PassSalt: user.PassSalt,
@@ -47,8 +50,6 @@ func createFromToken(postReq *UserLoginRequest) (err error) {
 	if err != nil {
 		return errors.New("User with the same login seems to exist")
 	}
-	// Not needed any more...
-	_ = db.Instance.Delete(&invite)
 	return nil
 }
 
@@ -107,6 +108,17 @@ func UserLogin(c *gin.Context) {
 	})
 }
 
+func cleanupName(name string) string {
+	name = strings.Trim(name, " \n\r")
+	for strings.Contains(name, "  ") {
+		name = strings.ReplaceAll(name, "  ", " ")
+	}
+	if len(name) > 50 {
+		name = name[:50]
+	}
+	return name
+}
+
 func UserSave(c *gin.Context) {
 	session := auth.LoadSession(c)
 	currentUser := session.User()
@@ -124,10 +136,13 @@ func UserSave(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "select storage bucket"})
 		return
 	}
+	// Cleanup
+	req.Name = cleanupName(req.Name)
 	if req.Name == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "empty name"})
 		return
 	}
+	token := ""
 	user := models.User{ID: req.ID}
 	if user.ID > 0 {
 		if err = db.Instance.Preload("Grants").Find(&user).Error; err != nil {
@@ -135,8 +150,10 @@ func UserSave(c *gin.Context) {
 			return
 		}
 	} else {
-		// New user
-		user.Email = req.Email
+		// New user with random email (login)
+		// They can choose their login later
+		user.Email = utils.Rand16BytesToBase62()
+		token = user.Email
 	}
 	user.BucketID = &req.Bucket
 	user.Name = req.Name
@@ -153,16 +170,6 @@ func UserSave(c *gin.Context) {
 	if err = db.Instance.Save(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
-	}
-	token := ""
-	if req.ID == 0 {
-		// This was a new user - create invitation token
-		invite := models.NewInvitation(user.ID)
-		if err = db.Instance.Save(&invite).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		token = invite.Token
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"error": "",

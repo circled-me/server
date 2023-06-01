@@ -24,7 +24,6 @@ func Init() {
 	db.Instance.AutoMigrate(&Group{})
 	db.Instance.AutoMigrate(&GroupPost{})
 	db.Instance.AutoMigrate(&GroupPostAsset{})
-	db.Instance.AutoMigrate(&Invitation{})
 	db.Instance.AutoMigrate(&Like{})
 	db.Instance.AutoMigrate(&Location{})
 	db.Instance.AutoMigrate(&Place{})
