@@ -38,8 +38,15 @@ func createFromToken(postReq *UserLoginRequest) (err error) {
 		return errors.New("Invalid user")
 	}
 	user.Email = postReq.Email
-	if err = models.UserSetPassword(user, postReq.Password); err != nil {
-		return errors.New("Cannot save user")
+	user.SetPassword(postReq.Password)
+	err = db.Instance.Where("id = ?", invite.UserID).Updates(&models.User{
+		Email:    user.Email,
+		Name:     user.Email, // For now...
+		Password: user.Password,
+		PassSalt: user.PassSalt,
+	}).Error
+	if err != nil {
+		return errors.New("User with the same login seems to exist")
 	}
 	// Not needed any more...
 	_ = db.Instance.Delete(&invite)

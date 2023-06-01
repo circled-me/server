@@ -54,10 +54,9 @@ func UserCreate(name, email, plainTextPassword string) (u User, err error) {
 	return u, db.Instance.Create(&u).Error
 }
 
-func UserSetPassword(u User, plainTextPassword string) (err error) {
+func (u *User) SetPassword(plainTextPassword string) {
 	u.PassSalt = randSalt()
 	u.Password = utils.Sha512String(plainTextPassword + u.PassSalt)
-	return db.Instance.Save(&u).Error
 }
 
 func UserLogin(email, plainTextPassword string) (u User, err error) {
