@@ -63,6 +63,7 @@ func MomentList(c *gin.Context) {
 				max(created_at)                       end
 		from   assets
 		where  user_id = ?
+				and deleted = 0
 				and place_id is not null
 		group  by 2, 1
 		having cnt > 6
@@ -116,7 +117,7 @@ func MomentAssets(c *gin.Context) {
 	rows, err := db.Instance.
 		Table("assets").
 		Select("id, mime_type").
-		Where("user_id = ? and place_id in (?) and created_at>=? and created_at<=?", user.ID, strings.Split(r.Places, ","), r.Start, r.End).
+		Where("user_id = ? and place_id in (?) and deleted=0 and created_at>=? and created_at<=?", user.ID, strings.Split(r.Places, ","), r.Start, r.End).
 		Order("created_at ASC").Rows()
 
 	if err != nil {

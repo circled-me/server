@@ -13,9 +13,9 @@ import (
 )
 
 type UploadConfirmation struct {
-	ID       uint64 `form:"id" binding:"required"` // Local DB ID
-	Size     int64  `form:"size" binding:"required"`
-	MimeType string `form:"mime_type" binding:""`
+	ID       uint64 `json:"id" binding:"required"` // Local DB ID
+	Size     int64  `json:"size" binding:"required"`
+	MimeType string `json:"mime_type" binding:""`
 }
 
 func getUploadRequest(c *gin.Context) (req models.UploadRequest, err error) {
@@ -80,7 +80,7 @@ func UploadRequestNewURL(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"id":  asset.ID,
-		"url": asset.CreateUploadURI(false),
+		"url": asset.CreateUploadURI(false, req.Token), // TODO: Thumb?
 	})
 }
 

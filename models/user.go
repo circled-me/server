@@ -16,7 +16,7 @@ type User struct {
 	CreatedAt   int
 	UpdatedAt   int
 	CreatedByID *uint64
-	CreatedBy   *User
+	CreatedBy   *User         `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	Name        string        `gorm:"type:varchar(100)"`
 	Email       string        `gorm:"type:varchar(150);index:uniq_email,unique"`
 	Password    string        `gorm:"type:varchar(256)"` // actually with SHA512 - 128 hex chars is enough (64 bytes output)
@@ -24,7 +24,7 @@ type User struct {
 	TotpToken   string        `gorm:"type:varchar(200)"`
 	TotpAlgo    otp.Algorithm `gorm:"type:tinyint(1)"`
 	TotpXOR     uint32        `gorm:"type:int unsigned"`
-	Grants      []Grant
+	Grants      []Grant       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	BucketID    *uint64
 	Bucket      storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }

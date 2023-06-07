@@ -137,8 +137,8 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"id":        asset.ID,
-		"uri":       asset.CreateUploadURI(false),
-		"thumb":     asset.CreateUploadURI(true),
+		"uri":       asset.CreateUploadURI(false, ""),
+		"thumb":     asset.CreateUploadURI(true, ""),
 		"mime_type": asset.MimeType,
 	})
 	return &asset

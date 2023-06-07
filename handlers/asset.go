@@ -96,7 +96,7 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 	if checkUser > 0 && asset.UserID != checkUser {
 		// Check if we have access via a Shared Album
 		var count int64
-		result := db.Instance.Raw("select 1 from album_asset where asset_id=? and exists(select 1 from album_contributors where album_contributors.album_id = album_asset.album_id and album_contributors.user_id=?)", r.ID, checkUser).Scan(&count)
+		result := db.Instance.Raw("select 1 from album_assets join album_contributors on (album_contributors.album_id = album_assets.album_id) where album_contributors.user_id=? and asset_id=?", checkUser, r.ID).Scan(&count)
 		if result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 			return

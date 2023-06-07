@@ -93,6 +93,7 @@ func main() {
 	// Album handlers
 	router.GET("/album/list", handlers.AlbumList)
 	router.POST("/album/create", handlers.AlbumCreate)
+	router.POST("/album/save", handlers.AlbumSave)
 	router.POST("/album/delete", handlers.AlbumDelete)
 	router.POST("/album/add", handlers.AlbumAddAsset)
 	router.POST("/album/remove", handlers.AlbumRemoveAsset)
@@ -125,7 +126,7 @@ func main() {
 	router.GET("/w/upload/:token/", web.UploadRequestView)
 	router.GET("/w/upload/:token/new-url/", web.UploadRequestNewURL)
 	router.POST("/w/upload/:token/confirm/", web.UploadRequestConfirm)
-	router.POST("/w/upload/:token/", web.UploadRequestProcess)
+	router.PUT("/w/upload/:token/", web.UploadRequestProcess)
 
 	router.Run(GetBindAddress())
 }

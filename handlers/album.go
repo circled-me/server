@@ -7,6 +7,7 @@ import (
 	"server/db"
 	"server/models"
 	"server/utils"
+	"strings"
 
 	_ "image/jpeg"
 
@@ -15,15 +16,18 @@ import (
 )
 
 type AlbumInfo struct {
-	ID          uint64 `json:"id"`
-	Owner       uint64 `json:"owner"`
-	Name        string `json:"name"`
-	Subtitle    string `json:"subtitle"`
-	HeroAssetId uint64 `json:"hero_asset_id"`
+	ID           uint64 `json:"id"`
+	Owner        uint64 `json:"owner"`
+	Name         string `json:"name"`
+	Subtitle     string `json:"subtitle"`
+	HeroAssetId  uint64 `json:"hero_asset_id"`
+	Contributors []int  `json:"contributors"`
 }
 
-type AlbumCreateRequest struct {
-	Name string `form:"name" binding:"required"`
+type AlbumSaveRequest struct {
+	ID          uint64 `form:"id"`
+	Name        string `form:"name" binding:"required"`
+	HeroAssetId uint64 `form:"hero_asset_id"`
 }
 
 type AlbumAssetRequest struct {
@@ -100,17 +104,72 @@ func AlbumCreate(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
 		return
 	}
-	r := AlbumCreateRequest{}
+	r := AlbumSaveRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	r.Name = strings.Trim(r.Name, " \n\t\r")
+	if len(r.Name) < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "empty name"})
 		return
 	}
 	album := models.Album{
 		Name:   r.Name,
 		UserID: user.ID,
 	}
+	if r.HeroAssetId > 0 {
+		album.HeroAssetID = &r.HeroAssetId
+	}
 	result := db.Instance.Create(&album)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, AlbumInfo{
+		ID:          album.ID,
+		Name:        album.Name,
+		HeroAssetId: 0,
+	})
+}
+
+func AlbumSave(c *gin.Context) {
+	session := auth.LoadSession(c)
+	user := session.User()
+	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+		return
+	}
+	r := AlbumSaveRequest{}
+	err := c.ShouldBindWith(&r, binding.Form)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	r.Name = strings.Trim(r.Name, " \n\t\r")
+	if len(r.Name) < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "empty name"})
+		return
+	}
+	if r.ID < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no ID"})
+		return
+	}
+	album := models.Album{
+		ID: r.ID,
+	}
+	if db.Instance.Find(&album).Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error 6"})
+		return
+	}
+	if album.UserID != user.ID {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "some error 7"})
+		return
+	}
+	album.Name = r.Name
+	album.HeroAssetID = &r.HeroAssetId
+	result := db.Instance.Save(&album)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
@@ -171,7 +230,7 @@ func AlbumAddAsset(c *gin.Context) {
 		AlbumID: r.AlbumID,
 		AssetID: r.AssetID,
 	}
-	result = db.Instance.FirstOrCreate(&albumAsset)
+	result = db.Instance.Create(&albumAsset)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 		return

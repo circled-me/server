@@ -29,7 +29,11 @@ type UserInfo struct {
 }
 
 func isValidLogin(l string) bool {
-	return !strings.ContainsAny(l, " \t\n\r")
+	return !strings.ContainsAny(l, " \t\n\r") &&
+		len(l) > 0 &&
+		((l[0] >= 'a' && l[0] <= 'z') ||
+			(l[0] >= 'A' && l[0] <= 'Z') ||
+			(l[0] >= '0' && l[0] <= '9'))
 }
 
 func createFromToken(postReq *UserLoginRequest) (err error) {
@@ -38,7 +42,7 @@ func createFromToken(postReq *UserLoginRequest) (err error) {
 		return errors.New("Invalid token")
 	}
 	if !isValidLogin(postReq.Email) {
-		return errors.New("Login cannot contain empty spaces")
+		return errors.New("Login cannot contain empty spaces and must start with a letter or a number")
 	}
 	user.Email = postReq.Email
 	user.SetPassword(postReq.Password)

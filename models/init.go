@@ -19,6 +19,7 @@ func Init() {
 	// db.Instance.AutoMigrate(&AssetTag{})
 	db.Instance.AutoMigrate(&User{})
 	db.Instance.AutoMigrate(&Comment{})
+	db.Instance.AutoMigrate(&FavouriteAsset{})
 	db.Instance.AutoMigrate(&Face{})
 	db.Instance.AutoMigrate(&Grant{})
 	db.Instance.AutoMigrate(&Group{})

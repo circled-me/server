@@ -119,13 +119,16 @@ func (a *Asset) GetRoughLocation() (location Location) {
 //  2. Pre-signed remote S3 upload URL
 //
 // TODO: Add error response
-func (a *Asset) CreateUploadURI(thumb bool) string {
+func (a *Asset) CreateUploadURI(thumb bool, webToken string) string {
 	// TODO: Better way?
 	if a.Bucket.ID != a.BucketID {
 		db.Instance.Preload("Bucket").First(a)
 	}
 	if a.Bucket.IsS3() {
 		return a.Bucket.CreateS3UploadURI(a.GetPathOrThumb(thumb))
+	}
+	if webToken != "" {
+		return "/w/upload/" + webToken + "/?id=" + strconv.FormatUint(a.ID, 10) + "&thumb=" + strconv.FormatBool(thumb)
 	}
 	return "/backup/upload?id=" + strconv.FormatUint(a.ID, 10) + "&thumb=" + strconv.FormatBool(thumb)
 }
