@@ -313,7 +313,13 @@ func AlbumAssets(c *gin.Context) {
 			Order("assets.created_at ASC").Rows()
 	} else {
 		// Normal album
-		// TODO: Add check for access (own or contributor)
+		// Check for access (own album or as a contributor)
+		access := 0
+		db.Instance.Raw("select 1 from albums a left join album_contributors ac on (ac.album_id = a.id) where a.id = ? AND (a.user_id = ? OR ac.user_id = ?)", r.AlbumID, user.ID, user.ID).Scan(&access)
+		if access == 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 4"})
+			return
+		}
 		rows, err = db.Instance.
 			Table("album_assets").
 			Select("asset_id, mime_type").
