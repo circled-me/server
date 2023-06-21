@@ -15,6 +15,7 @@ import (
 	_ "image/jpeg"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 type AssetFetchRequest struct {
@@ -31,6 +32,11 @@ type AssetInfo struct {
 
 type AssetDeleteRequest struct {
 	ID uint64 `form:"id" binding:"required"`
+}
+
+type AssetFavouriteRequest struct {
+	ID           uint64 `form:"id" binding:"required"`
+	AlbumAssetID uint64 `form:"album_asset_id"`
 }
 
 // TODO: Move to before save in Asset
@@ -82,6 +88,21 @@ func AssetFetch(c *gin.Context) {
 	RealAssetFetch(c, user.ID)
 }
 
+func checkAlbumAccess(c *gin.Context, checkUser, assetID uint64) bool {
+	// Check if we have access via a Shared Album
+	var count int64
+	result := db.Instance.Raw("select 1 from album_assets join album_contributors on (album_contributors.album_id = album_assets.album_id) where album_contributors.user_id=? and asset_id=?", checkUser, assetID).Scan(&count)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		return false
+	}
+	if count == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 2"})
+		return false
+	}
+	return true
+}
+
 func RealAssetFetch(c *gin.Context, checkUser uint64) {
 	r := AssetFetchRequest{}
 	err := c.ShouldBindQuery(&r)
@@ -94,15 +115,7 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 	}
 	db.Instance.Joins("Bucket").First(&asset)
 	if checkUser > 0 && asset.UserID != checkUser {
-		// Check if we have access via a Shared Album
-		var count int64
-		result := db.Instance.Raw("select 1 from album_assets join album_contributors on (album_contributors.album_id = album_assets.album_id) where album_contributors.user_id=? and asset_id=?", checkUser, r.ID).Scan(&count)
-		if result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
-			return
-		}
-		if count == 0 {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 2"})
+		if !checkAlbumAccess(c, checkUser, r.ID) {
 			return
 		}
 	}
@@ -191,4 +204,84 @@ func AssetDelete(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusOK, gin.H{"error": ""})
 	}
+}
+
+func AssetFavourite(c *gin.Context) {
+	session := auth.LoadSession(c)
+	user := session.User()
+	if user.ID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+		return
+	}
+	r := AssetFavouriteRequest{}
+	err := c.ShouldBindWith(&r, binding.Form)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	asset := models.Asset{ID: r.ID}
+	db.Instance.First(&asset)
+	if asset.ID != r.ID {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 2"})
+		return
+	}
+	if r.AlbumAssetID == 0 || asset.UserID == user.ID {
+		r.AlbumAssetID = 0
+		// This must be our own asset
+		if asset.ID != r.ID || asset.UserID != user.ID {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 2"})
+			return
+		}
+	} else {
+		// We should have access to this album
+		albumAsset := models.AlbumAsset{ID: r.AlbumAssetID}
+		db.Instance.First(&albumAsset)
+		if albumAsset.ID != r.AlbumAssetID || albumAsset.AssetID != r.ID {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 3"})
+			return
+		}
+		if !checkAlbumAccess(c, user.ID, r.ID) {
+			return
+		}
+	}
+	// All checks done! Phew...
+	fav := models.FavouriteAsset{
+		UserID:       user.ID,
+		AssetID:      r.ID,
+		AlbumAssetID: nil,
+	}
+	if r.AlbumAssetID > 0 {
+		fav.AlbumAssetID = &r.AlbumAssetID
+	}
+	if db.Instance.Create(&fav).Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error 5"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"error": ""})
+}
+
+func AssetUnfavourite(c *gin.Context) {
+	session := auth.LoadSession(c)
+	user := session.User()
+	if user.ID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
+		return
+	}
+	r := AssetFavouriteRequest{}
+	err := c.ShouldBindWith(&r, binding.Form)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	fav := models.FavouriteAsset{}
+	err = db.Instance.First(&fav, "user_id=? AND asset_id=?", user.ID, r.ID).Error
+	if err != nil || fav.UserID != user.ID || fav.AssetID != r.ID {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "some error 2"})
+		return
+	}
+	if db.Instance.Delete(&fav).Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error 3"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"error": ""})
 }

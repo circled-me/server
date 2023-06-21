@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"server/auth"
@@ -44,6 +45,12 @@ type AlbumContributeRequest struct {
 	UserID  uint64 `form:"user_id" binding:"required"`
 }
 
+func getFirstFavouriteAssetID(userID uint64) uint64 {
+	fav := models.FavouriteAsset{}
+	db.Instance.First(&fav, "user_id = ?", userID)
+	return fav.AssetID
+}
+
 func AlbumList(c *gin.Context) {
 	session := auth.LoadSession(c)
 	user := session.User()
@@ -67,6 +74,16 @@ func AlbumList(c *gin.Context) {
 	}
 	defer rows.Close()
 	result := []AlbumInfo{}
+	firstFavourite := getFirstFavouriteAssetID(user.ID)
+	if firstFavourite > 0 {
+		result = append(result, AlbumInfo{
+			ID:          0,
+			Owner:       user.ID,
+			Name:        "Favourites",
+			Subtitle:    "All photos you liked ❤️",
+			HeroAssetId: firstFavourite,
+		})
+	}
 	var minDate, maxDate int64
 	for rows.Next() {
 		albumInfo := AlbumInfo{}
@@ -124,7 +141,7 @@ func AlbumCreate(c *gin.Context) {
 	}
 	result := db.Instance.Create(&album)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error 1"})
 		return
 	}
 	c.JSON(http.StatusOK, AlbumInfo{
@@ -282,18 +299,28 @@ func AlbumAssets(c *gin.Context) {
 		return
 	}
 	r := AlbumIDRequest{}
-	err := c.ShouldBindQuery(&r)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	rows, err := db.Instance.
-		Table("album_assets").
-		Select("asset_id, mime_type").
-		Where("album_id = ?", r.AlbumID).
-		Joins("join assets on album_assets.asset_id = assets.id").
-		Order("assets.created_at ASC").Rows()
+	_ = c.ShouldBindQuery(&r)
 
+	var err error
+	var rows *sql.Rows
+	if r.AlbumID == 0 {
+		// Favourite album
+		rows, err = db.Instance.
+			Table("favourite_assets").
+			Select("asset_id, mime_type").
+			Where("favourite_assets.user_id = ?", user.ID).
+			Joins("join assets on favourite_assets.asset_id = assets.id").
+			Order("assets.created_at ASC").Rows()
+	} else {
+		// Normal album
+		// TODO: Add check for access (own or contributor)
+		rows, err = db.Instance.
+			Table("album_assets").
+			Select("asset_id, mime_type").
+			Where("album_id = ?", r.AlbumID).
+			Joins("join assets on album_assets.asset_id = assets.id").
+			Order("assets.created_at ASC").Rows()
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return

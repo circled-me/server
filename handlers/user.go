@@ -206,11 +206,15 @@ func UserList(c *gin.Context) {
 	}
 	result := []UserInfo{}
 	for _, u := range users {
+		bucket := uint64(0)
+		if u.BucketID != nil {
+			bucket = *u.BucketID
+		}
 		userInfo := UserInfo{
 			ID:          u.ID,
 			Name:        u.Name,
 			Email:       u.Email,
-			Bucket:      *u.BucketID,
+			Bucket:      bucket,
 			Permissions: u.GetPermissions(),
 		}
 		result = append(result, userInfo)

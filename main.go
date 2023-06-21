@@ -90,6 +90,8 @@ func main() {
 	router.GET("/asset/list", handlers.AssetList)
 	router.GET("/asset/fetch", handlers.AssetFetch)
 	router.POST("/asset/delete", handlers.AssetDelete) // TODO: S3
+	router.POST("/asset/favourite", handlers.AssetFavourite)
+	router.POST("/asset/unfavourite", handlers.AssetUnfavourite)
 	// Album handlers
 	router.GET("/album/list", handlers.AlbumList)
 	router.POST("/album/create", handlers.AlbumCreate)
@@ -99,7 +101,7 @@ func main() {
 	router.POST("/album/remove", handlers.AlbumRemoveAsset)
 	router.GET("/album/assets", handlers.AlbumAssets)
 	router.GET("/album/share", handlers.AlbumShare)
-	// TODO: there should be a way to list and remove controbutors too
+	// TODO: there should be a way to list and remove contributors too
 	router.POST("/album/contributor", handlers.AlbumContributor)
 
 	// Upload Request
