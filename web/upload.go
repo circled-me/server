@@ -110,3 +110,7 @@ func UploadRequestConfirm(c *gin.Context) {
 	asset.MimeType = r.MimeType
 	db.Instance.Updates(&asset)
 }
+
+func DisallowRobots(c *gin.Context) {
+	c.String(http.StatusOK, "User-agent: *\nDisallow: /\n")
+}

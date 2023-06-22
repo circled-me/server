@@ -129,6 +129,8 @@ func main() {
 	router.GET("/w/upload/:token/new-url/", web.UploadRequestNewURL)
 	router.POST("/w/upload/:token/confirm/", web.UploadRequestConfirm)
 	router.PUT("/w/upload/:token/", web.UploadRequestProcess)
+	// Misc
+	router.GET("/robots.txt", web.DisallowRobots)
 
 	router.Run(GetBindAddress())
 }
