@@ -268,12 +268,9 @@ func AlbumRemoveAsset(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	albumAsset := models.AlbumAsset{
-		AlbumID: r.AlbumID,
-		AssetID: r.AssetID,
-	}
+	albumAsset := models.AlbumAsset{}
 	// Check if this is our album or our asset
-	result := db.Instance.Joins("Album").Joins("Asset").Find(&albumAsset)
+	result := db.Instance.Joins("Album").Joins("Asset").Where("album_id=? AND asset_id=?", r.AlbumID, r.AssetID).Find(&albumAsset)
 	if result.Error != nil || result.RowsAffected != 1 {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
