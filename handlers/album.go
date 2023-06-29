@@ -233,7 +233,7 @@ func AlbumAddAsset(c *gin.Context) {
 		return
 	}
 	// Check if this is our album or we are added as a contributor
-	var count int64
+	count := int64(0)
 	result := db.Instance.Raw("select 1 from albums where id=? and (user_id=? OR exists(select 1 from album_contributors where album_contributors.album_id = albums.id and album_contributors.user_id=?))", r.AlbumID, user.ID, user.ID).Scan(&count)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
@@ -282,7 +282,7 @@ func AlbumRemoveAsset(c *gin.Context) {
 	// Then we can remove it from the album
 	result = db.Instance.Delete(&albumAsset)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 5"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"error": ""})
@@ -334,7 +334,7 @@ func AlbumAssets(c *gin.Context) {
 	for rows.Next() {
 		assetInfo := AssetInfo{}
 		if err = rows.Scan(&assetInfo.ID, &mimeType); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 5"})
 			return
 		}
 		assetInfo.Type = GetTypeFrom(mimeType)

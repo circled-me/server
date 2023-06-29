@@ -135,6 +135,14 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error 3"})
 		return nil
 	}
+	if asset.Favourite {
+		fav := models.FavouriteAsset{
+			UserID:       user.ID,
+			AssetID:      asset.ID,
+			AlbumAssetID: nil,
+		}
+		_ = db.Instance.Create(&fav)
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"id":        asset.ID,
 		"uri":       asset.CreateUploadURI(false, ""),
