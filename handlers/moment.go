@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"server/auth"
 	"server/db"
 	"server/models"
 	"server/utils"
@@ -40,13 +39,7 @@ func (m *MomentInfo) merge(a *MomentInfo) {
 	m.Subtitle = utils.GetDatesString(m.Start, m.End)
 }
 
-func MomentList(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func MomentList(c *gin.Context, user *models.User) {
 	// TODO: Minimum number of assets for a location should be configurable (now 6 below)
 	rows, err := db.Instance.Raw(`
 	select date,
@@ -101,13 +94,7 @@ func MomentList(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func MomentAssets(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func MomentAssets(c *gin.Context, user *models.User) {
 	r := MomentInfo{}
 	err := c.ShouldBindQuery(&r)
 	if err != nil {

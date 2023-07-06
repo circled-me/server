@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"net/http"
-	"server/auth"
 	"server/db"
 	"server/models"
 	"server/storage"
@@ -50,13 +49,7 @@ func GetTypeFrom(mimeType string) uint {
 	return models.AssetTypeOther
 }
 
-func AssetList(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AssetList(c *gin.Context, user *models.User) {
 	rows, err := db.Instance.Table("assets").Select("id, mime_type").Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).Order("created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
@@ -77,13 +70,7 @@ func AssetList(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func AssetFetch(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AssetFetch(c *gin.Context, user *models.User) {
 	RealAssetFetch(c, user.ID)
 }
 
@@ -164,13 +151,7 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 	}
 }
 
-func AssetDelete(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AssetDelete(c *gin.Context, user *models.User) {
 	r := AssetDeleteRequest{}
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
@@ -205,13 +186,7 @@ func AssetDelete(c *gin.Context) {
 	}
 }
 
-func AssetFavourite(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AssetFavourite(c *gin.Context, user *models.User) {
 	r := AssetFavouriteRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
@@ -259,13 +234,7 @@ func AssetFavourite(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"error": ""})
 }
 
-func AssetUnfavourite(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AssetUnfavourite(c *gin.Context, user *models.User) {
 	r := AssetFavouriteRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {

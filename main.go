@@ -1,6 +1,7 @@
 package main
 
 import (
+	"server/auth"
 	"server/db"
 	"server/locations"
 	"server/processing"
@@ -73,50 +74,53 @@ func main() {
 	cookieStore := gormsessions.NewStore(db.Instance, true, []byte(sessionStoreKey))
 	cookieStore.Options(sessions.Options{MaxAge: sessionExpirationTime})
 	router.Use(sessions.Sessions(sessionCookieName, cookieStore))
+
+	// Custom Auth Router
+	authRouter := &auth.Router{Base: router}
 	// Backup handlers
-	router.POST("/backup/check", handlers.BackupCheck)
-	router.PUT("/backup/upload", handlers.BackupUpload)
-	router.POST("/backup/meta-data", handlers.BackupMetaData)
-	router.POST("/backup/confirm", handlers.BackupConfirm)
+	authRouter.POST("/backup/check", handlers.BackupCheck, models.PermissionPhotoBackup)
+	authRouter.PUT("/backup/upload", handlers.BackupUpload, models.PermissionPhotoBackup)
+	authRouter.POST("/backup/meta-data", handlers.BackupMetaData, models.PermissionPhotoBackup)
+	authRouter.POST("/backup/confirm", handlers.BackupConfirm, models.PermissionPhotoBackup)
 	// Bucket handlers
-	router.GET("/bucket/list", handlers.BucketList)
-	router.POST("/bucket/save", handlers.BucketSave)
+	authRouter.GET("/bucket/list", handlers.BucketList, models.PermissionAdmin)
+	authRouter.POST("/bucket/save", handlers.BucketSave, models.PermissionAdmin)
 	// User info handlers
-	router.POST("/user/save", handlers.UserSave)
 	router.POST("/user/login", handlers.UserLogin)
-	router.GET("/user/permissions", handlers.UserGetPermissions)
-	router.GET("/user/list", handlers.UserList)
+	authRouter.POST("/user/save", handlers.UserSave, models.PermissionAdmin)
+	authRouter.GET("/user/permissions", handlers.UserGetPermissions)
+	authRouter.GET("/user/list", handlers.UserList)
 	// Asset handlers
-	router.GET("/asset/list", handlers.AssetList)
-	router.GET("/asset/fetch", handlers.AssetFetch)
-	router.POST("/asset/delete", handlers.AssetDelete) // TODO: S3
-	router.POST("/asset/favourite", handlers.AssetFavourite)
-	router.POST("/asset/unfavourite", handlers.AssetUnfavourite)
+	authRouter.GET("/asset/list", handlers.AssetList, models.PermissionPhotoBackup)
+	authRouter.GET("/asset/fetch", handlers.AssetFetch)
+	authRouter.POST("/asset/delete", handlers.AssetDelete, models.PermissionPhotoBackup) // TODO: S3
+	authRouter.POST("/asset/favourite", handlers.AssetFavourite)
+	authRouter.POST("/asset/unfavourite", handlers.AssetUnfavourite)
 	// Album handlers
-	router.GET("/album/list", handlers.AlbumList)
-	router.POST("/album/create", handlers.AlbumCreate)
-	router.POST("/album/save", handlers.AlbumSave)
-	router.POST("/album/delete", handlers.AlbumDelete)
-	router.POST("/album/add", handlers.AlbumAddAsset)
-	router.POST("/album/remove", handlers.AlbumRemoveAsset)
-	router.GET("/album/assets", handlers.AlbumAssets)
-	router.GET("/album/share", handlers.AlbumShare)
+	authRouter.GET("/album/list", handlers.AlbumList)
+	authRouter.POST("/album/create", handlers.AlbumCreate, models.PermissionPhotoBackup)
+	authRouter.POST("/album/save", handlers.AlbumSave, models.PermissionPhotoBackup)
+	authRouter.POST("/album/delete", handlers.AlbumDelete, models.PermissionPhotoBackup)
+	authRouter.POST("/album/add", handlers.AlbumAddAsset, models.PermissionPhotoBackup)
+	authRouter.POST("/album/remove", handlers.AlbumRemoveAsset, models.PermissionPhotoBackup)
+	authRouter.GET("/album/assets", handlers.AlbumAssets)
+	authRouter.GET("/album/share", handlers.AlbumShare)
 	// TODO: there should be a way to list and remove contributors too
-	router.POST("/album/contributor", handlers.AlbumContributor)
+	authRouter.POST("/album/contributor", handlers.AlbumContributor, models.PermissionPhotoBackup)
 
 	// Upload Request
-	router.GET("/upload/share", handlers.UploadShare)
+	authRouter.GET("/upload/share", handlers.UploadShare, models.PermissionPhotoBackup)
 	// Moment handlers
-	router.GET("/moment/list", handlers.MomentList)
-	router.GET("/moment/assets", handlers.MomentAssets)
+	authRouter.GET("/moment/list", handlers.MomentList, models.PermissionPhotoBackup)
+	authRouter.GET("/moment/assets", handlers.MomentAssets, models.PermissionPhotoBackup)
 	// Group handlers
-	// router.GET("/group/list", handlers.GroupList)
-	// router.POST("/group/create", handlers.GroupCreate)
-	// router.POST("/group/save", handlers.GroupSave)
-	// router.POST("/group/delete", handlers.GroupDelete)
-	// router.POST("/group/members", handlers.GroupMembers)
+	// authRouter.GET("/group/list", handlers.GroupList)
+	// authRouter.POST("/group/create", handlers.GroupCreate)
+	// authRouter.POST("/group/save", handlers.GroupSave)
+	// authRouter.POST("/group/delete", handlers.GroupDelete)
+	// authRouter.POST("/group/members", handlers.GroupMembers)
 	// Face recognition related
-	// router.GET("/faces/get", handlers.GetFaces)
+	// authRouter.GET("/faces/get", handlers.GetFaces)
 
 	/*
 	 *	Web interface

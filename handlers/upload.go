@@ -3,7 +3,6 @@ package handlers
 import (
 	"log"
 	"net/http"
-	"server/auth"
 	"server/db"
 	"server/models"
 
@@ -12,13 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func UploadShare(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func UploadShare(c *gin.Context, user *models.User) {
 	shareInfo := models.NewUploadRequest(user.ID)
 	result := db.Instance.Create(&shareInfo)
 	if result.Error != nil {

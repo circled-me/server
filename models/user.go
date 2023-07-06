@@ -86,3 +86,12 @@ func (u *User) HasPermission(required Permission) bool {
 	}
 	return false
 }
+
+func (u *User) HasPermissions(required []Permission) bool {
+	for _, permission := range required {
+		if !u.HasPermission(permission) {
+			return false
+		}
+	}
+	return true
+}

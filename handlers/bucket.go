@@ -3,7 +3,6 @@ package handlers
 import (
 	"log"
 	"net/http"
-	"server/auth"
 	"server/db"
 	"server/models"
 	"server/storage"
@@ -43,13 +42,7 @@ func cleanupPath(in *storage.Bucket) {
 	}
 }
 
-func BucketSave(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionAdmin) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func BucketSave(c *gin.Context, user *models.User) {
 	bucket := storage.Bucket{}
 	err := c.ShouldBindWith(&bucket, binding.JSON)
 	if err != nil {
@@ -96,13 +89,7 @@ func BucketSave(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"error": ""})
 }
 
-func BucketList(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionAdmin) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func BucketList(c *gin.Context, user *models.User) {
 	buckets := []storage.Bucket{}
 	result := db.Instance.Find(&buckets)
 	if result.Error != nil {

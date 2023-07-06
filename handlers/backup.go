@@ -7,7 +7,6 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
-	"server/auth"
 	"server/db"
 	"server/models"
 	"server/storage"
@@ -44,29 +43,17 @@ type BackupCheckRequest struct {
 	IDs []string `binding:"required"`
 }
 
-func BackupMetaData(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func BackupMetaData(c *gin.Context, user *models.User) {
 	var r BackupRequest
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	_ = NewMetadata(c, &user, &r)
+	_ = NewMetadata(c, user, &r)
 }
 
-func BackupConfirm(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func BackupConfirm(c *gin.Context, user *models.User) {
 	var r BackupConfirmation
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
@@ -152,13 +139,7 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 	return &asset
 }
 
-func BackupUpload(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func BackupUpload(c *gin.Context, user *models.User) {
 	BackupLocalAsset(user.ID, c)
 }
 
@@ -204,13 +185,7 @@ func BackupLocalAsset(userID uint64, c *gin.Context) {
 }
 
 // BackupCheck returns the ids of all assets that were already uploaded
-func BackupCheck(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func BackupCheck(c *gin.Context, user *models.User) {
 	var r BackupCheckRequest
 	err := c.ShouldBindJSON(&r)
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"server/auth"
 	"server/db"
 	"server/models"
 	"server/utils"
@@ -51,13 +50,7 @@ func getFirstFavouriteAssetID(userID uint64) uint64 {
 	return fav.AssetID
 }
 
-func AlbumList(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AlbumList(c *gin.Context, user *models.User) {
 	rows, err := db.Instance.
 		Table("albums").
 		Select("albums.id, albums.name, albums.user_id, albums.hero_asset_id, ifnull(min(assets.created_at), 0), ifnull(max(assets.created_at), 0)").
@@ -114,13 +107,7 @@ func AlbumList(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func AlbumCreate(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AlbumCreate(c *gin.Context, user *models.User) {
 	r := AlbumSaveRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
@@ -151,13 +138,7 @@ func AlbumCreate(c *gin.Context) {
 	})
 }
 
-func AlbumSave(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AlbumSave(c *gin.Context, user *models.User) {
 	r := AlbumSaveRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
@@ -198,13 +179,7 @@ func AlbumSave(c *gin.Context) {
 	})
 }
 
-func AlbumDelete(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AlbumDelete(c *gin.Context, user *models.User) {
 	r := AlbumIDRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
@@ -219,13 +194,7 @@ func AlbumDelete(c *gin.Context) {
 	c.JSON(http.StatusOK, "OK")
 }
 
-func AlbumAddAsset(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AlbumAddAsset(c *gin.Context, user *models.User) {
 	r := AlbumAssetRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
@@ -255,13 +224,7 @@ func AlbumAddAsset(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"error": ""})
 }
 
-func AlbumRemoveAsset(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AlbumRemoveAsset(c *gin.Context, user *models.User) {
 	r := AlbumAssetRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
@@ -288,13 +251,7 @@ func AlbumRemoveAsset(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"error": ""})
 }
 
-func AlbumAssets(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AlbumAssets(c *gin.Context, user *models.User) {
 	r := AlbumIDRequest{}
 	_ = c.ShouldBindQuery(&r)
 
@@ -343,13 +300,7 @@ func AlbumAssets(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func AlbumShare(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AlbumShare(c *gin.Context, user *models.User) {
 	r := AlbumIDRequest{} // same for now
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
@@ -384,13 +335,7 @@ func AlbumShare(c *gin.Context) {
 	})
 }
 
-func AlbumContributor(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 || !user.HasPermission(models.PermissionPhotoBackup) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func AlbumContributor(c *gin.Context, user *models.User) {
 	r := AlbumContributeRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {

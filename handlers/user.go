@@ -123,13 +123,7 @@ func cleanupName(name string) string {
 	return name
 }
 
-func UserSave(c *gin.Context) {
-	session := auth.LoadSession(c)
-	currentUser := session.User()
-	if currentUser.ID == 0 || !currentUser.HasPermission(models.PermissionAdmin) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied"})
-		return
-	}
+func UserSave(c *gin.Context, currentUser *models.User) {
 	req := UserInfo{}
 	err := c.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
@@ -181,23 +175,11 @@ func UserSave(c *gin.Context) {
 	})
 }
 
-func UserGetPermissions(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Not Found", "name": "", "permissions": []int{}})
-		return
-	}
+func UserGetPermissions(c *gin.Context, user *models.User) {
 	c.JSON(http.StatusOK, gin.H{"error": "", "name": user.Name, "permissions": user.GetPermissions()})
 }
 
-func UserList(c *gin.Context) {
-	session := auth.LoadSession(c)
-	user := session.User()
-	if user.ID == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Not Found", "name": "", "permissions": []int{}})
-		return
-	}
+func UserList(c *gin.Context, user *models.User) {
 	users := []models.User{}
 	err := db.Instance.Preload("Grants").Order("created_at ASC").Find(&users).Error
 	if err != nil {
