@@ -14,6 +14,7 @@ import (
 	"server/storage"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-contrib/sessions"
 	gormsessions "github.com/gin-contrib/sessions/gorm"
 	"github.com/gin-gonic/gin"
@@ -74,6 +75,7 @@ func main() {
 	cookieStore := gormsessions.NewStore(db.Instance, true, []byte(sessionStoreKey))
 	cookieStore.Options(sessions.Options{MaxAge: sessionExpirationTime})
 	router.Use(sessions.Sessions(sessionCookieName, cookieStore))
+	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/asset/fetch"})))
 
 	// Custom Auth Router
 	authRouter := &auth.Router{Base: router}
@@ -88,12 +90,14 @@ func main() {
 	// User info handlers
 	router.POST("/user/login", handlers.UserLogin)
 	authRouter.POST("/user/save", handlers.UserSave, models.PermissionAdmin)
+	authRouter.POST("/user/reinvite", handlers.UserReInvite, models.PermissionAdmin)
 	authRouter.GET("/user/permissions", handlers.UserGetPermissions)
 	authRouter.GET("/user/list", handlers.UserList)
 	// Asset handlers
 	authRouter.GET("/asset/list", handlers.AssetList, models.PermissionPhotoBackup)
+	authRouter.GET("/asset/tags", handlers.TagList, models.PermissionPhotoBackup)
 	authRouter.GET("/asset/fetch", handlers.AssetFetch)
-	authRouter.POST("/asset/delete", handlers.AssetDelete, models.PermissionPhotoBackup) // TODO: S3
+	authRouter.POST("/asset/delete", handlers.AssetDelete, models.PermissionPhotoBackup) // TODO: S3 Delete
 	authRouter.POST("/asset/favourite", handlers.AssetFavourite)
 	authRouter.POST("/asset/unfavourite", handlers.AssetUnfavourite)
 	// Album handlers

@@ -44,6 +44,23 @@ func ByteArrayToFloat32Array(b []byte) (result []float32) {
 	return
 }
 
+func GetSeason(month time.Month, gpsLat *float32) string {
+	if gpsLat == nil {
+		return ""
+	}
+	if *gpsLat < 0 {
+		month += 6 // add half an year for southern hemisphere
+	}
+	if month >= 3 && month <= 5 {
+		return "Spring"
+	} else if month >= 6 && month <= 8 {
+		return "Summer"
+	} else if month >= 9 && month <= 11 {
+		return "Autumn/Fall"
+	}
+	return "Winter"
+}
+
 func GetDatesString(min, max int64) string {
 	if min == 0 || max == 0 {
 		return "empty :("

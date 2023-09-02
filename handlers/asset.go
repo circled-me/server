@@ -29,6 +29,19 @@ type AssetInfo struct {
 	Type uint   `json:"type"`
 }
 
+const (
+	tagTypeTime   = 1
+	tagTypePlace  = 2
+	tagTypePerson = 3
+)
+
+type Tag struct {
+	Type   int      `json:"t"`
+	Value  string   `json:"v"`
+	Assets []uint64 `json:"a"`
+}
+type Tags map[string]Tag
+
 type AssetDeleteRequest struct {
 	ID uint64 `form:"id" binding:"required"`
 }
@@ -47,6 +60,42 @@ func GetTypeFrom(mimeType string) uint {
 		return models.AssetTypeVideo
 	}
 	return models.AssetTypeOther
+}
+
+func (t *Tag) toIndex() string {
+	return strconv.Itoa(t.Type) + "_" + t.Value
+}
+
+func (t *Tags) toArray() []Tag {
+	result := []Tag{}
+	for _, v := range *t {
+		result = append(result, v)
+	}
+	return result
+}
+
+func (t *Tags) add(typ int, val any, assetId uint64) {
+	if val == nil {
+		return
+	}
+	tag := Tag{}
+	if s, ok := val.(*string); ok && s != nil && *s != "" {
+		tag = Tag{typ, *s, []uint64{assetId}}
+	} else if st, ok := val.(string); ok && st != "" {
+		tag = Tag{typ, st, []uint64{assetId}}
+	} else if i, ok := val.(int); ok {
+		tag = Tag{typ, strconv.Itoa(i), []uint64{assetId}}
+	} else {
+		return
+	}
+	tagIndex := tag.toIndex()
+	if _, exists := (*t)[tagIndex]; !exists {
+		(*t)[tagIndex] = tag
+		return
+	}
+	tag = (*t)[tagIndex]
+	tag.Assets = append(tag.Assets, assetId)
+	(*t)[tagIndex] = tag
 }
 
 func AssetList(c *gin.Context, user *models.User) {
@@ -68,6 +117,38 @@ func AssetList(c *gin.Context, user *models.User) {
 		result = append(result, assetInfo)
 	}
 	c.JSON(http.StatusOK, result)
+}
+
+func TagList(c *gin.Context, user *models.User) {
+	rows, err := db.Instance.Table("assets").Select("id, created_at, locations.gps_lat, area, city, country").Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).
+		Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").Order("created_at DESC").Rows()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		return
+	}
+	defer rows.Close()
+	tags := Tags{}
+	for rows.Next() {
+		var assetId, createdAt uint64
+		var gpsLat *float32
+		var area, city, country *string
+		if err = rows.Scan(&assetId, &createdAt, &gpsLat, &area, &city, &country); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
+			return
+		}
+		// Add location tags, e.g. "Tokyo", "Matsubara", etc
+		tags.add(tagTypePlace, area, assetId)
+		tags.add(tagTypePlace, city, assetId)
+		tags.add(tagTypePlace, country, assetId)
+		// Add time tags, e.g "2023", "April", "22"
+		year, month, day := time.Unix(int64(createdAt), 0).Date()
+		tags.add(tagTypeTime, &year, assetId)
+		tags.add(tagTypeTime, month.String(), assetId)
+		tags.add(tagTypeTime, day, assetId)
+		// Add season
+		tags.add(tagTypeTime, utils.GetSeason(month, gpsLat), assetId)
+	}
+	c.JSON(http.StatusOK, tags.toArray())
 }
 
 func AssetFetch(c *gin.Context, user *models.User) {

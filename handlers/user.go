@@ -175,6 +175,34 @@ func UserSave(c *gin.Context, currentUser *models.User) {
 	})
 }
 
+func UserReInvite(c *gin.Context, currentUser *models.User) {
+	req := UserInfo{}
+	err := c.ShouldBindWith(&req, binding.JSON)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	user := models.User{ID: req.ID}
+	if user.ID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "hmmmm"})
+		return
+	}
+	if err = db.Instance.Find(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	user.Email = utils.Rand16BytesToBase62()
+	user.Password = ""
+	if err = db.Instance.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"error": "",
+		"token": user.Email,
+	})
+}
+
 func UserGetPermissions(c *gin.Context, user *models.User) {
 	c.JSON(http.StatusOK, gin.H{"error": "", "name": user.Name, "permissions": user.GetPermissions()})
 }
