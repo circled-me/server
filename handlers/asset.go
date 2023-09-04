@@ -7,6 +7,7 @@ import (
 	"server/models"
 	"server/storage"
 	"server/utils"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"gorm.io/gorm"
 )
 
 type AssetFetchRequest struct {
@@ -30,9 +32,17 @@ type AssetInfo struct {
 }
 
 const (
-	tagTypeTime   = 1
-	tagTypePlace  = 2
-	tagTypePerson = 3
+	tagTypePlace     = 1
+	tagTypePerson    = 2
+	tagTypeYear      = 3
+	tagTypeMonth     = 4
+	tagTypeDay       = 5
+	tagTypeSeason    = 6
+	tagTypeType      = 7
+	tagTypeFavourite = 8
+	tagTypeAlbum     = 9
+
+	etagHeader = "ETag"
 )
 
 type Tag struct {
@@ -98,8 +108,38 @@ func (t *Tags) add(typ int, val any, assetId uint64) {
 	(*t)[tagIndex] = tag
 }
 
+func isNotModified(c *gin.Context, tx *gorm.DB) bool {
+	// Set the current ETag in all cases
+	row := tx.Row()
+	updatedAt := uint64(0)
+	if err := row.Scan(&updatedAt); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error -1"})
+		return false
+	}
+	c.Header("cache-control", "private, max-age=1")
+	c.Header(etagHeader, strconv.FormatUint(updatedAt, 10))
+
+	remoteEtag := c.Request.Header.Get("If-None-Match")
+	// Check if remote cache is still valid
+	if remoteEtag == "" {
+		return false
+	}
+	// ETag contains last updated asset time
+	remoteLastUpdated, _ := strconv.ParseUint(remoteEtag, 10, 64)
+	if remoteLastUpdated == updatedAt {
+		c.Status(http.StatusNotModified)
+		return true
+	}
+	return false
+}
+
 func AssetList(c *gin.Context, user *models.User) {
-	rows, err := db.Instance.Table("assets").Select("id, mime_type").Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).Order("created_at DESC").Rows()
+	whereCondition := "user_id=? AND deleted=0 AND size>0 AND thumb_size>0"
+	tx := db.Instance.Table("assets").Select("max(updated_at)").Where(whereCondition, user.ID)
+	if isNotModified(c, tx) {
+		return
+	}
+	rows, err := db.Instance.Table("assets").Select("id, mime_type").Where(whereCondition, user.ID).Order("created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
@@ -120,7 +160,12 @@ func AssetList(c *gin.Context, user *models.User) {
 }
 
 func TagList(c *gin.Context, user *models.User) {
-	rows, err := db.Instance.Table("assets").Select("id, created_at, locations.gps_lat, area, city, country").Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).
+	whereCondition := "user_id=? AND deleted=0 AND size>0 AND thumb_size>0"
+	tx := db.Instance.Table("assets").Select("max(updated_at)").Where(whereCondition, user.ID)
+	if isNotModified(c, tx) {
+		return
+	}
+	rows, err := db.Instance.Table("assets").Select("id, mime_type, favourite, created_at, locations.gps_lat, area, city, country").Where(whereCondition, user.ID).
 		Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").Order("created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
@@ -128,11 +173,13 @@ func TagList(c *gin.Context, user *models.User) {
 	}
 	defer rows.Close()
 	tags := Tags{}
+	mimeType := ""
+	var assetId, createdAt uint64
+	var gpsLat *float32
+	var area, city, country *string
+	favourite := false
 	for rows.Next() {
-		var assetId, createdAt uint64
-		var gpsLat *float32
-		var area, city, country *string
-		if err = rows.Scan(&assetId, &createdAt, &gpsLat, &area, &city, &country); err != nil {
+		if err = rows.Scan(&assetId, &mimeType, &favourite, &createdAt, &gpsLat, &area, &city, &country); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
 		}
@@ -142,13 +189,26 @@ func TagList(c *gin.Context, user *models.User) {
 		tags.add(tagTypePlace, country, assetId)
 		// Add time tags, e.g "2023", "April", "22"
 		year, month, day := time.Unix(int64(createdAt), 0).Date()
-		tags.add(tagTypeTime, &year, assetId)
-		tags.add(tagTypeTime, month.String(), assetId)
-		tags.add(tagTypeTime, day, assetId)
+		tags.add(tagTypeYear, year, assetId)
+		tags.add(tagTypeMonth, month.String(), assetId)
+		tags.add(tagTypeDay, day, assetId)
 		// Add season
-		tags.add(tagTypeTime, utils.GetSeason(month, gpsLat), assetId)
+		tags.add(tagTypeSeason, utils.GetSeason(month, gpsLat), assetId)
+		// Add type
+		if GetTypeFrom(mimeType) == models.AssetTypeVideo {
+			tags.add(tagTypeType, "Video", assetId)
+		}
+		// TODO: add album names?
+		// Add favourites
+		if favourite {
+			tags.add(tagTypeFavourite, "Favourite", assetId)
+		}
 	}
-	c.JSON(http.StatusOK, tags.toArray())
+	result := tags.toArray()
+	sort.Slice(result, func(i, j int) bool {
+		return len(result[i].Assets) > len(result[j].Assets)
+	})
+	c.JSON(http.StatusOK, result)
 }
 
 func AssetFetch(c *gin.Context, user *models.User) {

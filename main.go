@@ -5,6 +5,7 @@ import (
 	"server/db"
 	"server/locations"
 	"server/processing"
+	"server/utils"
 	"server/web"
 	"time"
 
@@ -33,28 +34,6 @@ func main() {
 	go locations.StartProcessing()
 	go processing.StartProcessing()
 
-	// faces.Init("/mnt/data1/models")
-
-	// One off
-	// assets := []models.Asset{}
-	// res := db.Instance.Table("assets").Where("deleted = 0").Find(&assets)
-	// if res.Error != nil {
-	// 	fmt.Println(res.Error)
-	// 	return
-	// }
-	// for _, asset := range assets {
-	// 	fmt.Printf("Processing Asset: %d\n", asset.ID)
-	// 	foundFaces, err := faces.ProcessPhoto(asset.ID, "/mnt/data1/circled-data/"+asset.GetThumbPath())
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		continue
-	// 	}
-	// 	fmt.Printf("Asset: %d, num faces: %d; saving...\n", asset.ID, len(foundFaces))
-	// 	for _, face := range foundFaces {
-	// 		db.Instance.Save(&face)
-	// 	}
-	// }
-
 	router := gin.Default()
 	router.SetTrustedProxies([]string{})
 	router.Use(cors.New(cors.Config{
@@ -76,7 +55,7 @@ func main() {
 	cookieStore.Options(sessions.Options{MaxAge: sessionExpirationTime})
 	router.Use(sessions.Sessions(sessionCookieName, cookieStore))
 	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/asset/fetch"})))
-
+	router.Use((&utils.CacheRouter{CacheTime: utils.CacheNoCache}).Handler()) // No cache by default, individual end-points can override that
 	// Custom Auth Router
 	authRouter := &auth.Router{Base: router}
 	// Backup handlers
