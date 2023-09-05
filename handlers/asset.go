@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"log"
 	"net/http"
 	"server/db"
 	"server/models"
@@ -53,7 +54,7 @@ type Tag struct {
 type Tags map[string]Tag
 
 type AssetDeleteRequest struct {
-	ID uint64 `form:"id" binding:"required"`
+	IDs []uint64 `form:"ids" binding:"required"`
 }
 
 type AssetFavouriteRequest struct {
@@ -134,12 +135,12 @@ func isNotModified(c *gin.Context, tx *gorm.DB) bool {
 }
 
 func AssetList(c *gin.Context, user *models.User) {
-	whereCondition := "user_id=? AND deleted=0 AND size>0 AND thumb_size>0"
-	tx := db.Instance.Table("assets").Select("max(updated_at)").Where(whereCondition, user.ID)
+	// Modified depends on deleted assets as well, that's why the where condition is different
+	tx := db.Instance.Table("assets").Select("max(updated_at)").Where("user_id=? AND size>0 AND thumb_size>0", user.ID)
 	if isNotModified(c, tx) {
 		return
 	}
-	rows, err := db.Instance.Table("assets").Select("id, mime_type").Where(whereCondition, user.ID).Order("created_at DESC").Rows()
+	rows, err := db.Instance.Table("assets").Select("id, mime_type").Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).Order("created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
@@ -160,13 +161,15 @@ func AssetList(c *gin.Context, user *models.User) {
 }
 
 func TagList(c *gin.Context, user *models.User) {
-	whereCondition := "user_id=? AND deleted=0 AND size>0 AND thumb_size>0"
-	tx := db.Instance.Table("assets").Select("max(updated_at)").Where(whereCondition, user.ID)
+	// Modified depends on deleted assets as well, that's why the where condition is different
+	tx := db.Instance.Table("assets").Select("max(updated_at)").Where("user_id=? AND size>0 AND thumb_size>0", user.ID)
 	if isNotModified(c, tx) {
 		return
 	}
-	rows, err := db.Instance.Table("assets").Select("id, mime_type, favourite, created_at, locations.gps_lat, area, city, country").Where(whereCondition, user.ID).
-		Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").Order("created_at DESC").Rows()
+	rows, err := db.Instance.Table("assets").Select("id, mime_type, favourite, created_at, locations.gps_lat, area, city, country").
+		Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).
+		Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").Order("created_at DESC").
+		Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
 		return
@@ -294,36 +297,48 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 
 func AssetDelete(c *gin.Context, user *models.User) {
 	r := AssetDeleteRequest{}
-	err := c.ShouldBindQuery(&r)
+	err := c.ShouldBindWith(&r, binding.JSON)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	asset := models.Asset{
-		ID: r.ID,
+	failed := []uint64{}
+	for _, id := range r.IDs {
+		asset := models.Asset{
+			ID: id,
+		}
+		db.Instance.Joins("Bucket").First(&asset)
+		if asset.ID != id || asset.UserID != user.ID {
+			failed = append(failed, id)
+			log.Printf("Asset: %d, auth error", id)
+			continue
+		}
+		asset.Deleted = true
+		err = db.Instance.Save(&asset).Error
+		if err != nil {
+			failed = append(failed, id)
+			log.Printf("Asset: %d, save error %s", id, err)
+			continue
+		}
+		storage := storage.StorageFrom(&asset.Bucket)
+		if storage == nil {
+			log.Printf("Asset: %d, error: storage is nil", id)
+			failed = append(failed, id)
+			continue
+		}
+		// TODO: S3 delete
+		if err = storage.Delete(asset.GetThumbPath()); err != nil {
+			log.Printf("Asset: %d, thumb delete error: %s", id, err.Error())
+		}
+		if err = storage.Delete(asset.GetPath()); err != nil {
+			log.Printf("Asset: %d, delete error: %s", id, err.Error())
+		}
 	}
-	db.Instance.Joins("Bucket").First(&asset)
-	if asset.ID != r.ID || asset.UserID != user.ID {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 2"})
-		return
-	}
-	asset.Deleted = true
-	err = db.Instance.Save(&asset).Error
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	storage := storage.StorageFrom(&asset.Bucket)
-	if storage == nil {
-		panic("Storage is nil")
-	}
-	_ = storage.Delete(asset.GetThumbPath())
-	err = storage.Delete(asset.GetPath())
 	// Handle errors
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if len(failed) > 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Some assets cannot be deleted", "failed": failed})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"error": ""})
+		c.JSON(http.StatusOK, gin.H{"error": "", "failed": failed})
 	}
 }
 

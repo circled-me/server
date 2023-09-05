@@ -75,14 +75,14 @@ func main() {
 	// Asset handlers
 	authRouter.GET("/asset/list", handlers.AssetList, models.PermissionPhotoBackup)
 	authRouter.GET("/asset/tags", handlers.TagList, models.PermissionPhotoBackup)
-	authRouter.GET("/asset/fetch", handlers.AssetFetch)
+	authRouter.GET("/asset/fetch", handlers.AssetFetch)                                  // Auth checks are done inside the handler
 	authRouter.POST("/asset/delete", handlers.AssetDelete, models.PermissionPhotoBackup) // TODO: S3 Delete
 	authRouter.POST("/asset/favourite", handlers.AssetFavourite)
 	authRouter.POST("/asset/unfavourite", handlers.AssetUnfavourite)
 	// Album handlers
 	authRouter.GET("/album/list", handlers.AlbumList)
 	authRouter.POST("/album/create", handlers.AlbumCreate, models.PermissionPhotoBackup)
-	authRouter.POST("/album/save", handlers.AlbumSave, models.PermissionPhotoBackup)
+	authRouter.POST("/album/save", handlers.AlbumSave, models.PermissionPhotoBackup) // TODO: Check hero saved?
 	authRouter.POST("/album/delete", handlers.AlbumDelete, models.PermissionPhotoBackup)
 	authRouter.POST("/album/add", handlers.AlbumAddAsset, models.PermissionPhotoBackup)
 	authRouter.POST("/album/remove", handlers.AlbumRemoveAsset, models.PermissionPhotoBackup)
