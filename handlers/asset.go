@@ -54,7 +54,7 @@ type Tag struct {
 type Tags map[string]Tag
 
 type AssetDeleteRequest struct {
-	IDs []uint64 `form:"ids" binding:"required"`
+	IDs []uint64 `json:"ids" binding:"required"`
 }
 
 type AssetFavouriteRequest struct {
@@ -112,22 +112,17 @@ func (t *Tags) add(typ int, val any, assetId uint64) {
 func isNotModified(c *gin.Context, tx *gorm.DB) bool {
 	// Set the current ETag in all cases
 	row := tx.Row()
-	updatedAt := uint64(0)
-	if err := row.Scan(&updatedAt); err != nil {
+	lastUpdatedAt := uint64(0)
+	if err := row.Scan(&lastUpdatedAt); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error -1"})
 		return false
 	}
 	c.Header("cache-control", "private, max-age=1")
-	c.Header(etagHeader, strconv.FormatUint(updatedAt, 10))
+	c.Header(etagHeader, strconv.FormatUint(lastUpdatedAt, 10))
 
-	remoteEtag := c.Request.Header.Get("If-None-Match")
-	// Check if remote cache is still valid
-	if remoteEtag == "" {
-		return false
-	}
 	// ETag contains last updated asset time
-	remoteLastUpdated, _ := strconv.ParseUint(remoteEtag, 10, 64)
-	if remoteLastUpdated == updatedAt {
+	remoteLastUpdatedAt, _ := strconv.ParseUint(c.Request.Header.Get("If-None-Match"), 10, 64)
+	if remoteLastUpdatedAt == lastUpdatedAt {
 		c.Status(http.StatusNotModified)
 		return true
 	}
@@ -337,9 +332,9 @@ func AssetDelete(c *gin.Context, user *models.User) {
 	// Handle errors
 	if len(failed) > 0 {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Some assets cannot be deleted", "failed": failed})
-	} else {
-		c.JSON(http.StatusOK, gin.H{"error": "", "failed": failed})
+		return
 	}
+	c.JSON(http.StatusOK, gin.H{"error": "", "failed": failed})
 }
 
 func AssetFavourite(c *gin.Context, user *models.User) {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"github.com/go-sql-driver/mysql"
 )
 
 type AlbumInfo struct {
@@ -30,9 +31,9 @@ type AlbumSaveRequest struct {
 	HeroAssetId uint64 `form:"hero_asset_id"`
 }
 
-type AlbumAssetRequest struct {
-	AlbumID uint64 `form:"album_id" binding:"required"`
-	AssetID uint64 `form:"asset_id" binding:"required"`
+type AlbumAssetsRequest struct {
+	AlbumID  uint64   `json:"album_id" binding:"required"`
+	AssetIDs []uint64 `json:"asset_ids" binding:"required"`
 }
 
 type AlbumIDRequest struct {
@@ -80,10 +81,13 @@ func AlbumList(c *gin.Context, user *models.User) {
 	var minDate, maxDate int64
 	for rows.Next() {
 		albumInfo := AlbumInfo{}
-		HeroAssetId := &albumInfo.HeroAssetId
+		var HeroAssetId *uint64
 		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name, &albumInfo.Owner, &HeroAssetId, &minDate, &maxDate); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
 			return
+		}
+		if HeroAssetId != nil {
+			albumInfo.HeroAssetId = *HeroAssetId
 		}
 		albumInfo.Subtitle = utils.GetDatesString(minDate, maxDate)
 		result = append(result, albumInfo)
@@ -194,9 +198,9 @@ func AlbumDelete(c *gin.Context, user *models.User) {
 	c.JSON(http.StatusOK, "OK")
 }
 
-func AlbumAddAsset(c *gin.Context, user *models.User) {
-	r := AlbumAssetRequest{}
-	err := c.ShouldBindWith(&r, binding.Form)
+func AlbumAddAssets(c *gin.Context, user *models.User) {
+	r := AlbumAssetsRequest{}
+	err := c.ShouldBindWith(&r, binding.JSON)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -212,43 +216,59 @@ func AlbumAddAsset(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "no!"})
 		return
 	}
-	albumAsset := models.AlbumAsset{
-		AlbumID: r.AlbumID,
-		AssetID: r.AssetID,
+	failed := []uint64{}
+	for _, id := range r.AssetIDs {
+		albumAsset := models.AlbumAsset{
+			AlbumID: r.AlbumID,
+			AssetID: id,
+		}
+		result = db.Instance.Create(&albumAsset)
+		if result.Error != nil {
+			if me, ok := result.Error.(*mysql.MySQLError); !ok || me.Number != 1062 {
+				failed = append(failed, id)
+			}
+		}
 	}
-	result = db.Instance.Create(&albumAsset)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
+	if len(failed) > 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Some assets cannot be added", "failed": failed})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"error": ""})
+	c.JSON(http.StatusOK, gin.H{"error": "", "failed": failed})
 }
 
 func AlbumRemoveAsset(c *gin.Context, user *models.User) {
-	r := AlbumAssetRequest{}
-	err := c.ShouldBindWith(&r, binding.Form)
+	r := AlbumAssetsRequest{}
+	err := c.ShouldBindWith(&r, binding.JSON)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	albumAsset := models.AlbumAsset{}
-	// Check if this is our album or our asset
-	result := db.Instance.Joins("Album").Joins("Asset").Where("album_id=? AND asset_id=?", r.AlbumID, r.AssetID).Find(&albumAsset)
-	if result.Error != nil || result.RowsAffected != 1 {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+	failed := []uint64{}
+	// TODO: Optimise below as it was converted from single asset deletion to multiple
+	for _, id := range r.AssetIDs {
+		albumAsset := models.AlbumAsset{}
+		// Check if this is our album or our asset
+		result := db.Instance.Joins("Album").Joins("Asset").Where("album_id=? AND asset_id=?", r.AlbumID, id).Find(&albumAsset)
+		if result.Error != nil || result.RowsAffected != 1 {
+			failed = append(failed, id)
+			continue
+		}
+		if albumAsset.Album.UserID != user.ID && albumAsset.Asset.UserID != user.ID {
+			failed = append(failed, id)
+			continue
+		}
+		// Then we can remove it from the album
+		result = db.Instance.Delete(&albumAsset)
+		if result.Error != nil {
+			failed = append(failed, id)
+			continue
+		}
+	}
+	if len(failed) > 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Some assets cannot be removed", "failed": failed})
 		return
 	}
-	if albumAsset.Album.UserID != user.ID && albumAsset.Asset.UserID != user.ID {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no!"})
-		return
-	}
-	// Then we can remove it from the album
-	result = db.Instance.Delete(&albumAsset)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 5"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"error": ""})
+	c.JSON(http.StatusOK, gin.H{"error": "", "failed": failed})
 }
 
 func AlbumAssets(c *gin.Context, user *models.User) {

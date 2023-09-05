@@ -8,7 +8,10 @@ import (
 var Instance *gorm.DB
 
 func Init(dsn string) {
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		SkipDefaultTransaction: true,
+		PrepareStmt:            true,
+	})
 	if err != nil || db == nil {
 		panic(err)
 	}

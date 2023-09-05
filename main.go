@@ -84,7 +84,7 @@ func main() {
 	authRouter.POST("/album/create", handlers.AlbumCreate, models.PermissionPhotoBackup)
 	authRouter.POST("/album/save", handlers.AlbumSave, models.PermissionPhotoBackup) // TODO: Check hero saved?
 	authRouter.POST("/album/delete", handlers.AlbumDelete, models.PermissionPhotoBackup)
-	authRouter.POST("/album/add", handlers.AlbumAddAsset, models.PermissionPhotoBackup)
+	authRouter.POST("/album/add", handlers.AlbumAddAssets, models.PermissionPhotoBackup)
 	authRouter.POST("/album/remove", handlers.AlbumRemoveAsset, models.PermissionPhotoBackup)
 	authRouter.GET("/album/assets", handlers.AlbumAssets)
 	authRouter.GET("/album/share", handlers.AlbumShare)
