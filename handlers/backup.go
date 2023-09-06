@@ -16,16 +16,16 @@ import (
 )
 
 type BackupRequest struct {
-	ID        string   `form:"id" binding:"required"` // Remote asset ID (string)
-	Name      string   `form:"name" binding:"required"`
-	MimeType  string   `form:"mimetype" binding:""`
-	Lat       *float64 `form:"lat" binding:""`
-	Long      *float64 `form:"long" binding:""`
-	Created   int64    `form:"created" binding:""`
-	Favourite bool     `form:"favourite" binding:""`
-	Width     uint16   `form:"width" binding:""`
-	Height    uint16   `form:"height" binding:""`
-	Duration  uint32   `form:"duration"`
+	RemoteID  string   `json:"id" binding:"required"`
+	Name      string   `json:"name" binding:"required"`
+	MimeType  string   `json:"mimetype"`
+	Lat       *float64 `json:"lat"`
+	Long      *float64 `json:"long"`
+	Created   int64    `json:"created"`
+	Favourite bool     `json:"favourite"`
+	Width     uint16   `json:"width"`
+	Height    uint16   `json:"height"`
+	Duration  uint32   `json:"duration"`
 }
 
 type BackupConfirmation struct {
@@ -43,11 +43,23 @@ type BackupCheckRequest struct {
 	IDs []string `binding:"required"`
 }
 
+type NewMetadataResponse struct {
+	ID       uint64 `json:"id"`
+	URI      string `json:"uri"`
+	Thumb    string `json:"thumb"`
+	MimeType string `json:"mime_type"`
+}
+
+type BackupAssetResponse struct {
+	Error string `json:"error"`
+	ID    uint64 `json:"id"`
+}
+
 func BackupMetaData(c *gin.Context, user *models.User) {
 	var r BackupRequest
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	_ = NewMetadata(c, user, &r)
@@ -57,7 +69,7 @@ func BackupConfirm(c *gin.Context, user *models.User) {
 	var r BackupConfirmation
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	asset := models.Asset{
@@ -67,7 +79,7 @@ func BackupConfirm(c *gin.Context, user *models.User) {
 	}
 	err = db.Instance.Updates(&asset).Error
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, Response{err.Error()})
 		return
 	}
 }
@@ -78,7 +90,7 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 	}
 	asset := models.Asset{
 		UserID:    user.ID,
-		RemoteID:  r.ID,
+		RemoteID:  r.RemoteID,
 		Name:      r.Name,
 		GroupID:   nil,
 		BucketID:  *user.BucketID,
@@ -104,22 +116,22 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 		asset.MimeType != "image/heif" &&
 		!strings.HasPrefix(asset.MimeType, "video/") {
 
-		c.JSON(http.StatusForbidden, gin.H{"error": "this file type is not allowed"})
+		c.JSON(http.StatusForbidden, Response{"this file type is not allowed"})
 		return nil
 	}
 
 	result := db.Instance.Create(&asset)
 	if result.Error != nil {
 		// Try loading the asset by RemoteID, maybe it exists and we should overwrite it
-		result = db.Instance.First(&asset, "remote_id = ?", r.ID)
+		result = db.Instance.First(&asset, "remote_id = ?", r.RemoteID)
 		if result.Error != nil {
 			// Now give up...
-			c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+			c.JSON(http.StatusInternalServerError, DBError1Response)
 			return nil
 		}
 	}
 	if db.Instance.Preload("Bucket").First(&asset).Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error 3"})
+		c.JSON(http.StatusInternalServerError, DBError2Response)
 		return nil
 	}
 	if asset.Favourite {
@@ -130,11 +142,11 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 		}
 		_ = db.Instance.Create(&fav)
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"id":        asset.ID,
-		"uri":       asset.CreateUploadURI(false, ""),
-		"thumb":     asset.CreateUploadURI(true, ""),
-		"mime_type": asset.MimeType,
+	c.JSON(http.StatusOK, NewMetadataResponse{
+		ID:       asset.ID,
+		URI:      asset.CreateUploadURI(false, ""),
+		Thumb:    asset.CreateUploadURI(true, ""),
+		MimeType: asset.MimeType,
 	})
 	return &asset
 }
@@ -147,13 +159,13 @@ func BackupLocalAsset(userID uint64, c *gin.Context) {
 	var r BackupUploadRequest
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	asset := models.Asset{}
 	result := db.Instance.Joins("Bucket").Where("user_id = ? AND assets.id = ?", userID, r.ID).Find(&asset)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	storage := storage.StorageFrom(&asset.Bucket)
@@ -164,14 +176,14 @@ func BackupLocalAsset(userID uint64, c *gin.Context) {
 	reader := io.TeeReader(c.Request.Body, &thumbContent)
 	size, err := storage.Save(asset.GetPathOrThumb(r.Thumb), reader)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, Response{err.Error()})
 		return
 	}
 	if r.Thumb {
 		asset.ThumbSize = size
 		thumb, _, err := image.Decode(&thumbContent)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, Response{err.Error()})
 			return
 		}
 		asset.ThumbWidth = uint16(thumb.Bounds().Dx())
@@ -181,7 +193,7 @@ func BackupLocalAsset(userID uint64, c *gin.Context) {
 	}
 	// Re-save asset as we have new .Size, .ThumbWidth, .ThumbHeight (TODO: .MimeType)
 	db.Instance.Updates(&asset)
-	c.JSON(http.StatusOK, gin.H{"error": "", "id": asset.ID})
+	c.JSON(http.StatusOK, BackupAssetResponse{"", asset.ID})
 }
 
 // BackupCheck returns the ids of all assets that were already uploaded
@@ -189,7 +201,7 @@ func BackupCheck(c *gin.Context, user *models.User) {
 	var r BackupCheckRequest
 	err := c.ShouldBindJSON(&r)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, Response{err.Error()})
 		return
 	}
 	rows, err := db.Instance.Table("assets").Select("remote_id").

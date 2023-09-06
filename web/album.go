@@ -23,7 +23,7 @@ func AlbumView(c *gin.Context) {
 
 	if err != nil {
 		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+		c.JSON(http.StatusInternalServerError, handlers.Response{"something went wrong"})
 		return
 	}
 

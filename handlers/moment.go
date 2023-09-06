@@ -69,7 +69,7 @@ func MomentList(c *gin.Context, user *models.User) {
 		2; 
 	`, user.ID).Rows()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	defer rows.Close()
@@ -79,7 +79,7 @@ func MomentList(c *gin.Context, user *models.User) {
 	for rows.Next() {
 		momentInfo := MomentInfo{}
 		if err = rows.Scan(&date, &momentInfo.Name, &momentInfo.Places, &momentInfo.HeroAssetId, &momentInfo.Start, &momentInfo.End); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
+			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
 		// Should we merge last moment with this one?
@@ -98,7 +98,7 @@ func MomentAssets(c *gin.Context, user *models.User) {
 	r := MomentInfo{}
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	rows, err := db.Instance.
@@ -108,7 +108,7 @@ func MomentAssets(c *gin.Context, user *models.User) {
 		Order("created_at ASC").Rows()
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	defer rows.Close()
@@ -117,7 +117,7 @@ func MomentAssets(c *gin.Context, user *models.User) {
 	for rows.Next() {
 		assetInfo := AssetInfo{}
 		if err = rows.Scan(&assetInfo.ID, &mimeType); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
+			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
 		assetInfo.Type = GetTypeFrom(mimeType)

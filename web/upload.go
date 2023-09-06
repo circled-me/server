@@ -94,7 +94,7 @@ func UploadRequestConfirm(c *gin.Context) {
 	var r UploadConfirmation
 	err = c.ShouldBindJSON(&r)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, handlers.Response{err.Error()})
 		return
 	}
 	asset := models.Asset{
@@ -103,12 +103,13 @@ func UploadRequestConfirm(c *gin.Context) {
 	}
 	result := db.Instance.First(&asset)
 	if result.Error != nil {
-		c.String(http.StatusInternalServerError, result.Error.Error())
+		c.JSON(http.StatusInternalServerError, handlers.DBError1Response)
 		return
 	}
 	asset.Size = r.Size
 	asset.MimeType = r.MimeType
 	db.Instance.Updates(&asset)
+	c.JSON(http.StatusOK, handlers.OKResponse)
 }
 
 func DisallowRobots(c *gin.Context) {

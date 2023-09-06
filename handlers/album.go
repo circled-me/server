@@ -45,12 +45,18 @@ type AlbumContributeRequest struct {
 	UserID  uint64 `form:"user_id" binding:"required"`
 }
 
+type AlbumShareResponse struct {
+	Title string `json:"title"`
+	Path  string `json:"path"`
+}
+
 func getFirstFavouriteAssetID(userID uint64) uint64 {
 	fav := models.FavouriteAsset{}
 	db.Instance.First(&fav, "user_id = ?", userID)
 	return fav.AssetID
 }
 
+// AlbumList returns an array of AlbumInfo objects
 func AlbumList(c *gin.Context, user *models.User) {
 	rows, err := db.Instance.
 		Table("albums").
@@ -63,7 +69,7 @@ func AlbumList(c *gin.Context, user *models.User) {
 		Order("albums.created_at DESC").
 		Rows()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	defer rows.Close()
@@ -83,7 +89,7 @@ func AlbumList(c *gin.Context, user *models.User) {
 		albumInfo := AlbumInfo{}
 		var HeroAssetId *uint64
 		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name, &albumInfo.Owner, &HeroAssetId, &minDate, &maxDate); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
+			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
 		if HeroAssetId != nil {
@@ -115,12 +121,12 @@ func AlbumCreate(c *gin.Context, user *models.User) {
 	r := AlbumSaveRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	r.Name = strings.Trim(r.Name, " \n\t\r")
 	if len(r.Name) < 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "empty name"})
+		c.JSON(http.StatusBadRequest, Response{"empty name"})
 		return
 	}
 	album := models.Album{
@@ -132,7 +138,7 @@ func AlbumCreate(c *gin.Context, user *models.User) {
 	}
 	result := db.Instance.Create(&album)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error 1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	c.JSON(http.StatusOK, AlbumInfo{
@@ -146,34 +152,34 @@ func AlbumSave(c *gin.Context, user *models.User) {
 	r := AlbumSaveRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	r.Name = strings.Trim(r.Name, " \n\t\r")
 	if len(r.Name) < 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "empty name"})
+		c.JSON(http.StatusBadRequest, Response{"empty name"})
 		return
 	}
 	if r.ID < 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no ID"})
+		c.JSON(http.StatusBadRequest, Response{"no ID"})
 		return
 	}
 	album := models.Album{
 		ID: r.ID,
 	}
 	if db.Instance.Find(&album).Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error 6"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	if album.UserID != user.ID {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "some error 7"})
+		c.JSON(http.StatusInternalServerError, DBError2Response)
 		return
 	}
 	album.Name = r.Name
 	album.HeroAssetID = &r.HeroAssetId
 	result := db.Instance.Save(&album)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		c.JSON(http.StatusInternalServerError, DBError3Response)
 		return
 	}
 	c.JSON(http.StatusOK, AlbumInfo{
@@ -187,33 +193,34 @@ func AlbumDelete(c *gin.Context, user *models.User) {
 	r := AlbumIDRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	result := db.Instance.Delete(&models.Album{}, "id=? and user_id=?", r.AlbumID, user.ID)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
-	c.JSON(http.StatusOK, "OK")
+	c.JSON(http.StatusOK, OKResponse)
 }
 
 func AlbumAddAssets(c *gin.Context, user *models.User) {
 	r := AlbumAssetsRequest{}
 	err := c.ShouldBindWith(&r, binding.JSON)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	// Check if this is our album or we are added as a contributor
 	count := int64(0)
-	result := db.Instance.Raw("select 1 from albums where id=? and (user_id=? OR exists(select 1 from album_contributors where album_contributors.album_id = albums.id and album_contributors.user_id=?))", r.AlbumID, user.ID, user.ID).Scan(&count)
+	result := db.Instance.Raw("select 1 from albums where id=? and (user_id=? OR exists(select 1 from album_contributors where album_contributors.album_id = albums.id and album_contributors.user_id=?))", r.AlbumID, user.ID, user.ID).
+		Scan(&count)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	if count != 1 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "no!"})
+		c.JSON(http.StatusUnauthorized, NopeResponse)
 		return
 	}
 	failed := []uint64{}
@@ -230,17 +237,17 @@ func AlbumAddAssets(c *gin.Context, user *models.User) {
 		}
 	}
 	if len(failed) > 0 {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Some assets cannot be added", "failed": failed})
+		c.JSON(http.StatusInternalServerError, MultiResponse{"Some assets cannot be added", failed})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"error": "", "failed": failed})
+	c.JSON(http.StatusOK, OKMultiResponse)
 }
 
 func AlbumRemoveAsset(c *gin.Context, user *models.User) {
 	r := AlbumAssetsRequest{}
 	err := c.ShouldBindWith(&r, binding.JSON)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	failed := []uint64{}
@@ -265,10 +272,10 @@ func AlbumRemoveAsset(c *gin.Context, user *models.User) {
 		}
 	}
 	if len(failed) > 0 {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Some assets cannot be removed", "failed": failed})
+		c.JSON(http.StatusInternalServerError, MultiResponse{"Some assets cannot be removed", failed})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"error": "", "failed": failed})
+	c.JSON(http.StatusOK, OKMultiResponse)
 }
 
 func AlbumAssets(c *gin.Context, user *models.User) {
@@ -286,12 +293,11 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 			Joins("join assets on favourite_assets.asset_id = assets.id").
 			Order("assets.created_at ASC").Rows()
 	} else {
-		// Normal album
-		// Check for access (own album or as a contributor)
+		// Normal album - check for access (own album or as a contributor)
 		access := 0
 		db.Instance.Raw("select 1 from albums a left join album_contributors ac on (ac.album_id = a.id) where a.id = ? AND (a.user_id = ? OR ac.user_id = ?)", r.AlbumID, user.ID, user.ID).Scan(&access)
 		if access == 0 {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 4"})
+			c.JSON(http.StatusUnauthorized, NopeResponse)
 			return
 		}
 		rows, err = db.Instance.
@@ -302,7 +308,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 			Order("assets.created_at ASC").Rows()
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	defer rows.Close()
@@ -311,7 +317,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 	for rows.Next() {
 		assetInfo := AssetInfo{}
 		if err = rows.Scan(&assetInfo.ID, &mimeType); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 5"})
+			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
 		assetInfo.Type = GetTypeFrom(mimeType)
@@ -324,18 +330,18 @@ func AlbumShare(c *gin.Context, user *models.User) {
 	r := AlbumIDRequest{} // same for now
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	// Check if this is our album or we are added as a contributor
 	var count int64
 	result := db.Instance.Raw("select 1 from albums where id=? and (user_id=? OR exists(select 1 from album_contributors where album_contributors.album_id = albums.id and album_contributors.user_id=?))", r.AlbumID, user.ID, user.ID).Scan(&count)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	if count != 1 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "no!"})
+		c.JSON(http.StatusUnauthorized, NopeResponse)
 		return
 	}
 	shareInfo := models.NewAlbumShare(user.ID, r.AlbumID)
@@ -344,14 +350,14 @@ func AlbumShare(c *gin.Context, user *models.User) {
 	result = db.Instance.Where(shareInfoCond).FirstOrCreate(&shareInfo)
 	if result.Error != nil {
 		fmt.Println(result.Error)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
+		c.JSON(http.StatusInternalServerError, DBError2Response)
 		return
 	}
 	db.Instance.Preload("Album").Find(&shareInfo)
 	// TODO: Make below configurable
-	c.JSON(http.StatusOK, gin.H{
-		"title": "[ " + shareInfo.Album.Name + " ]",
-		"path":  "/w/album/" + shareInfo.Token + "/",
+	c.JSON(http.StatusOK, AlbumShareResponse{
+		Title: "[ " + shareInfo.Album.Name + " ]",
+		Path:  "/w/album/" + shareInfo.Token + "/",
 	})
 }
 
@@ -359,7 +365,7 @@ func AlbumContributor(c *gin.Context, user *models.User) {
 	r := AlbumContributeRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	album := models.Album{
@@ -368,7 +374,7 @@ func AlbumContributor(c *gin.Context, user *models.User) {
 	}
 	result := db.Instance.Find(&album)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	if result.RowsAffected != 1 || r.UserID == user.ID {
@@ -381,8 +387,8 @@ func AlbumContributor(c *gin.Context, user *models.User) {
 	}
 	result = db.Instance.Create(&albumContributor)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		c.JSON(http.StatusInternalServerError, DBError2Response)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"error": ""})
+	c.JSON(http.StatusOK, OKResponse)
 }

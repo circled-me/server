@@ -114,7 +114,7 @@ func isNotModified(c *gin.Context, tx *gorm.DB) bool {
 	row := tx.Row()
 	lastUpdatedAt := uint64(0)
 	if err := row.Scan(&lastUpdatedAt); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error -1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return false
 	}
 	c.Header("cache-control", "private, max-age=1")
@@ -137,7 +137,7 @@ func AssetList(c *gin.Context, user *models.User) {
 	}
 	rows, err := db.Instance.Table("assets").Select("id, mime_type").Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).Order("created_at DESC").Rows()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	defer rows.Close()
@@ -146,7 +146,7 @@ func AssetList(c *gin.Context, user *models.User) {
 	for rows.Next() {
 		assetInfo := AssetInfo{}
 		if err = rows.Scan(&assetInfo.ID, &mimeType); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
+			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
 		assetInfo.Type = GetTypeFrom(mimeType)
@@ -166,7 +166,7 @@ func TagList(c *gin.Context, user *models.User) {
 		Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").Order("created_at DESC").
 		Rows()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	defer rows.Close()
@@ -178,7 +178,7 @@ func TagList(c *gin.Context, user *models.User) {
 	favourite := false
 	for rows.Next() {
 		if err = rows.Scan(&assetId, &mimeType, &favourite, &createdAt, &gpsLat, &area, &city, &country); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
+			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
 		// Add location tags, e.g. "Tokyo", "Matsubara", etc
@@ -203,6 +203,7 @@ func TagList(c *gin.Context, user *models.User) {
 		}
 	}
 	result := tags.toArray()
+	// Sort tags by popularity (num assets)
 	sort.Slice(result, func(i, j int) bool {
 		return len(result[i].Assets) > len(result[j].Assets)
 	})
@@ -218,11 +219,11 @@ func checkAlbumAccess(c *gin.Context, checkUser, assetID uint64) bool {
 	var count int64
 	result := db.Instance.Raw("select 1 from album_assets join album_contributors on (album_contributors.album_id = album_assets.album_id) where album_contributors.user_id=? and asset_id=?", checkUser, assetID).Scan(&count)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return false
 	}
 	if count == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 2"})
+		c.JSON(http.StatusUnauthorized, NopeResponse)
 		return false
 	}
 	return true
@@ -232,7 +233,7 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 	r := AssetFetchRequest{}
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	asset := models.Asset{
@@ -286,7 +287,7 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 	}
 	// Handle errors
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, Response{err.Error()})
 	}
 }
 
@@ -294,7 +295,7 @@ func AssetDelete(c *gin.Context, user *models.User) {
 	r := AssetDeleteRequest{}
 	err := c.ShouldBindWith(&r, binding.JSON)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	failed := []uint64{}
@@ -331,30 +332,30 @@ func AssetDelete(c *gin.Context, user *models.User) {
 	}
 	// Handle errors
 	if len(failed) > 0 {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Some assets cannot be deleted", "failed": failed})
+		c.JSON(http.StatusInternalServerError, MultiResponse{"Some assets cannot be deleted", failed})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"error": "", "failed": failed})
+	c.JSON(http.StatusOK, OKMultiResponse)
 }
 
 func AssetFavourite(c *gin.Context, user *models.User) {
 	r := AssetFavouriteRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	asset := models.Asset{ID: r.ID}
 	db.Instance.First(&asset)
 	if asset.ID != r.ID {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 2"})
+		c.JSON(http.StatusUnauthorized, NopeResponse)
 		return
 	}
 	if r.AlbumAssetID == 0 || asset.UserID == user.ID {
 		r.AlbumAssetID = 0
 		// This must be our own asset
 		if asset.ID != r.ID || asset.UserID != user.ID {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 2"})
+			c.JSON(http.StatusUnauthorized, Nope2Response)
 			return
 		}
 	} else {
@@ -362,7 +363,7 @@ func AssetFavourite(c *gin.Context, user *models.User) {
 		albumAsset := models.AlbumAsset{ID: r.AlbumAssetID}
 		db.Instance.First(&albumAsset)
 		if albumAsset.ID != r.AlbumAssetID || albumAsset.AssetID != r.ID {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "access denied 3"})
+			c.JSON(http.StatusUnauthorized, Nope3Response)
 			return
 		}
 		if !checkAlbumAccess(c, user.ID, r.ID) {
@@ -379,28 +380,28 @@ func AssetFavourite(c *gin.Context, user *models.User) {
 		fav.AlbumAssetID = &r.AlbumAssetID
 	}
 	if db.Instance.Create(&fav).Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error 5"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"error": ""})
+	c.JSON(http.StatusOK, OKResponse)
 }
 
 func AssetUnfavourite(c *gin.Context, user *models.User) {
 	r := AssetFavouriteRequest{}
 	err := c.ShouldBindWith(&r, binding.Form)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	fav := models.FavouriteAsset{}
 	err = db.Instance.First(&fav, "user_id=? AND asset_id=?", user.ID, r.ID).Error
 	if err != nil || fav.UserID != user.ID || fav.AssetID != r.ID {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "some error 2"})
+		c.JSON(http.StatusUnauthorized, NopeResponse)
 		return
 	}
 	if db.Instance.Delete(&fav).Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error 3"})
+		c.JSON(http.StatusInternalServerError, DBError3Response)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"error": ""})
+	c.JSON(http.StatusOK, OKResponse)
 }

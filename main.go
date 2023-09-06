@@ -70,7 +70,7 @@ func main() {
 	router.POST("/user/login", handlers.UserLogin)
 	authRouter.POST("/user/save", handlers.UserSave, models.PermissionAdmin)
 	authRouter.POST("/user/reinvite", handlers.UserReInvite, models.PermissionAdmin)
-	authRouter.GET("/user/permissions", handlers.UserGetPermissions)
+	authRouter.GET("/user/status", handlers.UserGetStatus)
 	authRouter.GET("/user/list", handlers.UserList)
 	// Asset handlers
 	authRouter.GET("/asset/list", handlers.AssetList, models.PermissionPhotoBackup)
@@ -96,11 +96,11 @@ func main() {
 	// Moment handlers
 	authRouter.GET("/moment/list", handlers.MomentList, models.PermissionPhotoBackup)
 	authRouter.GET("/moment/assets", handlers.MomentAssets, models.PermissionPhotoBackup)
-	// Group handlers
+	// Group handlers - TODO: review permissions
 	// authRouter.GET("/group/list", handlers.GroupList)
 	// authRouter.POST("/group/create", handlers.GroupCreate)
 	// authRouter.POST("/group/save", handlers.GroupSave)
-	// authRouter.POST("/group/delete", handlers.GroupDelete)
+	// authRouter.POST("/group/delete", handlers.GroupDelete, models.PermissionAdmin)
 	// authRouter.POST("/group/members", handlers.GroupMembers)
 	// Face recognition related
 	// authRouter.GET("/faces/get", handlers.GetFaces)

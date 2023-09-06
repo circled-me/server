@@ -53,7 +53,7 @@ func Init() {
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("Storage Buckets found: %d\n", len(buckets))
+	log.Printf("Storage Buckets found: %d", len(buckets))
 	for _, bucket := range buckets {
 		log.Printf("Bucket: %+v\n", bucket)
 		storage := NewStorage(&bucket)

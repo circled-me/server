@@ -14,10 +14,10 @@ import (
 )
 
 type UserLoginRequest struct {
-	Email    string `form:"email" binding:"required"`
-	Password string `form:"password" binding:"required"`
-	Token    string `form:"token"`
-	New      bool   `form:"new"`
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
+	Token    string `json:"token"`
+	New      bool   `json:"new"`
 }
 
 type UserInfo struct {
@@ -26,6 +26,18 @@ type UserInfo struct {
 	Email       string `json:"email"`
 	Permissions []int  `json:"permissions"`
 	Bucket      uint64 `json:"bucket"`
+}
+
+type UserStatusResponse struct {
+	Error       string `json:"error"`
+	Name        string `json:"name"`
+	UserID      uint64 `json:"user_id"`
+	Permissions []int  `json:"permissions"`
+}
+
+type UserSaveResponse struct {
+	Error string `json:"error"`
+	Token string `json:"token"`
 }
 
 func isValidLogin(l string) bool {
@@ -39,10 +51,10 @@ func isValidLogin(l string) bool {
 func createFromToken(postReq *UserLoginRequest) (err error) {
 	user := models.User{}
 	if db.Instance.Where("email = ?", postReq.Token).Find(&user).Error != nil || user.ID == 0 {
-		return errors.New("Invalid token")
+		return errors.New("invalid token")
 	}
 	if !isValidLogin(postReq.Email) {
-		return errors.New("Login cannot contain empty spaces and must start with a letter or a number")
+		return errors.New("login cannot contain empty spaces and must start with a letter or a number")
 	}
 	user.Email = postReq.Email
 	user.SetPassword(postReq.Password)
@@ -52,7 +64,7 @@ func createFromToken(postReq *UserLoginRequest) (err error) {
 		PassSalt: user.PassSalt,
 	}).Error
 	if err != nil {
-		return errors.New("User with the same login seems to exist")
+		return errors.New("user with the same login seems to exist")
 	}
 	return nil
 }
@@ -75,28 +87,28 @@ func createFirstUser(postReq *UserLoginRequest) (err error) {
 
 func UserLogin(c *gin.Context) {
 	postReq := UserLoginRequest{}
-	err := c.ShouldBindWith(&postReq, binding.Form)
+	err := c.ShouldBindJSON(&postReq)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	if postReq.Token != "" {
 		// New user has been invited
 		if err = createFromToken(&postReq); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, Response{err.Error()})
 			return
 		}
 	} else if postReq.New {
 		// Check if we have a brand new instance
 		if err = createFirstUser(&postReq); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, Response{err.Error()})
 			return
 		}
 	}
 	// Proceed with standard login
 	user, err := models.UserLogin(postReq.Email, postReq.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, Response{err.Error()})
 		return
 	}
 	permissions := user.GetPermissions()
@@ -104,11 +116,10 @@ func UserLogin(c *gin.Context) {
 	session.Set("id", user.ID)
 	session.Set("permissions", permissions)
 	session.Save()
-	c.JSON(http.StatusOK, gin.H{
-		"error":       "",
-		"name":        user.Email,
-		"user_id":     user.ID,
-		"permissions": permissions,
+	c.JSON(http.StatusOK, UserStatusResponse{
+		Name:        user.Email,
+		UserID:      user.ID,
+		Permissions: permissions,
 	})
 }
 
@@ -127,24 +138,24 @@ func UserSave(c *gin.Context, currentUser *models.User) {
 	req := UserInfo{}
 	err := c.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	if req.Bucket == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "select storage bucket"})
+		c.JSON(http.StatusBadRequest, Response{"select storage bucket"})
 		return
 	}
 	// Cleanup
 	req.Name = cleanupName(req.Name)
 	if req.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "empty name"})
+		c.JSON(http.StatusBadRequest, Response{"empty name"})
 		return
 	}
 	token := ""
 	user := models.User{ID: req.ID}
 	if user.ID > 0 {
 		if err = db.Instance.Preload("Grants").Find(&user).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, DBError1Response)
 			return
 		}
 	} else {
@@ -166,12 +177,11 @@ func UserSave(c *gin.Context, currentUser *models.User) {
 		})
 	}
 	if err = db.Instance.Save(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, DBError2Response)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"error": "",
-		"token": token,
+	c.JSON(http.StatusOK, UserSaveResponse{
+		Token: token,
 	})
 }
 
@@ -179,39 +189,41 @@ func UserReInvite(c *gin.Context, currentUser *models.User) {
 	req := UserInfo{}
 	err := c.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	user := models.User{ID: req.ID}
 	if user.ID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "hmmmm"})
+		c.JSON(http.StatusBadRequest, Response{"hmmmm"})
 		return
 	}
 	if err = db.Instance.Find(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	user.Email = utils.Rand16BytesToBase62()
 	user.Password = ""
 	if err = db.Instance.Save(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, DBError2Response)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"error": "",
-		"token": user.Email,
+	c.JSON(http.StatusOK, UserSaveResponse{
+		Token: user.Email,
 	})
 }
 
-func UserGetPermissions(c *gin.Context, user *models.User) {
-	c.JSON(http.StatusOK, gin.H{"error": "", "name": user.Name, "permissions": user.GetPermissions()})
+func UserGetStatus(c *gin.Context, user *models.User) {
+	c.JSON(http.StatusOK, UserStatusResponse{
+		Name:        user.Name,
+		Permissions: user.GetPermissions(),
+	})
 }
 
 func UserList(c *gin.Context, user *models.User) {
 	users := []models.User{}
 	err := db.Instance.Preload("Grants").Order("created_at ASC").Find(&users).Error
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	result := []UserInfo{}

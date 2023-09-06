@@ -46,54 +46,54 @@ func BucketSave(c *gin.Context, user *models.User) {
 	bucket := storage.Bucket{}
 	err := c.ShouldBindWith(&bucket, binding.JSON)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	cleanupPath(&bucket)
 
 	if bucket.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Empty bucket name"})
+		c.JSON(http.StatusBadRequest, Response{"Empty bucket name"})
 		return
 	}
 	if bucket.StorageType == storage.StorageTypeFile {
 		if bucket.Path == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Empty bucket path"})
+			c.JSON(http.StatusBadRequest, Response{"Empty bucket path"})
 			return
 		}
 		if bucket.Path[0] != '/' {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Path must be absolute and start with / (slash)"})
+			c.JSON(http.StatusBadRequest, Response{"Path must be absolute and start with / (slash)"})
 			return
 		}
 	} else if bucket.StorageType == storage.StorageTypeS3 {
 		if bucket.S3Key == "" || bucket.S3Secret == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "'S3 Key' and 'S3 Secret' must be provided"})
+			c.JSON(http.StatusBadRequest, Response{"'S3 Key' and 'S3 Secret' must be provided"})
 			return
 		}
 		if bucket.Region == "" {
 			bucket.Region = "us-east-1"
 		}
 	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "'type' must be one of 'file' or 's3'"})
+		c.JSON(http.StatusBadRequest, Response{"'type' must be one of 'file' or 's3'"})
 		return
 	}
 	if err := hasWriteAccess(&bucket); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No access to bucket: " + err.Error()})
+		c.JSON(http.StatusBadRequest, Response{"No write access to bucket: " + err.Error()})
 		return
 	}
 	if err = bucket.Create(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
 	// Re-initialize storage
 	storage.Init()
-	c.JSON(http.StatusOK, gin.H{"error": ""})
+	c.JSON(http.StatusOK, OKResponse)
 }
 
 func BucketList(c *gin.Context, user *models.User) {
 	buckets := []storage.Bucket{}
 	result := db.Instance.Find(&buckets)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	c.JSON(http.StatusOK, buckets)
