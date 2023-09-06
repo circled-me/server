@@ -86,14 +86,12 @@ func AlbumAssetView(c *gin.Context) {
 		Joins("join album_assets on album_shares.album_id = album_assets.album_id").Rows()
 
 	if err != nil {
-		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
 		return
 	}
 	defer rows.Close()
 	if !rows.Next() {
-		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went totally wrong"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "something went totally wrong"})
 		return
 	}
 	// Return the asset

@@ -115,7 +115,7 @@ func isNotModified(c *gin.Context, tx *gorm.DB) bool {
 	lastUpdatedAt := uint64(0)
 	if err := row.Scan(&lastUpdatedAt); err != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
-		return false
+		return true
 	}
 	c.Header("cache-control", "private, max-age=1")
 	c.Header(etagHeader, strconv.FormatUint(lastUpdatedAt, 10))
