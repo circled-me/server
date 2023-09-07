@@ -2,7 +2,6 @@ package storage
 
 import (
 	"io"
-	"log"
 	"os"
 	"strings"
 
@@ -59,7 +58,7 @@ func (s *S3Storage) EnsureLocalFile(path string) error {
 }
 
 func (s *S3Storage) ReleaseLocalFile(path string) {
-	s.Delete(path)
+	_ = s.Delete(path)
 }
 
 // UpdateFile updates the remote S3 object (uploads the local copy)
@@ -85,12 +84,10 @@ func (s *S3Storage) UpdateFile(path, mimeType string) error {
 	return err
 }
 
-func (s *S3Storage) DeleteRemoteFile(path string) {
+func (s *S3Storage) DeleteRemoteFile(path string) error {
 	_, err := s.s3Client.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: &s.Bucket.Name,
 		Key:    aws.String(s.Bucket.GetRemotePath(path)),
 	})
-	if err != nil {
-		log.Printf("Error deleting remote object %s: %s", s.Bucket.GetRemotePath(path), err.Error())
-	}
+	return err
 }

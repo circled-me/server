@@ -111,15 +111,13 @@ func UserLogin(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, Response{err.Error()})
 		return
 	}
-	permissions := user.GetPermissions()
 	session := auth.LoadSession(c)
 	session.Set("id", user.ID)
-	session.Set("permissions", permissions)
-	session.Save()
+	_ = session.Save()
 	c.JSON(http.StatusOK, UserStatusResponse{
 		Name:        user.Email,
 		UserID:      user.ID,
-		Permissions: permissions,
+		Permissions: user.GetPermissions(),
 	})
 }
 

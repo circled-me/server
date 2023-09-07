@@ -15,7 +15,7 @@ type StorageSpecificAPI interface {
 	EnsureDirExists(dir string) error
 	EnsureLocalFile(path string) error
 	ReleaseLocalFile(path string)
-	DeleteRemoteFile(path string)
+	DeleteRemoteFile(path string) error
 	UpdateFile(path, mimeType string) error
 }
 
@@ -45,7 +45,9 @@ var (
 )
 
 func Init() {
-	db.Instance.AutoMigrate(&Bucket{})
+	if err := db.Instance.AutoMigrate(&Bucket{}); err != nil {
+		log.Printf("Auto-migrate error: %v", err)
+	}
 
 	cachedStorage = []StorageAPI{}
 	var buckets []Bucket
@@ -166,8 +168,8 @@ func (s *Storage) EnsureLocalFile(path string) error {
 func (s *Storage) ReleaseLocalFile(path string) {
 	s.specifics.ReleaseLocalFile(path)
 }
-func (s *Storage) DeleteRemoteFile(path string) {
-	s.specifics.DeleteRemoteFile(path)
+func (s *Storage) DeleteRemoteFile(path string) error {
+	return s.specifics.DeleteRemoteFile(path)
 }
 func (s *Storage) UpdateFile(path, mimeType string) error {
 	return s.specifics.UpdateFile(path, mimeType)

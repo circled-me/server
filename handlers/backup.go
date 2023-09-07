@@ -57,7 +57,7 @@ type BackupAssetResponse struct {
 
 func BackupMetaData(c *gin.Context, user *models.User) {
 	var r BackupRequest
-	err := c.ShouldBindQuery(&r)
+	err := c.ShouldBindJSON(&r)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return

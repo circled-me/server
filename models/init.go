@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"math/rand"
 	"server/db"
 	"time"
@@ -10,27 +11,34 @@ func Init() {
 	// Seed the random number generator - required for User.Salt
 	rand.Seed(time.Now().UnixNano())
 
-	db.Instance.AutoMigrate(&Album{})
-	db.Instance.AutoMigrate(&AlbumAsset{})
-	db.Instance.AutoMigrate(&AlbumContributor{})
-	db.Instance.AutoMigrate(&AlbumAsset{})
-	db.Instance.AutoMigrate(&AlbumShare{})
-	db.Instance.AutoMigrate(&Asset{})
-	// db.Instance.AutoMigrate(&AssetTag{})
-	db.Instance.AutoMigrate(&User{})
-	db.Instance.AutoMigrate(&Comment{})
-	db.Instance.AutoMigrate(&FavouriteAsset{})
-	db.Instance.AutoMigrate(&Face{})
-	db.Instance.AutoMigrate(&Grant{})
-	db.Instance.AutoMigrate(&Group{})
-	db.Instance.AutoMigrate(&GroupPost{})
-	db.Instance.AutoMigrate(&GroupPostAsset{})
-	db.Instance.AutoMigrate(&Like{})
-	db.Instance.AutoMigrate(&Location{})
-	db.Instance.AutoMigrate(&Place{})
-	db.Instance.AutoMigrate(&FavouritePlace{})
-	// db.Instance.AutoMigrate(&Tag{})
-	db.Instance.AutoMigrate(&GroupPost{})
-	db.Instance.AutoMigrate(&GroupUser{})
-	db.Instance.AutoMigrate(&UploadRequest{})
+	es := []error{}
+	es = append(es, db.Instance.AutoMigrate(&Album{}))
+	es = append(es, db.Instance.AutoMigrate(&AlbumAsset{}))
+	es = append(es, db.Instance.AutoMigrate(&AlbumContributor{}))
+	es = append(es, db.Instance.AutoMigrate(&AlbumAsset{}))
+	es = append(es, db.Instance.AutoMigrate(&AlbumShare{}))
+	es = append(es, db.Instance.AutoMigrate(&Asset{}))
+	// es = append(es, db.Instance.AutoMigrate(&AssetTag{}))
+	es = append(es, db.Instance.AutoMigrate(&User{}))
+	es = append(es, db.Instance.AutoMigrate(&Comment{}))
+	es = append(es, db.Instance.AutoMigrate(&FavouriteAsset{}))
+	es = append(es, db.Instance.AutoMigrate(&Face{}))
+	es = append(es, db.Instance.AutoMigrate(&Grant{}))
+	// es = append(es, db.Instance.AutoMigrate(&Group{}))
+	es = append(es, db.Instance.AutoMigrate(&GroupPost{}))
+	es = append(es, db.Instance.AutoMigrate(&GroupPostAsset{}))
+	es = append(es, db.Instance.AutoMigrate(&Like{}))
+	es = append(es, db.Instance.AutoMigrate(&Location{}))
+	es = append(es, db.Instance.AutoMigrate(&Place{}))
+	es = append(es, db.Instance.AutoMigrate(&FavouritePlace{}))
+	// es = append(es, db.Instance.AutoMigrate(&Tag{}))
+	es = append(es, db.Instance.AutoMigrate(&GroupPost{}))
+	es = append(es, db.Instance.AutoMigrate(&GroupUser{}))
+	es = append(es, db.Instance.AutoMigrate(&UploadRequest{}))
+
+	for _, e := range es {
+		if e != nil {
+			log.Printf("Auto-migrate error: %v", e)
+		}
+	}
 }

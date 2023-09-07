@@ -1,7 +1,6 @@
 package web
 
 import (
-	"fmt"
 	"net/http"
 	"server/db"
 	"server/handlers"
@@ -22,8 +21,7 @@ func AlbumView(c *gin.Context) {
 		Joins("join albums on album_shares.album_id = albums.id").Joins("join users on album_shares.user_id = users.id").Rows()
 
 	if err != nil {
-		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, handlers.Response{"something went wrong"})
+		c.JSON(http.StatusInternalServerError, handlers.DBError1Response)
 		return
 	}
 
@@ -33,8 +31,7 @@ func AlbumView(c *gin.Context) {
 	var userName string
 	if rows.Next() {
 		if err = rows.Scan(&albumId, &albumName, &userName); err != nil {
-			fmt.Println(err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "something went really wrong"})
+			c.JSON(http.StatusInternalServerError, handlers.Response{Error: "something went really wrong"})
 			rows.Close()
 			return
 		}
@@ -44,8 +41,7 @@ func AlbumView(c *gin.Context) {
 	// Get all assets for the album
 	rows, err = db.Instance.Table("album_assets").Select("asset_id, mime_type, assets.created_at").Where("album_id = ?", albumId).Joins("join assets on album_assets.asset_id = assets.id").Order("assets.created_at ASC").Rows()
 	if err != nil {
-		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, handlers.DBError1Response)
 		return
 	}
 	defer rows.Close()
@@ -55,7 +51,7 @@ func AlbumView(c *gin.Context) {
 	for rows.Next() {
 		assetInfo := AssetInfo{}
 		if err = rows.Scan(&assetInfo.ID, &assetInfo.MimeType, &created); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
+			c.JSON(http.StatusInternalServerError, handlers.DBError2Response)
 			return
 		}
 		assetInfo.Type = handlers.GetTypeFrom(assetInfo.MimeType)
@@ -79,19 +75,22 @@ func AlbumView(c *gin.Context) {
 func AlbumAssetView(c *gin.Context) {
 	token := c.Param("token")
 	r := handlers.AssetFetchRequest{}
-	_ = c.ShouldBindQuery(&r)
-
+	err := c.ShouldBindQuery(&r)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, handlers.Response{Error: err.Error()})
+		return
+	}
 	// Verify we have permission to view this asset
 	rows, err := db.Instance.Table("album_shares").Select("album_assets.album_id").Where("token = ? and album_assets.asset_id = ?", token, r.ID).
 		Joins("join album_assets on album_shares.album_id = album_assets.album_id").Rows()
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+		c.JSON(http.StatusInternalServerError, handlers.Response{Error: "something went wrong"})
 		return
 	}
 	defer rows.Close()
 	if !rows.Next() {
-		c.JSON(http.StatusNotFound, gin.H{"error": "something went totally wrong"})
+		c.JSON(http.StatusNotFound, handlers.Response{Error: "something went totally wrong"})
 		return
 	}
 	// Return the asset

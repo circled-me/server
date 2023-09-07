@@ -72,8 +72,11 @@ func processOne(asset *models.Asset) uint64 {
 				return 0
 			}
 			if db.Instance.Save(&asset).Error == nil {
-				storage.DeleteRemoteFile(oldPath)
-				storage.Delete(oldPath)
+				err1 := storage.DeleteRemoteFile(oldPath)
+				err2 := storage.Delete(oldPath)
+				if err1 != nil || err2 != nil {
+					log.Printf("Error deleting object (remote,local): %v, %v", err1, err2)
+				}
 			}
 		} else {
 			fmt.Printf("ERROR in video processing for: %s, %v, size: %v\n", asset.GetPath(), err, asset.Size)
@@ -115,7 +118,11 @@ func processOne(asset *models.Asset) uint64 {
 			log.Printf("Error creating thumbnail for %s: %s", asset.GetPath(), err.Error())
 		} else {
 			buf := bytes.Buffer{}
-			storage.Load(asset.GetThumbPath(), &buf)
+			_, err := storage.Load(asset.GetThumbPath(), &buf)
+			if err != nil {
+				log.Printf("Cannot load object %v", err)
+				return 0
+			}
 			asset.ThumbSize = int64(buf.Len())
 			thumb, _, err := image.Decode(&buf)
 			if err != nil {

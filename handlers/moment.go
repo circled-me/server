@@ -32,7 +32,7 @@ func (m *MomentInfo) merge(a *MomentInfo) {
 		places[p] = true
 	}
 	newPlaces := []string{}
-	for p, _ := range places {
+	for p := range places {
 		newPlaces = append(newPlaces, p)
 	}
 	m.Places = strings.Join(newPlaces, ",")

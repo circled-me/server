@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"server/auth"
 	"server/db"
 	"server/locations"
@@ -25,6 +26,7 @@ const (
 	sessionStoreKey       = "this is a long key" // TODO: convert to env variable
 	sessionCookieName     = "token"
 	sessionExpirationTime = 365 * 86400 // 1 year
+	DEBUG_MODE            = true        // TODO make this env variable
 )
 
 func main() {
@@ -35,7 +37,10 @@ func main() {
 	go processing.StartProcessing()
 
 	router := gin.Default()
-	router.SetTrustedProxies([]string{})
+	_ = router.SetTrustedProxies([]string{})
+	if DEBUG_MODE {
+		router.Use(utils.ErrorLogMiddleware)
+	}
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"PUT", "POST", "DELETE"},
@@ -54,7 +59,9 @@ func main() {
 	cookieStore := gormsessions.NewStore(db.Instance, true, []byte(sessionStoreKey))
 	cookieStore.Options(sessions.Options{MaxAge: sessionExpirationTime})
 	router.Use(sessions.Sessions(sessionCookieName, cookieStore))
-	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/asset/fetch"})))
+	if !DEBUG_MODE {
+		router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/asset/fetch"})))
+	}
 	router.Use((&utils.CacheRouter{CacheTime: utils.CacheNoCache}).Handler()) // No cache by default, individual end-points can override that
 	// Custom Auth Router
 	authRouter := &auth.Router{Base: router}
@@ -119,5 +126,6 @@ func main() {
 	// Misc
 	router.GET("/robots.txt", web.DisallowRobots)
 
-	router.Run(GetBindAddress())
+	err := router.Run(GetBindAddress())
+	log.Printf("Server stopped: %v", err)
 }

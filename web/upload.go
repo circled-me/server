@@ -18,6 +18,11 @@ type UploadConfirmation struct {
 	MimeType string `json:"mime_type" binding:""`
 }
 
+type NewAssetResponse struct {
+	ID  uint64 `json:"id"`
+	URL string `json:"url"`
+}
+
 func getUploadRequest(c *gin.Context) (req models.UploadRequest, err error) {
 	token := c.Param("token")
 	// TODO: secure it more - need to make sure we have the client ip (proxy protocol?)
@@ -59,8 +64,7 @@ func UploadRequestView(c *gin.Context) {
 func UploadRequestNewURL(c *gin.Context) {
 	req, err := getUploadRequest(c)
 	if err != nil || req.ID == 0 {
-		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+		c.JSON(http.StatusInternalServerError, handlers.Response{Error: "something went wrong"})
 		return
 	}
 	prefix := req.Token
@@ -75,26 +79,25 @@ func UploadRequestNewURL(c *gin.Context) {
 	}
 	result := db.Instance.Create(&asset)
 	if result.Error != nil {
-		c.String(http.StatusInternalServerError, result.Error.Error())
+		c.JSON(http.StatusInternalServerError, handlers.DBError1Response)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"id":  asset.ID,
-		"url": asset.CreateUploadURI(false, req.Token), // TODO: Thumb?
+	c.JSON(http.StatusOK, NewAssetResponse{
+		ID:  asset.ID,
+		URL: asset.CreateUploadURI(false, req.Token), // TODO: Thumb?
 	})
 }
 
 func UploadRequestConfirm(c *gin.Context) {
 	req, err := getUploadRequest(c)
 	if err != nil || req.ID == 0 {
-		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+		c.JSON(http.StatusInternalServerError, handlers.Response{Error: "something went wrong"})
 		return
 	}
 	var r UploadConfirmation
 	err = c.ShouldBindJSON(&r)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, handlers.Response{err.Error()})
+		c.JSON(http.StatusBadRequest, handlers.Response{Error: err.Error()})
 		return
 	}
 	asset := models.Asset{

@@ -41,7 +41,7 @@ func NewDiskStorage(bucket *Bucket) StorageAPI {
 }
 
 func (s *DiskStorage) EnsureLocalFile(path string) error {
-	return nil
+	return nil // noop
 }
 
 func (s *DiskStorage) ReleaseLocalFile(path string) {
@@ -49,9 +49,9 @@ func (s *DiskStorage) ReleaseLocalFile(path string) {
 }
 
 func (s *DiskStorage) UpdateFile(path, mimeType string) error {
-	return nil
+	return nil // noop
 }
 
-func (s *DiskStorage) DeleteRemoteFile(path string) {
-	// noop
+func (s *DiskStorage) DeleteRemoteFile(path string) error {
+	return nil // noop
 }
