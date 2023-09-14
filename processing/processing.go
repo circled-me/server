@@ -16,13 +16,90 @@ import (
 	"time"
 )
 
-// TODO: This file has too many nested statements
+type processingTask interface {
+	getName() string
+	process(*models.Asset) int
+	shouldHandle(*models.Asset) bool
+}
 
-// convertVideo uses hard-coded options
-func convertVideo(inFile, outFile string) error {
-	log.Printf("Converting file %s to %s", inFile, outFile)
-	cmd := exec.Command("ffmpeg", "-y", "-i", inFile, "-c:v", "libx264", "-c:a", "aac", "-b:a", "128k", "-crf", "24", outFile)
-	return cmd.Run()
+var (
+	tasks = map[string]processingTask{}
+)
+
+func registerTask(t processingTask) {
+	tasks[t.getName()] = t
+}
+func Init() {
+	if err := db.Instance.AutoMigrate(&ProcessingTask{}); err != nil {
+		log.Printf("Auto-migrate error: %v", err)
+	}
+	// Initialise all processing tasks
+	registerTask(&videoConvert{})
+}
+
+// TODO: 2 or more in parallel? Depending on CPU count?
+func processPending() {
+	// All assets that don't hvave processing_tasks record, OR
+	// status has fewer tasks performed than the currently available ones
+	rows, err := db.Instance.
+		Table("assets").
+		Joins("LEFT JOIN processing_tasks ON (assets.id = processing_tasks.asset_id)").
+		Select("assets.id, IFNULL(processing_tasks.status, ''), processing_tasks.asset_id").
+		Where("assets.deleted=0 AND "+
+			"assets.size>0 AND "+
+			"unix_timestamp()-assets.created_at>30 AND "+
+			"(processing_tasks.status IS NULL OR "+
+			"  LENGTH(processing_tasks.status)-LENGTH(REPLACE(processing_tasks.status, ',', ''))+1 < ?)", len(tasks)).
+		Order("assets.created_at").Rows()
+	if err != nil {
+		log.Printf("processPending error: %v", err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		asset := models.Asset{}
+		status := ""
+		var recordId *uint64
+		if err = rows.Scan(&asset.ID, &status, &recordId); err != nil {
+			log.Printf("processPending row error: %v", err)
+			break
+		}
+		if err = db.Instance.Preload("Bucket").Preload("User").First(&asset).Error; err != nil {
+			log.Printf("processPending load asset error: %v", err)
+			continue
+		}
+		current := ProcessingTask{
+			AssetID: asset.ID,
+			Status:  status,
+		}
+		statusMap := current.statusToMap()
+		for taskName, task := range tasks {
+			if _, ok := statusMap[taskName]; ok {
+				// TODO: Have retries maybe?
+				// For now - just one try for each task
+				continue
+			}
+			if !task.shouldHandle(&asset) {
+				statusMap[taskName] = Skipped
+				continue
+			}
+			start := time.Now()
+			statusMap[taskName] = task.process(&asset)
+			timeConsumed := time.Since(start).Milliseconds()
+			log.Printf("Task %s, asset: %d, result: %d, time: %v", taskName, asset.ID, statusMap[taskName], timeConsumed)
+		}
+		current.updateWith(statusMap)
+		if recordId == nil {
+			// This is a new record
+			err = db.Instance.Create(&current).Error
+		} else {
+			// This is an update
+			err = db.Instance.Save(&current).Error
+		}
+		if err != nil {
+			log.Printf("processPending save task error: %v", err)
+		}
+	}
 }
 
 func getNextForProcessing(lastProcessedID uint64) (result models.Asset) {
@@ -58,7 +135,7 @@ func processOne(asset *models.Asset) uint64 {
 		ext := filepath.Ext(asset.Name)
 		asset.Name = asset.Name[:len(asset.Name)-len(ext)] + ".mp4"
 		newPath := asset.GetPath()
-		err := convertVideo(storage.GetFullPath(oldPath), storage.GetFullPath(newPath))
+		err := ffmpeg(storage.GetFullPath(oldPath), storage.GetFullPath(newPath))
 		asset.Size = storage.GetSize(newPath)
 		if err == nil || asset.Size <= 0 {
 			log.Print("DONE video processing for:", asset.GetPath())
@@ -165,4 +242,8 @@ func StartProcessing() {
 			time.Sleep(30 * time.Second)
 		}
 	}
+	// for {
+	// 	processPending()
+	// 	time.Sleep(10 * time.Second)
+	// }
 }

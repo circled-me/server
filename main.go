@@ -8,6 +8,7 @@ import (
 	"server/processing"
 	"server/utils"
 	"server/web"
+	"strings"
 	"time"
 
 	// "server/faces"
@@ -19,6 +20,7 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-contrib/sessions"
 	gormsessions "github.com/gin-contrib/sessions/gorm"
+	"github.com/gin-gonic/autotls"
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,10 +31,15 @@ const (
 	DEBUG_MODE            = true        // TODO make this env variable
 )
 
+var (
+	TLS_DOMAINS = "" // TODO make this env variable, e.g. "example.com example2.com"
+)
+
 func main() {
 	db.Init(GetMySQLDSN())
 	models.Init()
 	storage.Init()
+	processing.Init()
 	go locations.StartProcessing()
 	go processing.StartProcessing()
 
@@ -126,6 +133,11 @@ func main() {
 	// Misc
 	router.GET("/robots.txt", web.DisallowRobots)
 
-	err := router.Run(GetBindAddress())
-	log.Printf("Server stopped: %v", err)
+	var err error
+	if TLS_DOMAINS != "" {
+		err = autotls.Run(router, strings.Split(TLS_DOMAINS, " ")...)
+	} else {
+		err = router.Run(GetBindAddress())
+	}
+	log.Fatalf("Server stopped: %v", err)
 }

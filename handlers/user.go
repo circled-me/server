@@ -106,9 +106,9 @@ func UserLogin(c *gin.Context) {
 		}
 	}
 	// Proceed with standard login
-	user, err := models.UserLogin(postReq.Email, postReq.Password)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, Response{err.Error()})
+	user, success := models.UserLogin(postReq.Email, postReq.Password)
+	if !success {
+		c.JSON(http.StatusUnauthorized, Response{"Incorrect username or password"})
 		return
 	}
 	session := auth.LoadSession(c)

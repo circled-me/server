@@ -1,9 +1,6 @@
 package models
 
 import (
-	"crypto/rand"
-	"encoding/base64"
-	"errors"
 	"server/db"
 	"server/storage"
 	"server/utils"
@@ -27,18 +24,17 @@ type User struct {
 	Grants      []Grant       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	BucketID    *uint64
 	Bucket      storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+
+	// Settings
+	VideoSetting uint8 `gorm:"not null"`
 }
 
-const saltSize = 60
+const (
+	saltSize = 60
 
-func randSalt() string {
-	b := make([]byte, saltSize)
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
-	}
-	return base64.StdEncoding.EncodeToString(b)
-}
+	VideoSettingConvert = 0
+	VideoSettingSkip    = 1
+)
 
 func UserCreate(name, email, plainTextPassword string) (u User, err error) {
 	// TODO: Be able to pass different storage bucket
@@ -46,7 +42,7 @@ func UserCreate(name, email, plainTextPassword string) (u User, err error) {
 
 	u.Email = email
 	u.Name = name
-	u.PassSalt = randSalt()
+	u.PassSalt = utils.RandSalt(saltSize)
 	u.Password = utils.Sha512String(plainTextPassword + u.PassSalt)
 	if storage != nil {
 		u.BucketID = &storage.GetBucket().ID
@@ -55,19 +51,19 @@ func UserCreate(name, email, plainTextPassword string) (u User, err error) {
 }
 
 func (u *User) SetPassword(plainTextPassword string) {
-	u.PassSalt = randSalt()
+	u.PassSalt = utils.RandSalt(saltSize)
 	u.Password = utils.Sha512String(plainTextPassword + u.PassSalt)
 }
 
-func UserLogin(email, plainTextPassword string) (u User, err error) {
+func UserLogin(email, plainTextPassword string) (u User, success bool) {
 	result := db.Instance.Preload("Grants").First(&u, "email = ?", email)
 	if result.Error != nil {
-		return User{}, errors.New("Incorrect email or password")
+		return User{}, false
 	}
 	if u.Password != utils.Sha512String(plainTextPassword+u.PassSalt) {
-		return User{}, errors.New("Incorrect email or password")
+		return User{}, false
 	}
-	return u, nil
+	return u, true
 }
 
 func (u *User) GetPermissions() []int {

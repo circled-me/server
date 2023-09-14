@@ -18,23 +18,19 @@ func Init() {
 	es = append(es, db.Instance.AutoMigrate(&AlbumAsset{}))
 	es = append(es, db.Instance.AutoMigrate(&AlbumShare{}))
 	es = append(es, db.Instance.AutoMigrate(&Asset{}))
-	// es = append(es, db.Instance.AutoMigrate(&AssetTag{}))
-	es = append(es, db.Instance.AutoMigrate(&User{}))
+	// Bucket is in storage package
 	es = append(es, db.Instance.AutoMigrate(&Comment{}))
 	es = append(es, db.Instance.AutoMigrate(&FavouriteAsset{}))
-	es = append(es, db.Instance.AutoMigrate(&Face{}))
 	es = append(es, db.Instance.AutoMigrate(&Grant{}))
 	// es = append(es, db.Instance.AutoMigrate(&Group{}))
 	es = append(es, db.Instance.AutoMigrate(&GroupPost{}))
 	es = append(es, db.Instance.AutoMigrate(&GroupPostAsset{}))
-	es = append(es, db.Instance.AutoMigrate(&Like{}))
 	es = append(es, db.Instance.AutoMigrate(&Location{}))
 	es = append(es, db.Instance.AutoMigrate(&Place{}))
-	es = append(es, db.Instance.AutoMigrate(&FavouritePlace{}))
-	// es = append(es, db.Instance.AutoMigrate(&Tag{}))
 	es = append(es, db.Instance.AutoMigrate(&GroupPost{}))
 	es = append(es, db.Instance.AutoMigrate(&GroupUser{}))
 	es = append(es, db.Instance.AutoMigrate(&UploadRequest{}))
+	es = append(es, db.Instance.AutoMigrate(&User{}))
 
 	for _, e := range es {
 		if e != nil {

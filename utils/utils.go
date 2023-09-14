@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha512"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"image"
 	_ "image/gif"
 	"image/jpeg"
@@ -73,11 +73,19 @@ func GetDatesString(min, max int64) string {
 	return minString + " - " + maxString
 }
 
+func RandSalt(saltSize int) string {
+	b := make([]byte, saltSize)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
+	}
+	return base64.StdEncoding.EncodeToString(b)
+}
+
 func Rand16BytesToBase62() string {
 	buf := make([]byte, 16)
 	_, err := rand.Read(buf)
 	if err != nil {
-		fmt.Println("error:", err)
 		panic(err)
 	}
 	var i big.Int
