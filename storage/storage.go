@@ -11,6 +11,7 @@ import (
 )
 
 type StorageSpecificAPI interface {
+	// GetFullPath always returns local path (tmp path for remote storage)
 	GetFullPath(path string) string
 	EnsureDirExists(dir string) error
 	EnsureLocalFile(path string) error

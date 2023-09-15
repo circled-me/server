@@ -8,10 +8,11 @@ import (
 )
 
 const (
-	Skipped     = 0
-	UserSkipped = 1
-	Done        = 2
-	Failed      = 3
+	Skipped       = 0
+	UserSkipped   = 1
+	Done          = 2
+	Failed        = 3
+	FailedStorage = 4
 )
 
 type ProcessingTask struct {

@@ -10,60 +10,66 @@ import (
 	"server/storage"
 )
 
-const taskVideoConvert = "video_convert"
-
 type videoConvert struct{}
 
-func (vc *videoConvert) getName() string {
-	return taskVideoConvert
+func (vc *videoConvert) order() int {
+	return orderSooner
 }
 
 func (vc *videoConvert) shouldHandle(asset *models.Asset) bool {
-	return asset.IsVideo()
+	return asset.IsVideo() && asset.MimeType != "video/mp4"
 }
 
-func (vc *videoConvert) process(asset *models.Asset) int {
+func (vc *videoConvert) requiresContent(asset *models.Asset) bool {
+	return true
+}
+
+func (vc *videoConvert) process(assetIn *models.Asset, storage storage.StorageAPI) (status int, clean func()) {
+	asset := *assetIn
 	if asset.User.VideoSetting == models.VideoSettingSkip {
-		return UserSkipped
+		return UserSkipped, nil
 	}
-	if asset.MimeType == "video/mp4" {
-		return Skipped
-	}
-	storage := storage.StorageFrom(&asset.Bucket)
 	oldPath := asset.GetPath()
 	ext := filepath.Ext(asset.Name)
 	asset.Name = asset.Name[:len(asset.Name)-len(ext)] + ".mp4"
 	newPath := asset.GetPath()
-	err := ffmpeg(storage.GetFullPath(oldPath), storage.GetFullPath(newPath))
+	err := ffmpegConvert(storage.GetFullPath(oldPath), storage.GetFullPath(newPath))
 	asset.Size = storage.GetSize(newPath)
-	// TODO: Is below correct??
-	if err == nil || asset.Size <= 0 {
-		log.Print("DONE video processing for:", asset.GetPath())
-
-		defer storage.ReleaseLocalFile(newPath)
-		asset.MimeType = "video/mp4"
-		asset.PresignedUntil = 0
-		err := storage.UpdateFile(newPath, asset.MimeType)
-		if err != nil {
-			log.Println(err.Error())
-			return Failed
-		}
-		if db.Instance.Save(&asset).Error == nil {
-			err1 := storage.DeleteRemoteFile(oldPath)
-			err2 := storage.Delete(oldPath)
-			if err1 != nil || err2 != nil {
-				log.Printf("Error deleting object (remote,local): %v, %v", err1, err2)
-			}
-		}
-	} else {
-		fmt.Printf("ERROR in video processing for: %s, %v, size: %v\n", asset.GetPath(), err, asset.Size)
-		return Failed
+	// Always cleanup in the end
+	clean = func() {
+		// Delete the temp file after all tasks have completed
+		storage.ReleaseLocalFile(newPath)
 	}
-	return Done
+
+	if err != nil || asset.Size <= 0 {
+		fmt.Printf("ERROR in video processing for: %s, %v, size: %v\n", asset.GetPath(), err, asset.Size)
+		return Failed, clean
+	}
+	log.Print("DONE video processing for:", asset.GetPath())
+
+	asset.MimeType = "video/mp4"
+	asset.PresignedUntil = 0
+	if err := storage.UpdateFile(newPath, asset.MimeType); err != nil {
+		log.Printf("Error updating asset ID %d (%s->%s): %v", asset.ID, newPath, asset.GetPath(), err)
+		return Failed, clean
+	}
+	if err = db.Instance.Save(&asset).Error; err != nil {
+		log.Printf("Error updating DB for asset ID %d: %v", asset.ID, err)
+		return Failed, clean
+	}
+	// Set the newly changed Name, MimeType, etc to the main asset so other tasks can use it
+	*assetIn = asset
+	// Delete old files and objects
+	err1 := storage.DeleteRemoteFile(oldPath)
+	err2 := storage.Delete(oldPath)
+	if err1 != nil || err2 != nil {
+		log.Printf("Error deleting old objects for asset ID %d (%s), errors (remote,local): %v, %v", asset.ID, oldPath, err1, err2)
+	}
+	return Done, clean
 }
 
-// ffmpeg uses hard-coded options
-func ffmpeg(inFile, outFile string) error {
+// ffmpegConvert uses hard-coded options
+func ffmpegConvert(inFile, outFile string) error {
 	log.Printf("Converting file %s to %s", inFile, outFile)
 	cmd := exec.Command("ffmpeg", "-y", "-i", inFile, "-c:v", "libx264", "-c:a", "aac", "-b:a", "128k", "-crf", "24", outFile)
 	return cmd.Run()
