@@ -208,7 +208,7 @@ func BackupCheck(c *gin.Context, user *models.User) {
 		Where("user_id = ? AND remote_id IN (?) AND (thumb_size>0 OR (mime_type NOT LIKE 'image/%' AND mime_type NOT LIKE 'video/%'))", user.ID, r.IDs).Rows()
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 1"})
+		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	defer rows.Close()
@@ -216,7 +216,7 @@ func BackupCheck(c *gin.Context, user *models.User) {
 	result := []string{}
 	for rows.Next() {
 		if err = rows.Scan(&remoteID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error 2"})
+			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
 		result = append(result, remoteID)

@@ -288,7 +288,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 		// Favourite album
 		rows, err = db.Instance.
 			Table("favourite_assets").
-			Select("asset_id, mime_type").
+			Select("asset_id, mime_type, gps_lat, gps_long").
 			Where("favourite_assets.user_id = ?", user.ID).
 			Joins("join assets on favourite_assets.asset_id = assets.id").
 			Order("assets.created_at ASC").Rows()
@@ -302,7 +302,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 		}
 		rows, err = db.Instance.
 			Table("album_assets").
-			Select("asset_id, mime_type").
+			Select("asset_id, mime_type, gps_lat, gps_long").
 			Where("album_id = ?", r.AlbumID).
 			Joins("join assets on album_assets.asset_id = assets.id").
 			Order("assets.created_at ASC").Rows()
@@ -316,7 +316,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 	mimeType := ""
 	for rows.Next() {
 		assetInfo := AssetInfo{}
-		if err = rows.Scan(&assetInfo.ID, &mimeType); err != nil {
+		if err = rows.Scan(&assetInfo.ID, &mimeType, &assetInfo.GpsLat, &assetInfo.GpsLong); err != nil {
 			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
@@ -378,7 +378,7 @@ func AlbumContributor(c *gin.Context, user *models.User) {
 		return
 	}
 	if result.RowsAffected != 1 || r.UserID == user.ID {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "no!"})
+		c.JSON(http.StatusUnauthorized, Response{"no!"})
 		return
 	}
 	albumContributor := models.AlbumContributor{

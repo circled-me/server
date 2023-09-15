@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"net/http"
 	"server/db"
@@ -28,6 +29,9 @@ type AssetFetchRequest struct {
 type AssetInfo struct {
 	ID   uint64 `json:"id"`
 	Type uint   `json:"type"`
+	// TODO: fill these for albums and moments
+	GpsLat  *float64 `json:"gps_lat"`
+	GpsLong *float64 `json:"gps_long"`
 }
 
 type AssetDeleteRequest struct {
@@ -56,7 +60,7 @@ func AssetList(c *gin.Context, user *models.User) {
 	if isNotModified(c, tx) {
 		return
 	}
-	rows, err := db.Instance.Table("assets").Select("id, mime_type").Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).Order("created_at DESC").Rows()
+	rows, err := db.Instance.Table("assets").Select("id, mime_type, gps_lat, gps_long").Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).Order("created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
@@ -66,13 +70,14 @@ func AssetList(c *gin.Context, user *models.User) {
 	mimeType := ""
 	for rows.Next() {
 		assetInfo := AssetInfo{}
-		if err = rows.Scan(&assetInfo.ID, &mimeType); err != nil {
+		if err = rows.Scan(&assetInfo.ID, &mimeType, &assetInfo.GpsLat, &assetInfo.GpsLong); err != nil {
 			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
 		assetInfo.Type = GetTypeFrom(mimeType)
 		result = append(result, assetInfo)
 	}
+	fmt.Println(result)
 	c.JSON(http.StatusOK, result)
 }
 
@@ -81,14 +86,18 @@ func AssetFetch(c *gin.Context, user *models.User) {
 }
 
 func checkAlbumAccess(c *gin.Context, checkUser, assetID uint64) bool {
-	// Check if we have access via a Shared Album
-	var count int64
-	result := db.Instance.Raw("select 1 from album_assets join album_contributors on (album_contributors.album_id = album_assets.album_id) where album_contributors.user_id=? and asset_id=?", checkUser, assetID).Scan(&count)
+	// Check if we have access via any shared album or if any of those albums is ours
+	var sum int64
+	result := db.Instance.Debug().Raw("select sum(ifnull(album_contributors.user_id, ifnull(albums.user_id, 0))) "+
+		"from album_assets "+
+		"left join album_contributors on (album_contributors.album_id = album_assets.album_id and album_contributors.user_id = ?) "+
+		"left join albums on (albums.id = album_assets.album_id and albums.user_id = ?) "+
+		"where asset_id=?", checkUser, checkUser, assetID).Scan(&sum)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return false
 	}
-	if count == 0 {
+	if sum == 0 {
 		c.JSON(http.StatusUnauthorized, NopeResponse)
 		return false
 	}

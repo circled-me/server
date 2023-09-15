@@ -5,6 +5,7 @@ const (
 	ContributorViewOnly = 1
 )
 
+// TODO: Review the primary key in MySQL?!
 type AlbumContributor struct {
 	CreatedAt int64
 	UserID    uint64 `gorm:"primaryKey"`

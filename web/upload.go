@@ -40,7 +40,7 @@ func UploadRequestProcess(c *gin.Context) {
 	req, err := getUploadRequest(c)
 	if err != nil || req.ID == 0 {
 		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+		c.JSON(http.StatusInternalServerError, handlers.Response{Error: "something went wrong"})
 		return
 	}
 	handlers.BackupLocalAsset(req.UserID, c)
@@ -50,7 +50,7 @@ func UploadRequestView(c *gin.Context) {
 	req, err := getUploadRequest(c)
 	if err != nil || req.ID == 0 {
 		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+		c.JSON(http.StatusInternalServerError, handlers.Response{Error: "something went wrong"})
 		return
 	}
 	// Some cleanup

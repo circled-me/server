@@ -90,7 +90,7 @@ func main() {
 	authRouter.GET("/asset/list", handlers.AssetList, models.PermissionPhotoBackup)
 	authRouter.GET("/asset/tags", handlers.TagList, models.PermissionPhotoBackup)
 	authRouter.GET("/asset/fetch", handlers.AssetFetch)                                  // Auth checks are done inside the handler
-	authRouter.POST("/asset/delete", handlers.AssetDelete, models.PermissionPhotoBackup) // TODO: S3 Delete
+	authRouter.POST("/asset/delete", handlers.AssetDelete, models.PermissionPhotoBackup) // TODO: S3 Delete done?
 	authRouter.POST("/asset/favourite", handlers.AssetFavourite)
 	authRouter.POST("/asset/unfavourite", handlers.AssetUnfavourite)
 	// Album handlers
