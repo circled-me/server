@@ -103,7 +103,7 @@ func processPending() {
 		Select("assets.id, IFNULL(processing_tasks.status, ''), processing_tasks.asset_id").
 		Where("assets.deleted=0 AND "+
 			"assets.size>0 AND "+
-			"unix_timestamp()-assets.created_at>30 AND "+
+			"unix_timestamp()-assets.updated_at>30 AND "+
 			"(processing_tasks.status IS NULL OR "+
 			"  LENGTH(processing_tasks.status)-LENGTH(REPLACE(processing_tasks.status, ',', ''))+1 < ?)", len(tasks)).
 		Order("assets.created_at").Rows()
