@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"bytes"
-	"fmt"
+	"database/sql"
 	"log"
 	"net/http"
 	"server/db"
@@ -27,8 +27,12 @@ type AssetFetchRequest struct {
 }
 
 type AssetInfo struct {
-	ID   uint64 `json:"id"`
-	Type uint   `json:"type"`
+	ID       uint64  `json:"id"`
+	Type     uint    `json:"type"`
+	Name     string  `json:"name"`
+	Location *string `json:"location"`
+	DID      string  `json:"did"` // DeviceID
+	Created  uint64  `json:"created"`
 	// TODO: fill these for albums and moments
 	GpsLat  *float64 `json:"gps_lat"`
 	GpsLong *float64 `json:"gps_long"`
@@ -54,30 +58,43 @@ func GetTypeFrom(mimeType string) uint {
 	return models.AssetTypeOther
 }
 
+func loadAssetsFromRows(c *gin.Context, rows *sql.Rows) *[]AssetInfo {
+	result := []AssetInfo{}
+	mimeType := ""
+	for rows.Next() {
+		assetInfo := AssetInfo{}
+		if err := rows.Scan(&assetInfo.ID, &assetInfo.Name, &assetInfo.Created, &assetInfo.DID, &mimeType, &assetInfo.GpsLat, &assetInfo.GpsLong, &assetInfo.Location); err != nil {
+			log.Panicf("DB error: %v", err)
+			c.JSON(http.StatusInternalServerError, DBError2Response)
+			return nil
+		}
+		assetInfo.Type = GetTypeFrom(mimeType)
+		result = append(result, assetInfo)
+	}
+	return &result
+}
+
 func AssetList(c *gin.Context, user *models.User) {
 	// Modified depends on deleted assets as well, that's why the where condition is different
 	tx := db.Instance.Table("assets").Select("max(updated_at)").Where("user_id=? AND size>0 AND thumb_size>0", user.ID)
 	if isNotModified(c, tx) {
 		return
 	}
-	rows, err := db.Instance.Table("assets").Select("id, mime_type, gps_lat, gps_long").Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).Order("created_at DESC").Rows()
+	// TODO: For big sets maybe dynamically load asset info individually
+	rows, err := db.Instance.
+		Table("assets").
+		Select("assets.id, assets.name, assets.created_at, assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display").
+		Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
+		Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).Order("created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	defer rows.Close()
-	result := []AssetInfo{}
-	mimeType := ""
-	for rows.Next() {
-		assetInfo := AssetInfo{}
-		if err = rows.Scan(&assetInfo.ID, &mimeType, &assetInfo.GpsLat, &assetInfo.GpsLong); err != nil {
-			c.JSON(http.StatusInternalServerError, DBError2Response)
-			return
-		}
-		assetInfo.Type = GetTypeFrom(mimeType)
-		result = append(result, assetInfo)
+	result := loadAssetsFromRows(c, rows)
+	if result == nil {
+		return
 	}
-	fmt.Println(result)
 	c.JSON(http.StatusOK, result)
 }
 

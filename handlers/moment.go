@@ -103,7 +103,8 @@ func MomentAssets(c *gin.Context, user *models.User) {
 	}
 	rows, err := db.Instance.
 		Table("assets").
-		Select("id, mime_type, gps_lat, gps_long").
+		Select("assets.id, assets.name, assets.created_at, assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display").
+		Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
 		Where("user_id = ? and place_id in (?) and deleted=0 and created_at>=? and created_at<=?", user.ID, strings.Split(r.Places, ","), r.Start, r.End).
 		Order("created_at ASC").Rows()
 
@@ -112,16 +113,9 @@ func MomentAssets(c *gin.Context, user *models.User) {
 		return
 	}
 	defer rows.Close()
-	result := []AssetInfo{}
-	mimeType := ""
-	for rows.Next() {
-		assetInfo := AssetInfo{}
-		if err = rows.Scan(&assetInfo.ID, &mimeType, &assetInfo.GpsLat, &assetInfo.GpsLong); err != nil {
-			c.JSON(http.StatusInternalServerError, DBError2Response)
-			return
-		}
-		assetInfo.Type = GetTypeFrom(mimeType)
-		result = append(result, assetInfo)
+	result := loadAssetsFromRows(c, rows)
+	if result == nil {
+		return
 	}
 	c.JSON(http.StatusOK, result)
 }

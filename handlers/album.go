@@ -288,9 +288,10 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 		// Favourite album
 		rows, err = db.Instance.
 			Table("favourite_assets").
-			Select("asset_id, mime_type, gps_lat, gps_long").
+			Select("assets.id, assets.name, assets.created_at, assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display").
 			Where("favourite_assets.user_id = ?", user.ID).
-			Joins("join assets on favourite_assets.asset_id = assets.id").
+			Joins("JOIN assets on favourite_assets.asset_id = assets.id").
+			Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
 			Order("assets.created_at ASC").Rows()
 	} else {
 		// Normal album - check for access (own album or as a contributor)
@@ -302,9 +303,10 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 		}
 		rows, err = db.Instance.
 			Table("album_assets").
-			Select("asset_id, mime_type, gps_lat, gps_long").
+			Select("assets.id, assets.name, assets.created_at, assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display").
 			Where("album_id = ?", r.AlbumID).
-			Joins("join assets on album_assets.asset_id = assets.id").
+			Joins("JOIN assets on album_assets.asset_id = assets.id").
+			Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
 			Order("assets.created_at ASC").Rows()
 	}
 	if err != nil {
@@ -312,16 +314,9 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 		return
 	}
 	defer rows.Close()
-	result := []AssetInfo{}
-	mimeType := ""
-	for rows.Next() {
-		assetInfo := AssetInfo{}
-		if err = rows.Scan(&assetInfo.ID, &mimeType, &assetInfo.GpsLat, &assetInfo.GpsLong); err != nil {
-			c.JSON(http.StatusInternalServerError, DBError2Response)
-			return
-		}
-		assetInfo.Type = GetTypeFrom(mimeType)
-		result = append(result, assetInfo)
+	result := loadAssetsFromRows(c, rows)
+	if result == nil {
+		return
 	}
 	c.JSON(http.StatusOK, result)
 }
