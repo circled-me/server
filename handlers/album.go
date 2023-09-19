@@ -37,7 +37,7 @@ type AlbumAssetsRequest struct {
 }
 
 type AlbumIDRequest struct {
-	AlbumID uint64 `json:"album_id" binding:"required"`
+	AlbumID uint64 `json:"album_id" form:"album_id" binding:"required"`
 }
 
 type AlbumContributeRequest struct {
