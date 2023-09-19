@@ -43,8 +43,8 @@ type AssetDeleteRequest struct {
 }
 
 type AssetFavouriteRequest struct {
-	ID           uint64 `form:"id" binding:"required"`
-	AlbumAssetID uint64 `form:"album_asset_id"`
+	ID           uint64 `json:"id" binding:"required"`
+	AlbumAssetID uint64 `json:"album_asset_id"`
 }
 
 // TODO: Move to before save in Asset
@@ -232,7 +232,7 @@ func AssetDelete(c *gin.Context, user *models.User) {
 
 func AssetFavourite(c *gin.Context, user *models.User) {
 	r := AssetFavouriteRequest{}
-	err := c.ShouldBindWith(&r, binding.Form)
+	err := c.ShouldBindJSON(&r)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
@@ -280,7 +280,7 @@ func AssetFavourite(c *gin.Context, user *models.User) {
 
 func AssetUnfavourite(c *gin.Context, user *models.User) {
 	r := AssetFavouriteRequest{}
-	err := c.ShouldBindWith(&r, binding.Form)
+	err := c.ShouldBindJSON(&r
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return

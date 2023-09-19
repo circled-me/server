@@ -26,9 +26,9 @@ type AlbumInfo struct {
 }
 
 type AlbumSaveRequest struct {
-	ID          uint64 `form:"id"`
-	Name        string `form:"name" binding:"required"`
-	HeroAssetId uint64 `form:"hero_asset_id"`
+	ID          uint64 `json:"id"`
+	Name        string `json:"name" binding:"required"`
+	HeroAssetId uint64 `json:"hero_asset_id"`
 }
 
 type AlbumAssetsRequest struct {
@@ -37,12 +37,12 @@ type AlbumAssetsRequest struct {
 }
 
 type AlbumIDRequest struct {
-	AlbumID uint64 `form:"album_id" binding:"required"`
+	AlbumID uint64 `json:"album_id" binding:"required"`
 }
 
 type AlbumContributeRequest struct {
-	AlbumID uint64 `form:"album_id" binding:"required"`
-	UserID  uint64 `form:"user_id" binding:"required"`
+	AlbumID uint64 `json:"album_id" binding:"required"`
+	UserID  uint64 `json:"user_id" binding:"required"`
 }
 
 type AlbumShareResponse struct {
@@ -119,7 +119,7 @@ func AlbumList(c *gin.Context, user *models.User) {
 
 func AlbumCreate(c *gin.Context, user *models.User) {
 	r := AlbumSaveRequest{}
-	err := c.ShouldBindWith(&r, binding.Form)
+	err := c.ShouldBindJSON(&r)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
@@ -150,7 +150,7 @@ func AlbumCreate(c *gin.Context, user *models.User) {
 
 func AlbumSave(c *gin.Context, user *models.User) {
 	r := AlbumSaveRequest{}
-	err := c.ShouldBindWith(&r, binding.Form)
+	err := c.ShouldBindJSON(&r)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
@@ -191,7 +191,7 @@ func AlbumSave(c *gin.Context, user *models.User) {
 
 func AlbumDelete(c *gin.Context, user *models.User) {
 	r := AlbumIDRequest{}
-	err := c.ShouldBindWith(&r, binding.Form)
+	err := c.ShouldBindJSON(&r)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
@@ -358,7 +358,7 @@ func AlbumShare(c *gin.Context, user *models.User) {
 
 func AlbumContributor(c *gin.Context, user *models.User) {
 	r := AlbumContributeRequest{}
-	err := c.ShouldBindWith(&r, binding.Form)
+	err := c.ShouldBindJSON(&r)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
