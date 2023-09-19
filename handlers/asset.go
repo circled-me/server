@@ -280,7 +280,7 @@ func AssetFavourite(c *gin.Context, user *models.User) {
 
 func AssetUnfavourite(c *gin.Context, user *models.User) {
 	r := AssetFavouriteRequest{}
-	err := c.ShouldBindJSON(&r
+	err := c.ShouldBindJSON(&r)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return

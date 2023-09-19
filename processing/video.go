@@ -71,6 +71,6 @@ func (vc *videoConvert) process(assetIn *models.Asset, storage storage.StorageAP
 // ffmpegConvert uses hard-coded options
 func ffmpegConvert(inFile, outFile string) error {
 	log.Printf("Converting file %s to %s", inFile, outFile)
-	cmd := exec.Command("ffmpeg", "-y", "-i", inFile, "-c:v", "libx264", "-c:a", "aac", "-b:a", "128k", "-crf", "24", outFile)
+	cmd := exec.Command("ffmpeg", "-y", "-i", inFile, "-movflags", "use_metadata_tags", "-c:v", "libx264", "-c:a", "aac", "-b:a", "128k", "-crf", "24", outFile)
 	return cmd.Run()
 }
