@@ -114,8 +114,7 @@ func (b *Bucket) CreateSVC() *s3.S3 {
 
 func (b *Bucket) GetUsage() int64 {
 	result := int64(-1)
-	if err := db.Instance.Raw("select sum(size+thumb_size) from assets where bucket_id=? and deleted=0", b.ID).Scan(&result).Error; err != nil {
-		log.Printf("DB error: %v", err)
+	if err := db.Instance.Raw("select ifnull(sum(size+thumb_size), 0) from assets where bucket_id=? and deleted=0", b.ID).Scan(&result).Error; err != nil {
 		return -1
 	}
 	return result
