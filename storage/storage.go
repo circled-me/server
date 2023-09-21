@@ -28,17 +28,13 @@ type StorageAPI interface {
 	Load(path string, writer io.Writer) (int64, error)
 	Serve(path string, request *http.Request, writer http.ResponseWriter)
 	Delete(path string) error
-	GetTotalSpace() uint64
-	GetFreeSpace() uint64
 	GetBucket() *Bucket
 }
 
 type Storage struct {
 	StorageAPI
-	specifics  StorageAPI
-	TotalSpace uint64
-	FreeSpace  uint64
-	Bucket     Bucket
+	specifics StorageAPI
+	Bucket    Bucket
 }
 
 var (
@@ -72,14 +68,6 @@ func NewStorage(bucket *Bucket) StorageAPI {
 	} else {
 		panic(fmt.Sprintf("Storage type unavailable for Bucket %d", bucket.ID))
 	}
-}
-
-func (s *Storage) GetTotalSpace() uint64 {
-	return s.TotalSpace
-}
-
-func (s *Storage) GetFreeSpace() uint64 {
-	return s.FreeSpace
 }
 
 func (s *Storage) GetBucket() *Bucket {

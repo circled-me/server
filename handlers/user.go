@@ -26,6 +26,7 @@ type UserInfo struct {
 	Email       string `json:"email"`
 	Permissions []int  `json:"permissions"`
 	Bucket      uint64 `json:"bucket"`
+	Quota       int64  `json:"quota"` // in MB
 }
 
 type UserStatusResponse struct {
@@ -33,6 +34,8 @@ type UserStatusResponse struct {
 	Name        string `json:"name"`
 	UserID      uint64 `json:"user_id"`
 	Permissions []int  `json:"permissions"`
+	BucketUsage int64  `json:"bucket_usage"`
+	BucketQuota int64  `json:"bucket_quota"`
 }
 
 type UserSaveResponse struct {
@@ -85,6 +88,15 @@ func createFirstUser(postReq *UserLoginRequest) (err error) {
 	return nil
 }
 
+func newUserStatusResponse(name string, permissions []int) UserStatusResponse {
+	return UserStatusResponse{
+		Name:        name,
+		Permissions: permissions,
+		BucketUsage: -1,
+		BucketQuota: -1,
+	}
+}
+
 func UserLogin(c *gin.Context) {
 	postReq := UserLoginRequest{}
 	err := c.ShouldBindJSON(&postReq)
@@ -114,11 +126,10 @@ func UserLogin(c *gin.Context) {
 	session := auth.LoadSession(c)
 	session.Set("id", user.ID)
 	_ = session.Save()
-	c.JSON(http.StatusOK, UserStatusResponse{
-		Name:        user.Email,
-		UserID:      user.ID,
-		Permissions: user.GetPermissions(),
-	})
+
+	result := newUserStatusResponse(user.Email, user.GetPermissions())
+	result.UserID = user.ID
+	c.JSON(http.StatusOK, result)
 }
 
 func cleanupName(name string) string {
@@ -132,7 +143,7 @@ func cleanupName(name string) string {
 	return name
 }
 
-func UserSave(c *gin.Context, currentUser *models.User) {
+func UserSave(c *gin.Context, adminUser *models.User) {
 	req := UserInfo{}
 	err := c.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
@@ -163,6 +174,7 @@ func UserSave(c *gin.Context, currentUser *models.User) {
 		token = user.Email
 	}
 	user.BucketID = &req.Bucket
+	user.Quota = req.Quota * 1024 * 1024 // req.Quota is in MB
 	user.Name = req.Name
 	for _, g := range user.Grants {
 		db.Instance.Delete(&g)
@@ -170,7 +182,7 @@ func UserSave(c *gin.Context, currentUser *models.User) {
 	user.Grants = []models.Grant{}
 	for _, p := range req.Permissions {
 		user.Grants = append(user.Grants, models.Grant{
-			GrantorID:  currentUser.ID,
+			GrantorID:  adminUser.ID,
 			Permission: models.Permission(p),
 		})
 	}
@@ -211,10 +223,13 @@ func UserReInvite(c *gin.Context, currentUser *models.User) {
 }
 
 func UserGetStatus(c *gin.Context, user *models.User) {
-	c.JSON(http.StatusOK, UserStatusResponse{
-		Name:        user.Name,
-		Permissions: user.GetPermissions(),
-	})
+	result := newUserStatusResponse(user.Name, user.GetPermissions())
+	result.BucketUsage, result.BucketQuota = user.GetUsage()
+	if user.HasPermission(models.PermissionAdmin) {
+		// No quota for admins
+		result.BucketQuota, _ = user.Bucket.GetSpaceInfo()
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 func UserList(c *gin.Context, user *models.User) {
@@ -235,6 +250,7 @@ func UserList(c *gin.Context, user *models.User) {
 			Name:        u.Name,
 			Email:       u.Email,
 			Bucket:      bucket,
+			Quota:       u.Quota,
 			Permissions: u.GetPermissions(),
 		}
 		result = append(result, userInfo)

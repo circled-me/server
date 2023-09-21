@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"server/db"
 	"server/storage"
 	"server/utils"
@@ -26,7 +27,9 @@ type User struct {
 	Bucket      storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 
 	// Settings
+	Quota        int64 `gorm:"not null"` // in MB
 	VideoSetting uint8 `gorm:"not null"`
+	// ImageProcessing uint8 `gorm:"not null"` // 0 - no, 1 - always to JPEG
 }
 
 const (
@@ -90,4 +93,14 @@ func (u *User) HasPermissions(required []Permission) bool {
 		}
 	}
 	return true
+}
+
+// GetUsage returns the usage for the current bucket (only)
+func (u *User) GetUsage() (used, quota int64) {
+	result := int64(-1)
+	if err := db.Instance.Raw("select sum(size+thumb_size) from assets where user_id=? and bucket_id=? and deleted=0", u.ID, u.BucketID).Scan(&result).Error; err != nil {
+		log.Printf("DB error: %v", err)
+		return -1, 0
+	}
+	return result, u.Quota
 }

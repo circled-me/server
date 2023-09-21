@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"golang.org/x/sys/unix"
 )
 
 type StorageType uint8
@@ -109,4 +110,22 @@ func (b *Bucket) CreateSVC() *s3.S3 {
 	}
 	sess, _ := session.NewSession(config)
 	return s3.New(sess)
+}
+
+func (b *Bucket) GetUsage() int64 {
+	result := int64(-1)
+	if err := db.Instance.Raw("select sum(size+thumb_size) from assets where bucket_id=? and deleted=0", b.ID).Scan(&result).Error; err != nil {
+		log.Printf("DB error: %v", err)
+		return -1
+	}
+	return result
+}
+
+func (b *Bucket) GetSpaceInfo() (available, size int64) {
+	if b.StorageType != StorageTypeFile {
+		return -1, -1 // unknown for S3 or any other storage type
+	}
+	var stat unix.Statfs_t
+	unix.Statfs(b.Path, &stat)
+	return int64(stat.Bavail) * int64(stat.Bsize), int64(stat.Blocks) * int64(stat.Bsize)
 }
