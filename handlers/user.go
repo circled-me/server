@@ -33,6 +33,7 @@ type UserStatusResponse struct {
 	Error       string `json:"error"`
 	Name        string `json:"name"`
 	UserID      uint64 `json:"user_id"`
+	PushToken   string `json:"push_token"`
 	Permissions []int  `json:"permissions"`
 	BucketUsage int64  `json:"bucket_usage"`
 	BucketQuota int64  `json:"bucket_quota"`
@@ -223,11 +224,16 @@ func UserReInvite(c *gin.Context, currentUser *models.User) {
 }
 
 func UserGetStatus(c *gin.Context, user *models.User) {
+	if user.PushToken == "" {
+		user.SetNewPushToken()
+	}
 	result := newUserStatusResponse(user.Name, user.GetPermissions())
+	result.PushToken = user.PushToken
 	result.BucketUsage, result.BucketQuota = user.GetUsage()
 	if user.HasPermission(models.PermissionAdmin) {
 		// No quota for admins
-		result.BucketQuota, _ = user.Bucket.GetSpaceInfo()
+		space, _ := user.Bucket.GetSpaceInfo()
+		result.BucketQuota = space / 1024 / 1024
 	}
 	c.JSON(http.StatusOK, result)
 }

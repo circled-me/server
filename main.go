@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	// "server/faces"
 	"server/handlers"
 	"server/models"
 	"server/storage"
@@ -28,11 +27,6 @@ const (
 	sessionStoreKey       = "this is a long key" // TODO: convert to env variable
 	sessionCookieName     = "token"
 	sessionExpirationTime = 365 * 86400 // 1 year
-	DEBUG_MODE            = true        // TODO make this env variable
-)
-
-var (
-	TLS_DOMAINS = "" // TODO make this env variable, e.g. "example.com example2.com"
 )
 
 func main() {

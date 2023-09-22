@@ -112,7 +112,7 @@ func AssetFetch(c *gin.Context, user *models.User) {
 func checkAlbumAccess(c *gin.Context, checkUser, assetID uint64) bool {
 	// Check if we have access via any shared album or if any of those albums is ours
 	var sum int64
-	result := db.Instance.Debug().Raw("select sum(ifnull(album_contributors.user_id, ifnull(albums.user_id, 0))) "+
+	result := db.Instance.Raw("select sum(ifnull(album_contributors.user_id, ifnull(albums.user_id, 0))) "+
 		"from album_assets "+
 		"left join album_contributors on (album_contributors.album_id = album_assets.album_id and album_contributors.user_id = ?) "+
 		"left join albums on (albums.id = album_assets.album_id and albums.user_id = ?) "+

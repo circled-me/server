@@ -15,8 +15,8 @@ type User struct {
 	CreatedByID *uint64
 	CreatedBy   *User         `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	Name        string        `gorm:"type:varchar(100)"`
-	Email       string        `gorm:"type:varchar(150);index:uniq_email,unique"`
-	Password    string        `gorm:"type:varchar(256)"` // actually with SHA512 - 128 hex chars is enough (64 bytes output)
+	Email       string        `gorm:"type:varchar(150);index:uniq_email,unique"` // TODO: rename Email to Login
+	Password    string        `gorm:"type:varchar(128)"`
 	PassSalt    string        `gorm:"type:varchar(200)"`
 	TotpToken   string        `gorm:"type:varchar(200)"`
 	TotpAlgo    otp.Algorithm `gorm:"type:tinyint(1)"`
@@ -24,6 +24,7 @@ type User struct {
 	Grants      []Grant       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	BucketID    *uint64
 	Bucket      storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	PushToken   string         `gorm:"type:varchar(128)"`
 
 	// Settings
 	Quota        int64 `gorm:"not null"` // in MB
@@ -50,6 +51,11 @@ func UserCreate(name, email, plainTextPassword string) (u User, err error) {
 		u.BucketID = &storage.GetBucket().ID
 	}
 	return u, db.Instance.Create(&u).Error
+}
+
+func (u *User) SetNewPushToken() {
+	u.PushToken = utils.Sha512String(u.Email + utils.RandSalt(saltSize))
+	db.Instance.Model(u).Update("push_token", u.PushToken)
 }
 
 func (u *User) SetPassword(plainTextPassword string) {

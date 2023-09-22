@@ -1,7 +1,6 @@
 module server
 
-go 1.18
-
+go 1.20
 require (
 	github.com/aws/aws-sdk-go v1.44.211
 	github.com/gin-contrib/cors v1.4.0
