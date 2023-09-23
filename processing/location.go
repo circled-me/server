@@ -18,8 +18,7 @@ func (l *location) requiresContent(asset *models.Asset) bool {
 	return false
 }
 
-func (l *location) process(assetIn *models.Asset, storage storage.StorageAPI) (int, func()) {
-	asset := *assetIn
+func (l *location) process(asset *models.Asset, storage storage.StorageAPI) (int, func()) {
 	// Try first local DB
 	location := asset.GetRoughLocation()
 	var result []models.Location
@@ -60,6 +59,5 @@ func (l *location) process(assetIn *models.Asset, storage storage.StorageAPI) (i
 	if db.Instance.Save(asset).Error != nil {
 		return FailedDB, nil
 	}
-	*assetIn = asset
 	return Done, nil
 }

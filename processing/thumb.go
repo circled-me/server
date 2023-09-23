@@ -20,8 +20,7 @@ func (t *thumb) requiresContent(asset *models.Asset) bool {
 	return true
 }
 
-func (t *thumb) process(assetIn *models.Asset, storage storage.StorageAPI) (status int, clean func()) {
-	asset := *assetIn
+func (t *thumb) process(asset *models.Asset, storage storage.StorageAPI) (status int, clean func()) {
 	cmd := exec.Command("ffmpeg", "-y", "-i", storage.GetFullPath(asset.GetPath()), "-vf", "scale=min(1280\\,iw):-1", "-ss", "00:00:00.000", "-vframes", "1", storage.GetFullPath(asset.GetThumbPath()))
 	err := cmd.Run()
 	if err != nil {

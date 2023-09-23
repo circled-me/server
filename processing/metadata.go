@@ -21,8 +21,7 @@ func (md *metadata) requiresContent(asset *models.Asset) bool {
 	return true
 }
 
-func (md *metadata) process(assetIn *models.Asset, storage storage.StorageAPI) (int, func()) {
-	asset := *assetIn
+func (md *metadata) process(asset *models.Asset, storage storage.StorageAPI) (int, func()) {
 	cmd := exec.Command("exiftool", "-n", "-T", "-gpslatitude", "-gpslongitude", "-imagewidth", "-imageheight", "-duration", storage.GetFullPath(asset.GetPath()))
 	output, err := cmd.Output()
 	if err != nil {
@@ -52,6 +51,5 @@ func (md *metadata) process(assetIn *models.Asset, storage storage.StorageAPI) (
 		log.Printf("Error updating DB for asset ID %d: %v", asset.ID, err)
 		return FailedDB, nil
 	}
-	*assetIn = asset
 	return Done, nil
 }

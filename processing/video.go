@@ -20,8 +20,7 @@ func (vc *videoConvert) requiresContent(asset *models.Asset) bool {
 	return true
 }
 
-func (vc *videoConvert) process(assetIn *models.Asset, storage storage.StorageAPI) (status int, clean func()) {
-	asset := *assetIn
+func (vc *videoConvert) process(asset *models.Asset, storage storage.StorageAPI) (status int, clean func()) {
 	if asset.User.VideoSetting == models.VideoSettingSkip {
 		return UserSkipped, nil
 	}
@@ -53,8 +52,6 @@ func (vc *videoConvert) process(assetIn *models.Asset, storage storage.StorageAP
 		log.Printf("Error updating DB for asset ID %d: %v", asset.ID, err)
 		return Failed, clean
 	}
-	// Set the newly changed Name, MimeType, etc to the main asset so other tasks can use it
-	*assetIn = asset
 	// Delete old files and objects
 	err1 := storage.DeleteRemoteFile(oldPath)
 	err2 := storage.Delete(oldPath)
