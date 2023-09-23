@@ -35,12 +35,12 @@ var (
 )
 
 func isNotModified(c *gin.Context, tx *gorm.DB) bool {
-	// Set the current ETag in all cases
 	row := tx.Row()
 	lastUpdatedAt := uint64(0)
 	if row.Scan(&lastUpdatedAt) != nil {
 		return false
 	}
+	// Set the current ETag
 	c.Header("cache-control", "private, max-age=1")
 	c.Header(etagHeader, strconv.FormatUint(lastUpdatedAt, 10))
 

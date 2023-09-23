@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 	"server/auth"
+	"server/config"
 	"server/db"
-	"server/locations"
 	"server/processing"
 	"server/utils"
 	"server/web"
@@ -30,16 +30,18 @@ const (
 )
 
 func main() {
-	db.Init(GetMySQLDSN())
+	db.Init()
 	models.Init()
 	storage.Init()
 	processing.Init()
-	go locations.StartProcessing()
 	go processing.StartProcessing()
 
+	// if !config.DEBUG_MODE {
+	// 	gin.SetMode(gin.ReleaseMode)
+	// }
 	router := gin.Default()
 	_ = router.SetTrustedProxies([]string{})
-	if DEBUG_MODE {
+	if config.DEBUG_MODE {
 		router.Use(utils.ErrorLogMiddleware)
 	}
 	router.Use(cors.New(cors.Config{
@@ -49,7 +51,7 @@ func main() {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		// AllowOriginFunc: func(origin string) bool {
-		// 	return origin == "https://github.com"
+		// 	return strings.HasSuffix(origin, ".circled.me") || strings.HasSuffix(origin, ".circled.me/")
 		// },
 		MaxAge: 30 * 24 * time.Hour,
 	}))
@@ -60,7 +62,7 @@ func main() {
 	cookieStore := gormsessions.NewStore(db.Instance, true, []byte(sessionStoreKey))
 	cookieStore.Options(sessions.Options{MaxAge: sessionExpirationTime})
 	router.Use(sessions.Sessions(sessionCookieName, cookieStore))
-	if !DEBUG_MODE {
+	if !config.DEBUG_MODE {
 		router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/asset/fetch"})))
 	}
 	router.Use((&utils.CacheRouter{CacheTime: utils.CacheNoCache}).Handler()) // No cache by default, individual end-points can override that
@@ -128,10 +130,10 @@ func main() {
 	router.GET("/robots.txt", web.DisallowRobots)
 
 	var err error
-	if TLS_DOMAINS != "" {
-		err = autotls.Run(router, strings.Split(TLS_DOMAINS, " ")...)
+	if config.TLS_DOMAINS != "" {
+		err = autotls.Run(router, strings.Split(config.TLS_DOMAINS, " ")...)
 	} else {
-		err = router.Run(GetBindAddress())
+		err = router.Run(config.BIND_ADDRESS)
 	}
 	log.Fatalf("Server stopped: %v", err)
 }

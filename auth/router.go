@@ -7,10 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// User is authenticated and posseses the required permissions
+// user is authenticated and posseses the required permissions
 type HandlerFunc func(c *gin.Context, user *models.User)
 
-// Router is a wrapper class that adds auth checks + User pre-loading
+// Router is a wrapper class that adds auth checks and user pre-loading
 type Router struct {
 	Base *gin.Engine
 }

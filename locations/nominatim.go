@@ -75,7 +75,7 @@ func (n *NominatimLocation) GetArea() string {
 	return a[0] + "," + a[1]
 }
 
-func getNominatimLocation(lat, long float64) *NominatimLocation {
+func GetNominatimLocation(lat, long float64) *NominatimLocation {
 	// Add throttling
 	if time.Since(lastRequest) < throttling {
 		time.Sleep(throttling - time.Since(lastRequest))

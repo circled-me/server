@@ -3,13 +3,11 @@ package handlers
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"server/db"
 	"server/models"
 	"server/push"
 	"server/utils"
-	"strconv"
 	"strings"
 
 	_ "image/jpeg"
@@ -207,45 +205,6 @@ func AlbumDelete(c *gin.Context, user *models.User) {
 	c.JSON(http.StatusOK, OKResponse)
 }
 
-func albumNewAssets(count int, albumId uint64, addeByUser *models.User) {
-	// TODO: Use raw queries instead?
-	album := models.Album{ID: albumId}
-	if db.Instance.
-		Preload("User").
-		Preload("Contributors").
-		First(&album).Error != nil {
-
-		log.Print("Cannot find album?")
-		return
-	}
-	what := strconv.Itoa(count) + " new photo"
-	if count > 1 {
-		what += "s"
-	}
-	notification := push.Notification{
-		Title: "Album \"" + album.Name + "\"",
-		Body:  addeByUser.Name + " added " + what + " to the album",
-	}
-	if album.UserID != addeByUser.ID {
-		notification.UserToken = album.User.PushToken
-		push.Send(&notification)
-	}
-	for _, c := range album.Contributors {
-		if addeByUser.ID == c.UserID {
-			continue
-		}
-		if c.User.ID != c.UserID {
-			c.User.ID = c.UserID
-			db.Instance.First(&c.User)
-		}
-		if c.User.PushToken == "" {
-			continue
-		}
-		notification.UserToken = c.User.PushToken
-		push.Send(&notification)
-	}
-}
-
 func AlbumAddAssets(c *gin.Context, user *models.User) {
 	r := AlbumAssetsRequest{}
 	err := c.ShouldBindWith(&r, binding.JSON)
@@ -281,7 +240,7 @@ func AlbumAddAssets(c *gin.Context, user *models.User) {
 		}
 	}
 	// Push notifications in background
-	go albumNewAssets(successful, r.AlbumID, user)
+	go push.AlbumNewAssets(successful, r.AlbumID, user)
 
 	if len(failed) > 0 {
 		c.JSON(http.StatusInternalServerError, MultiResponse{"Some assets cannot be added", failed})

@@ -7,18 +7,10 @@ import (
 	"server/db"
 	"server/models"
 	"server/storage"
-	"sort"
 	"time"
 )
 
-const (
-	orderSooner = -10
-	orderNormal = 0
-	orderLater  = 10
-)
-
 type processingTask interface {
-	order() int
 	shouldHandle(*models.Asset) bool
 	requiresContent(*models.Asset) bool // This method is necessary to establish if we need to download remote file contents
 	process(*models.Asset, storage.StorageAPI) (status int, cleanup func())
@@ -37,9 +29,6 @@ func (ts *processingTasks) register(t processingTask) {
 	*ts = append(*ts, processingTasksElement{
 		name: reflect.TypeOf(t).Elem().Name(),
 		task: t,
-	})
-	sort.Slice(*ts, func(i, j int) bool {
-		return (*ts)[i].task.order() < (*ts)[j].task.order()
 	})
 }
 
@@ -68,10 +57,15 @@ func (ts *processingTasks) process(asset *models.Asset, assetStorage storage.Sto
 			statusMap[e.name] = FailedStorage
 			continue
 		}
+		// Use a copy to avoid modifications in case of failure
+		assetCopy := *asset
 		start := time.Now()
-		status, cleanup := e.task.process(asset, assetStorage)
+		status, cleanup := e.task.process(&assetCopy, assetStorage)
 		timeConsumed := time.Since(start).Milliseconds()
-
+		// In case of success copy modifications to original so next task can use that
+		if status == Done {
+			*asset = assetCopy
+		}
 		statusMap[e.name] = status
 		if cleanup != nil {
 			cleanAll = append(cleanAll, cleanup)
@@ -87,7 +81,8 @@ func Init() {
 	if err := db.Instance.AutoMigrate(&ProcessingTask{}); err != nil {
 		log.Printf("Auto-migrate error: %v", err)
 	}
-	// Initialise all processing tasks
+	// Register all processing tasks (executed in the same order)
+	tasks.register(&location{})
 	tasks.register(&videoConvert{})
 	tasks.register(&metadata{})
 	tasks.register(&thumb{})

@@ -12,10 +12,6 @@ import (
 
 type thumb struct{}
 
-func (t *thumb) order() int {
-	return orderLater
-}
-
 func (t *thumb) shouldHandle(asset *models.Asset) bool {
 	return asset.ThumbSize == 0
 }

@@ -12,10 +12,6 @@ import (
 
 type videoConvert struct{}
 
-func (vc *videoConvert) order() int {
-	return orderSooner
-}
-
 func (vc *videoConvert) shouldHandle(asset *models.Asset) bool {
 	return asset.IsVideo() && asset.MimeType != "video/mp4"
 }

@@ -13,6 +13,7 @@ const (
 	Done          = 2
 	Failed        = 3
 	FailedStorage = 4
+	FailedDB      = 5
 )
 
 type ProcessingTask struct {

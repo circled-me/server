@@ -13,10 +13,6 @@ import (
 
 type metadata struct{}
 
-func (md *metadata) order() int {
-	return orderNormal
-}
-
 func (md *metadata) shouldHandle(asset *models.Asset) bool {
 	return asset.Width == 0 || asset.Height == 0 || (asset.Duration == 0 && asset.IsVideo())
 }
@@ -54,7 +50,7 @@ func (md *metadata) process(assetIn *models.Asset, storage storage.StorageAPI) (
 	}
 	if err = db.Instance.Save(&asset).Error; err != nil {
 		log.Printf("Error updating DB for asset ID %d: %v", asset.ID, err)
-		return Failed, nil
+		return FailedDB, nil
 	}
 	*assetIn = asset
 	return Done, nil

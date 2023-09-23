@@ -2,6 +2,7 @@ package db
 
 import (
 	"log"
+	"server/config"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -9,8 +10,8 @@ import (
 
 var Instance *gorm.DB
 
-func Init(dsn string) {
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+func Init() {
+	db, err := gorm.Open(mysql.Open(config.MYSQL_DSN), &gorm.Config{
 		// SkipDefaultTransaction: true,
 		PrepareStmt: true,
 	})

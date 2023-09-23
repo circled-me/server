@@ -61,12 +61,12 @@ func MomentList(c *gin.Context, user *models.User) {
 		group  by 2, 1
 		having cnt > 6
 		order  by 2, 1 desc) t
-		join places
+	join places
 		on id = place_id
 	group  by 1,
 		2
 	order  by 1 desc,
-		2; 
+		2
 	`, user.ID).Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)

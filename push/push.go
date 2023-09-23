@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"server/config"
 )
 
 var httpClient = http.Client{}
@@ -21,7 +22,7 @@ type Notification struct {
 func Send(notification *Notification) error {
 	buf := bytes.Buffer{}
 	json.NewEncoder(&buf).Encode(*notification)
-	resp, err := httpClient.Post("http://192.168.1.6:8081/send", "application/json", &buf)
+	resp, err := httpClient.Post(config.PUSH_SERVER+"/send", "application/json", &buf)
 	if err != nil {
 		log.Printf("SendPushNotification, error: %v", err)
 		return err
