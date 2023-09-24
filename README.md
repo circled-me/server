@@ -31,7 +31,7 @@ ___
 - iOS Push notifications for new Albums, Photos (in progress)
 - Albums
   - Adding local server contributors and viewers
-  - Sharing albums to anyone with a "secret" link
+  - Sharing albums with anyone with a "secret" link
 - Filtering photos by year, month, location, etc
 - Moments - automatically grouping photos by time and location
 - Reverse geocoding for all assets
