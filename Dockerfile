@@ -12,4 +12,4 @@ RUN apk --no-cache add ca-certificates exiftool
 WORKDIR /root/
 COPY --from=0 /go/src/circled-server/circled-server .
 COPY --from=0 /go/src/circled-server/templates ./templates
-ENTRYPOINT ["/bin/sh", "-c", "./circled-server 1>>/var/log/circled-server.log 2>>/var/log/circled-server.log"]
+ENTRYPOINT ["./circled-server"]
