@@ -3,14 +3,15 @@ This project aims to help people easily backup and share photos, videos, albums 
 Upcoming releases will further enable you to share with your circles by including group chats and more...  
 
 After certain services became paid some time ago, I have decided I'd rather be able host my own photos.
-The main reason is, of course, privacy! This project has currently only one contributor, so help will be greatly appreciated 😊
+The main reason is, of course, privacy! But also at that time, there was no alternatve that offered good performance and low CPU/memory usage. 
+This project has currently only one contributor (i.e. me), so help will be greatly appreciated 😊
 
 Another focus of this project is having the ability to host everything a community needs to be able to communicate and exchange photos, ideas, etc.
 I strongly believe in local/focused communities and sharing with the community, but at the same time - keeping everything private, within the community.
 In my personal case, I share mostly photos with my family and close friends.
 
 ## Mobile app
-The **circled.me** mobile app **works with multiple accounts and servers**. For example, you can have your family server and account, and your gaming/running/basketball comunities' accounts on the same app and being able to interact with all of them at the same time.
+The **circled.me** mobile app **works with multiple accounts and servers**. For example, you can have your family server and account, and your gaming/running/reading comunities' accounts on the same app and being able to interact with all of them at the same time.
 
 <img src="https://app.circled.me/screenshots.jpg"/>
 
@@ -27,7 +28,7 @@ ___
 - Fast response times and low CPU usage
 - iOS and Android photo backup (using the circled.me app)
   - Supports either locally mounted disks or
-  - S3-compatible Services - this allows different users to use their own S3 bucket
+  - S3-compatible Services - this allows different users to use their own S3 bucket on the same server
 - iOS Push notifications for new Albums, Photos (in progress)
 - Albums
   - Adding local server contributors and viewers
@@ -35,7 +36,7 @@ ___
 - Filtering photos by year, month, location, etc
 - Moments - automatically grouping photos by time and location
 - Reverse geocoding for all assets
-- Automatic video conversion to web-compatible H.264
+- Automatic video conversion to web-compatible H.264 format
 
 
 ## Feautres that are in-progress and/or prioritised:
@@ -43,12 +44,22 @@ ___
 - Group chats
 - Face detection and tagging
 
-## Running the server
-The easiest way to run the server is within a docker container. 
+## Compiling and Running the server
+To compile, please use Go 1.20.5 or above.
+The easiest way to try and run the server is within a docker container. There's no image provided on Docker Hub (yet) so needs to be built locally, see example docker-compose file below.
 
-Modify the `mysql-data` and `asset-data` at the very least to suitable locations with enough space, etc.
+Current configuration environment variables:
+- `MYSQL_DSN` - see example or refer to https://github.com/go-sql-driver/mysql#dsn-data-source-name
+- `BIND_ADDRESS` - IP and port to bind to (incompatible with `TLS_DOMAINS`). This is useful if your server is, say, behind reverse proxy
+- `TLS_DOMAINS` - a list of comma-separated domain names. This uses the Let's Encrypt Gin implementation (https://github.com/gin-gonic/autotls)
+- `DEBUG_MODE` - currently defaults to `yes`
 
-NOTE: Please do not use this in production. 
+## docker-compose example
+This `docker-compose` file is **just an example** and does provide only basic configuration. 
+Modify the `mysql-data` and `asset-data` below at the very least to suitable locations with enough space, etc.
+Better though, use your "proper" MySQL server instead of running it in Docker.
+
+**NOTE: Please do not use this in production.**
 
 ```yaml:
 version: '2'
