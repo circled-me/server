@@ -2,7 +2,7 @@
 This project aims to help people easily backup and share photos, videos, albums on their own server. Focusing on performance, low footprint and ease of implementation and use.
 Upcoming releases will further enable you to share with your circles by including group chats and more.
 
-After certain services became paid some time ago, I have decided I'd rather be able host my own photos.
+After certain services that scan for faces, locations, etc, became paid some time ago, I have decided I'd rather be able to host my own photos.
 The main reason being, of course, privacy! But also at that time, there was no alternatve that offered good performance and low CPU/memory usage. 
 This project has currently only one contributor (i.e. me), so help will be greatly appreciated 😊
 
