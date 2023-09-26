@@ -48,6 +48,12 @@ ___
 To compile, please use Go 1.20.5 or above.
 The easiest way to try and run the server is within a docker container. There's no image provided on Docker Hub (yet) so needs to be built locally, see example docker-compose file below.
 
+```bash
+git clone https://github.com/circled-me/server.git
+cd server
+docker-compose -f docker-compose-example.yaml up
+```
+
 Current configuration environment variables:
 - `MYSQL_DSN` - see example or refer to https://github.com/go-sql-driver/mysql#dsn-data-source-name
 - `BIND_ADDRESS` - IP and port to bind to (incompatible with `TLS_DOMAINS`). This is useful if your server is, say, behind reverse proxy
