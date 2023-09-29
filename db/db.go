@@ -12,7 +12,6 @@ var Instance *gorm.DB
 
 func Init() {
 	db, err := gorm.Open(mysql.Open(config.MYSQL_DSN), &gorm.Config{
-		// SkipDefaultTransaction: true,
 		PrepareStmt: true,
 	})
 	if err != nil || db == nil {

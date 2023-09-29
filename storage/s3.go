@@ -3,6 +3,7 @@ package storage
 import (
 	"io"
 	"os"
+	"server/config"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -17,8 +18,7 @@ type S3Storage struct {
 
 // GetFullPath returns local temp path in case of S3
 func (s *S3Storage) GetFullPath(path string) string {
-	// TODO: the temp directory should be configurable
-	return "/tmp/" + strings.ReplaceAll(path, "/", "_")
+	return config.TMP_DIR + "/" + strings.ReplaceAll(path, "/", "_")
 }
 
 func (s *S3Storage) EnsureDirExists(dir string) error {
@@ -62,7 +62,7 @@ func (s *S3Storage) ReleaseLocalFile(path string) {
 }
 
 // UpdateFile updates the remote S3 object (uploads the local copy)
-func (s *S3Storage) UpdateFile(path, mimeType string) error {
+func (s *S3Storage) UpdateRemoteFile(path, mimeType string) error {
 	data, err := os.Open(s.GetFullPath(path))
 	if err != nil {
 		return err

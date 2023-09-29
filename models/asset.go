@@ -46,25 +46,27 @@ type Asset struct {
 	ThumbWidth          uint16
 	ThumbHeight         uint16
 	Duration            uint32
-	Processed           bool `gorm:"not null;default 0"`
+	Path                string `gorm:"type:varchar(2048)"` // Full path of the asset, including file/object name
+	ThumbPath           string `gorm:"type:varchar(2048)"` // Same but for thumbnail
+	Processed           bool   `gorm:"not null;default 0"`
 	PresignedUntil      int64
 	PresignedURL        string `gorm:"type:varchar(2000)"`
 	PresignedThumbUntil int64
 	PresignedThumbURL   string `gorm:"type:varchar(2000)"`
 }
 
-// GetPath returns the path of the asset. For example:
+// CreatePath returns new path for an asset. For example:
 //   - group/56/image.jpg
 //   - user/3/file.xls
-func (a *Asset) GetPath() string {
-	return a.GetPathOrThumb(false)
+func (a *Asset) CreatePath() string {
+	return a.CreatePathOrThumb(false)
 }
 
-func (a *Asset) GetThumbPath() string {
-	return a.GetPathOrThumb(true)
+func (a *Asset) CreateThumbPath() string {
+	return a.CreatePathOrThumb(true)
 }
 
-func (a *Asset) GetPathOrThumb(thumb bool) string {
+func (a *Asset) CreatePathOrThumb(thumb bool) string {
 	subDir := ""
 	if a.GroupID != nil {
 		// This is an asset uploaded to a Group (as part of a Post)
@@ -81,6 +83,26 @@ func (a *Asset) GetPathOrThumb(thumb bool) string {
 		path += strings.ToLower(filepath.Ext(a.Name))
 	}
 	return path
+}
+
+func (a *Asset) GetPathOrThumb(thumb bool) string {
+	if thumb {
+		return a.ThumbPath
+	}
+	return a.Path
+}
+
+func (a *Asset) AfterCreate(tx *gorm.DB) (err error) {
+	if a.Path != "" && a.ThumbPath != "" {
+		return
+	}
+	if a.Path == "" {
+		a.Path = a.CreatePath()
+	}
+	if a.ThumbPath == "" {
+		a.ThumbPath = a.CreateThumbPath()
+	}
+	return tx.Save(a).Error
 }
 
 func (a *Asset) BeforeSave(tx *gorm.DB) (err error) {
@@ -139,7 +161,7 @@ func (a *Asset) GetS3DownloadURL(thumb bool) (string, int64) {
 	if thumb && a.ThumbSize > 0 {
 		if a.PresignedThumbURL == "" || a.PresignedThumbUntil < time.Now().Add(presignValidAtLeastFor).Unix() {
 			// Need to sign again..
-			a.PresignedThumbURL = a.Bucket.CreateS3DownloadURI(a.GetPathOrThumb(true), presignViewURLFor)
+			a.PresignedThumbURL = a.Bucket.CreateS3DownloadURI(a.ThumbPath, presignViewURLFor)
 			a.PresignedThumbUntil = time.Now().Add(presignViewURLFor).Unix()
 			db.Instance.Updates(a)
 		}
@@ -149,35 +171,9 @@ func (a *Asset) GetS3DownloadURL(thumb bool) (string, int64) {
 	// Valid at least for another 30 minutes?
 	if a.PresignedURL == "" || a.PresignedUntil < time.Now().Add(presignValidAtLeastFor).Unix() {
 		// Need to sign again..
-		a.PresignedURL = a.Bucket.CreateS3DownloadURI(a.GetPathOrThumb(false), presignViewURLFor)
+		a.PresignedURL = a.Bucket.CreateS3DownloadURI(a.Path, presignViewURLFor)
 		a.PresignedUntil = time.Now().Add(presignViewURLFor).Unix()
 		db.Instance.Updates(a)
 	}
 	return a.PresignedURL, a.PresignedUntil
 }
-
-// func (a *Asset) AfterSave(tx *gorm.DB) (err error) {
-// 	// Scan the thumb for faces
-// 	if a.ThumbSize <= 0 {
-// 		return
-// 	}
-// 	foundFaces, err := faces.ProcessPhoto("/mnt/data1/circled-data/" + a.GetThumbPath())
-// 	if err != nil {
-// 		log.Print(err)
-// 		return
-// 	}
-// 	//fmt.Printf("Asset: %d, num faces: %d; saving...\n", a.ID, len(foundFaces))
-// 	for _, face := range foundFaces {
-// 		desc := [128]float32(face.Descriptor)
-// 		faceObject := Face{
-// 			AssetID:    a.ID,
-// 			Descriptor: utils.Float32ArrayToByteArray(desc[:]),
-// 			RectX1:     uint16(face.Rectangle.Min.X),
-// 			RectY1:     uint16(face.Rectangle.Min.Y),
-// 			RectX2:     uint16(face.Rectangle.Max.X),
-// 			RectY2:     uint16(face.Rectangle.Max.Y),
-// 		}
-// 		db.Instance.Save(&faceObject)
-// 	}
-// 	return
-// }

@@ -48,7 +48,7 @@ func (s *DiskStorage) ReleaseLocalFile(path string) {
 	// noop
 }
 
-func (s *DiskStorage) UpdateFile(path, mimeType string) error {
+func (s *DiskStorage) UpdateRemoteFile(path, mimeType string) error {
 	return nil // noop
 }
 

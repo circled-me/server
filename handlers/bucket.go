@@ -20,14 +20,19 @@ func hasWriteAccess(bucket *storage.Bucket) error {
 		log.Printf("Cannot save to bucket: %+v", bucket)
 		return err
 	}
-	err = storage.UpdateFile(testPath, "text/plain")
+	err = storage.UpdateRemoteFile(testPath, "text/plain")
 	if err != nil {
 		log.Printf("Cannot update bucket: %+v", bucket)
 		return err
 	}
 	err = storage.Delete(testPath)
 	if err != nil {
-		log.Printf("Cannot delete from bucket: %+v", bucket)
+		log.Printf("Cannot delete: %+v", bucket)
+		return err
+	}
+	err = storage.DeleteRemoteFile(testPath)
+	if err != nil {
+		log.Printf("Cannot delete remote object from bucket: %+v", bucket)
 		return err
 	}
 	return nil
@@ -77,11 +82,20 @@ func BucketSave(c *gin.Context, user *models.User) {
 		return
 	}
 	if err := hasWriteAccess(&bucket); err != nil {
-		c.JSON(http.StatusBadRequest, Response{"No write access to bucket: " + err.Error()})
+		c.JSON(http.StatusForbidden, Response{"No write access to bucket: " + err.Error()})
 		return
 	}
-	if err = bucket.Create(); err != nil {
-		c.JSON(http.StatusBadRequest, Response{err.Error()})
+	if err = bucket.TryInit(); err != nil {
+		c.JSON(http.StatusForbidden, Response{err.Error()})
+		return
+	}
+	if bucket.ID == 0 {
+		err = db.Instance.Create(&bucket).Error
+	} else {
+		err = db.Instance.Save(&bucket).Error
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{err.Error()})
 		return
 	}
 	// Re-initialize storage

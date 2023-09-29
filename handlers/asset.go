@@ -165,11 +165,11 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 		c.Header("content-type", "image/jpeg")
 		if r.Size == 0 {
 			// Default big (1280) thumb size
-			_, err = storage.Load(asset.GetThumbPath(), c.Writer)
+			_, err = storage.Load(asset.ThumbPath, c.Writer)
 		} else {
 			// Custom size
 			var buf bytes.Buffer
-			if _, err = storage.Load(asset.GetThumbPath(), &buf); err == nil {
+			if _, err = storage.Load(asset.ThumbPath, &buf); err == nil {
 				var imageThumbInfo utils.ImageThumbConverted
 				imageThumbInfo, err = utils.CreateThumb(r.Size, &buf, c.Writer)
 				c.Header("content-length", strconv.FormatInt(imageThumbInfo.ThumbSize, 10))
@@ -181,7 +181,7 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 			c.Header("content-disposition", "attachment; filename=\""+asset.Name+"\"")
 		}
 		// Handles Byte-ranges too
-		storage.Serve(asset.GetPath(), c.Request, c.Writer)
+		storage.Serve(asset.Path, c.Request, c.Writer)
 		return
 	}
 	// Handle errors
@@ -221,12 +221,19 @@ func AssetDelete(c *gin.Context, user *models.User) {
 			failed = append(failed, id)
 			continue
 		}
-		// TODO: S3 delete
-		if err = storage.Delete(asset.GetThumbPath()); err != nil {
+		// Finally delete
+		if err = storage.Delete(asset.ThumbPath); err != nil {
 			log.Printf("Asset: %d, thumb delete error: %s", id, err.Error())
 		}
-		if err = storage.Delete(asset.GetPath()); err != nil {
+		if err = storage.Delete(asset.Path); err != nil {
 			log.Printf("Asset: %d, delete error: %s", id, err.Error())
+		}
+		// Remote (S3) as well
+		if err = storage.DeleteRemoteFile(asset.ThumbPath); err != nil {
+			log.Printf("Remote Asset: %d, thumb delete error: %s", id, err.Error())
+		}
+		if err = storage.DeleteRemoteFile(asset.Path); err != nil {
+			log.Printf("Remote Asset: %d, delete error: %s", id, err.Error())
 		}
 	}
 	// Handle errors

@@ -7,9 +7,10 @@ import (
 
 var (
 	TLS_DOMAINS  = "" // e.g. "example.com,example2.com"
-	PUSH_SERVER  = ""
+	PUSH_SERVER  = "https://push.circled.me"
 	MYSQL_DSN    = "root:@tcp(127.0.0.1:3306)/circled?charset=utf8mb4&parseTime=True&loc=Local"
 	BIND_ADDRESS = "0.0.0.0:8080"
+	TMP_DIR      = "/tmp" // Used for temporary video conversion, etc (in case of S3 bucket)
 	DEBUG_MODE   = true
 )
 
@@ -18,6 +19,7 @@ func init() {
 	readEnvString("PUSH_SERVER", &PUSH_SERVER)
 	readEnvString("MYSQL_DSN", &MYSQL_DSN)
 	readEnvString("BIND_ADDRESS", &BIND_ADDRESS)
+	readEnvString("TMP_DIR", &TMP_DIR)
 	readEnvBool("DEBUG_MODE", &DEBUG_MODE)
 }
 
