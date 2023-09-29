@@ -43,6 +43,9 @@ ___
 - Map browsing of photos
 - Group chats
 - Face detection and tagging
+- Bulk-adding assets by:
+  - Scanning directories on local disks
+  - Scanning objects on already existing S3 bucket prefix
 
 ## Compiling and Running the server
 To compile, please use Go 1.20.5 or above.
