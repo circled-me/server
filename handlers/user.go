@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"server/auth"
 	"server/db"
@@ -170,7 +171,7 @@ func UserSave(c *gin.Context, adminUser *models.User) {
 		}
 	} else {
 		// New user with random email (login)
-		// They can choose their login later
+		// They will choose their login later
 		user.Email = utils.Rand16BytesToBase62()
 		token = user.Email
 	}
@@ -194,6 +195,29 @@ func UserSave(c *gin.Context, adminUser *models.User) {
 	c.JSON(http.StatusOK, UserSaveResponse{
 		Token: token,
 	})
+}
+
+func UserDelete(c *gin.Context, loggedUser *models.User) {
+	req := UserInfo{}
+	err := c.ShouldBindWith(&req, binding.JSON)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
+		return
+	}
+	if !loggedUser.HasPermission(models.PermissionAdmin) && loggedUser.ID != req.ID {
+		c.JSON(http.StatusForbidden, NopeResponse)
+		return
+	}
+	user := models.User{ID: req.ID}
+	if db.Instance.First(&user).Error != nil {
+		c.JSON(http.StatusBadRequest, Response{"Invalid user"})
+		return
+	}
+	log.Printf("Will delete user: %d", user.ID)
+	user.Password = ""
+	db.Instance.Save(&user)
+	// TODO: Delete all assets?? Or delete them later as a background task
+	c.JSON(http.StatusOK, OKResponse)
 }
 
 func UserReInvite(c *gin.Context, currentUser *models.User) {

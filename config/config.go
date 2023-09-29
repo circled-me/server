@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	TLS_DOMAINS  = "" // e.g. "example.com example2.com"
-	PUSH_SERVER  = "http://192.168.1.6:8081"
+	TLS_DOMAINS  = "" // e.g. "example.com,example2.com"
+	PUSH_SERVER  = ""
 	MYSQL_DSN    = "root:@tcp(127.0.0.1:3306)/circled?charset=utf8mb4&parseTime=True&loc=Local"
 	BIND_ADDRESS = "0.0.0.0:8080"
 	DEBUG_MODE   = true

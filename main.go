@@ -79,6 +79,7 @@ func main() {
 	// User info handlers
 	router.POST("/user/login", handlers.UserLogin)
 	authRouter.POST("/user/save", handlers.UserSave, models.PermissionAdmin)
+	authRouter.POST("/user/delete", handlers.UserDelete) // PermissionAdmin or own account check (in handler)
 	authRouter.POST("/user/reinvite", handlers.UserReInvite, models.PermissionAdmin)
 	authRouter.GET("/user/status", handlers.UserGetStatus)
 	authRouter.GET("/user/list", handlers.UserList)
@@ -131,7 +132,7 @@ func main() {
 
 	var err error
 	if config.TLS_DOMAINS != "" {
-		err = autotls.Run(router, strings.Split(config.TLS_DOMAINS, " ")...)
+		err = autotls.Run(router, strings.Split(config.TLS_DOMAINS, ",")...)
 	} else {
 		err = router.Run(config.BIND_ADDRESS)
 	}

@@ -2,12 +2,16 @@ package push
 
 import (
 	"log"
+	"server/config"
 	"server/db"
 	"server/models"
 	"strconv"
 )
 
 func AlbumNewAssets(count int, albumId uint64, addeByUser *models.User) {
+	if config.PUSH_SERVER == "" {
+		return
+	}
 	// TODO: Use raw queries instead?
 	album := models.Album{ID: albumId}
 	if db.Instance.
@@ -25,6 +29,10 @@ func AlbumNewAssets(count int, albumId uint64, addeByUser *models.User) {
 	notification := Notification{
 		Title: "Album \"" + album.Name + "\"",
 		Body:  addeByUser.Name + " added " + what + " to the album",
+		Data: Data{
+			Type:   NotificationTypeNewAssetsInAlbum,
+			Detail: albumId,
+		},
 	}
 	if album.UserID != addeByUser.ID {
 		notification.UserToken = album.User.PushToken
