@@ -47,7 +47,7 @@ func (b *Bucket) IsS3() bool {
 func (b *Bucket) TryInit() (err error) {
 	if b.ID > 0 {
 		count := int64(0)
-		if db.Instance.Raw("select 1 from albums where exists(select id from assets where bucket_id=?)", b.ID).Scan(&count).Error != nil {
+		if db.Instance.Raw("select exists(select id from assets where deleted=0 and bucket_id=?)", b.ID).Scan(&count).Error != nil {
 			return errors.New("DB error")
 		}
 		if count != 0 {
