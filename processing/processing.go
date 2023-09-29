@@ -130,11 +130,12 @@ func processPending() {
 			if assetStorage == nil {
 				fmt.Printf("processPending: Storage is nil for asset ID: %d", asset.ID)
 			} else {
-				if err = assetStorage.EnsureLocalFile(asset.GetPath()); err != nil {
-					fmt.Printf("Error downloading remote file for %s: %v\n", asset.GetPath(), err)
+				if err = assetStorage.EnsureLocalFile(asset.Path); err != nil {
+					fmt.Printf("Error downloading remote file for %s: %v\n", asset.Path, err)
+					assetStorage = nil
 				} else {
 					// In the end - cleanup local copy
-					defer assetStorage.ReleaseLocalFile(asset.GetPath())
+					defer assetStorage.ReleaseLocalFile(asset.Path)
 				}
 			}
 		}

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"log"
 	"net/url"
 	"os"
@@ -43,10 +44,15 @@ func (b *Bucket) IsS3() bool {
 	return b.StorageType == StorageTypeS3
 }
 
-func (b *Bucket) Create() (err error) {
-	err = db.Instance.Create(b).Error
-	if err != nil {
-		return
+func (b *Bucket) TryInit() (err error) {
+	if b.ID > 0 {
+		count := int64(0)
+		if db.Instance.Raw("select 1 from albums where exists(select id from assets where bucket_id=?)", b.ID).Scan(&count).Error != nil {
+			return errors.New("DB error")
+		}
+		if count != 0 {
+			return errors.New("Cannot modify bucket as it is already in use")
+		}
 	}
 	if b.StorageType == StorageTypeFile {
 		// Pre-create locations on disk

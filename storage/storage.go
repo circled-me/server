@@ -17,7 +17,7 @@ type StorageSpecificAPI interface {
 	EnsureLocalFile(path string) error
 	ReleaseLocalFile(path string)
 	DeleteRemoteFile(path string) error
-	UpdateFile(path, mimeType string) error
+	UpdateRemoteFile(path, mimeType string) error
 }
 
 type StorageAPI interface {
@@ -160,6 +160,6 @@ func (s *Storage) ReleaseLocalFile(path string) {
 func (s *Storage) DeleteRemoteFile(path string) error {
 	return s.specifics.DeleteRemoteFile(path)
 }
-func (s *Storage) UpdateFile(path, mimeType string) error {
-	return s.specifics.UpdateFile(path, mimeType)
+func (s *Storage) UpdateRemoteFile(path, mimeType string) error {
+	return s.specifics.UpdateRemoteFile(path, mimeType)
 }

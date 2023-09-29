@@ -216,7 +216,7 @@ func UserDelete(c *gin.Context, loggedUser *models.User) {
 	log.Printf("Will delete user: %d", user.ID)
 	user.Password = ""
 	db.Instance.Save(&user)
-	// TODO: Delete all assets?? Or delete them later as a background task
+	// TODO: Delete their personal assets later as a background task, keep the group ones
 	c.JSON(http.StatusOK, OKResponse)
 }
 

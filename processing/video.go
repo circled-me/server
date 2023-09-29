@@ -24,28 +24,27 @@ func (vc *videoConvert) process(asset *models.Asset, storage storage.StorageAPI)
 	if asset.User.VideoSetting == models.VideoSettingSkip {
 		return UserSkipped, nil
 	}
-	oldPath := asset.GetPath()
+	oldPath := asset.Path
 	ext := filepath.Ext(asset.Name)
 	asset.Name = asset.Name[:len(asset.Name)-len(ext)] + ".mp4"
-	newPath := asset.GetPath()
-	err := ffmpegConvert(storage.GetFullPath(oldPath), storage.GetFullPath(newPath))
-	asset.Size = storage.GetSize(newPath)
+	asset.Path = asset.Path[:len(asset.Path)-len(ext)] + ".mp4"
+	err := ffmpegConvert(storage.GetFullPath(oldPath), storage.GetFullPath(asset.Path))
+	asset.Size = storage.GetSize(asset.Path)
 	// Always cleanup in the end
 	clean = func() {
 		// Delete the temp file after all tasks have completed
-		storage.ReleaseLocalFile(newPath)
+		storage.ReleaseLocalFile(asset.Path)
 	}
-
 	if err != nil || asset.Size <= 0 {
-		fmt.Printf("ERROR in video processing for: %s, %v, size: %v\n", asset.GetPath(), err, asset.Size)
+		fmt.Printf("ERROR in video processing for: %s, %v, size: %v\n", oldPath, err, asset.Size)
 		return Failed, clean
 	}
-	log.Print("DONE video processing for:", asset.GetPath())
+	log.Print("DONE video processing for:", asset.Path)
 
 	asset.MimeType = "video/mp4"
 	asset.PresignedUntil = 0
-	if err := storage.UpdateFile(newPath, asset.MimeType); err != nil {
-		log.Printf("Error updating asset ID %d (%s->%s): %v", asset.ID, newPath, asset.GetPath(), err)
+	if err := storage.UpdateRemoteFile(asset.Path, asset.MimeType); err != nil {
+		log.Printf("Error updating asset ID %d (%s->%s): %v", asset.ID, oldPath, asset.Path, err)
 		return Failed, clean
 	}
 	if err = db.Instance.Save(&asset).Error; err != nil {

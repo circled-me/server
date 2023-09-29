@@ -22,7 +22,7 @@ func (md *metadata) requiresContent(asset *models.Asset) bool {
 }
 
 func (md *metadata) process(asset *models.Asset, storage storage.StorageAPI) (int, func()) {
-	cmd := exec.Command("exiftool", "-n", "-T", "-gpslatitude", "-gpslongitude", "-imagewidth", "-imageheight", "-duration", storage.GetFullPath(asset.GetPath()))
+	cmd := exec.Command("exiftool", "-n", "-T", "-gpslatitude", "-gpslongitude", "-imagewidth", "-imageheight", "-duration", storage.GetFullPath(asset.Path))
 	output, err := cmd.Output()
 	if err != nil {
 		log.Printf("Metadata processing error: %v", err)
