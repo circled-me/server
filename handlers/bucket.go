@@ -85,7 +85,7 @@ func BucketSave(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusForbidden, Response{"No write access to bucket: " + err.Error()})
 		return
 	}
-	if err = bucket.TryInit(); err != nil {
+	if err = bucket.CanSave(); err != nil {
 		c.JSON(http.StatusForbidden, Response{err.Error()})
 		return
 	}

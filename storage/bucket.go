@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"net/url"
-	"os"
 	"server/db"
 	"time"
 
@@ -44,7 +43,7 @@ func (b *Bucket) IsS3() bool {
 	return b.StorageType == StorageTypeS3
 }
 
-func (b *Bucket) TryInit() (err error) {
+func (b *Bucket) CanSave() (err error) {
 	if b.ID > 0 {
 		count := int64(0)
 		if db.Instance.Raw("select exists(select id from assets where deleted=0 and bucket_id=?)", b.ID).Scan(&count).Error != nil {
@@ -54,15 +53,7 @@ func (b *Bucket) TryInit() (err error) {
 			return errors.New("Cannot modify bucket as it is already in use")
 		}
 	}
-	if b.StorageType == StorageTypeFile {
-		// Pre-create locations on disk
-		if err = os.MkdirAll(b.Path+StorageLocationUser, 0777); err != nil {
-			return
-		}
-		if err = os.MkdirAll(b.Path+StorageLocationGroup, 0777); err != nil {
-			return
-		}
-	} else if b.StorageType == StorageTypeS3 {
+	if b.StorageType == StorageTypeS3 {
 		_, err = url.Parse(b.Path)
 	}
 	return
