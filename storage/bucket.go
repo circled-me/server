@@ -90,7 +90,6 @@ func (b *Bucket) CreateS3DownloadURI(path string, expiry time.Duration) string {
 		Key:    aws.String(b.GetRemotePath(path)),
 	})
 	out, err := req.Presign(expiry)
-	log.Printf("Download URI: %v, %v\n", err, out)
 	if err != nil {
 		log.Printf("Cannot sign request 2: %v", err)
 		return err.Error()

@@ -52,7 +52,7 @@ func (t *thumb) process(asset *models.Asset, storage storage.StorageAPI) (status
 		log.Printf("Error saving asset to DB for ID %d: %v", asset.ID, err)
 		return Failed, clean
 	}
-	if err = storage.UpdateRemoteFile(asset.ThumbPath, asset.MimeType); err != nil {
+	if err = storage.UpdateRemoteFile(asset.ThumbPath, "image/jpeg"); err != nil {
 		asset.ThumbSize = 0 // Revert
 		asset.ThumbPath = ""
 		db.Instance.Save(&asset)
