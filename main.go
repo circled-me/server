@@ -83,6 +83,7 @@ func main() {
 	authRouter.POST("/user/reinvite", handlers.UserReInvite, models.PermissionAdmin)
 	authRouter.GET("/user/status", handlers.UserGetStatus)
 	authRouter.GET("/user/list", handlers.UserList)
+	authRouter.POST("/user/logout", handlers.UserLogout)
 	// Asset handlers
 	authRouter.GET("/asset/list", handlers.AssetList, models.PermissionPhotoBackup)
 	authRouter.GET("/asset/tags", handlers.TagList, models.PermissionPhotoBackup)

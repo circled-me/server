@@ -8,6 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const userIdKey = "id"
+
 type Session struct {
 	sessions.Session
 }
@@ -18,8 +20,15 @@ func LoadSession(c *gin.Context) *Session {
 	}
 }
 
+func (s *Session) LogoutUser() {
+	s.Delete(userIdKey)
+	s.Clear()
+	s.Options(sessions.Options{Path: "/", MaxAge: -1})
+	s.Save()
+}
+
 func (s *Session) User() (user models.User) {
-	id := s.Get("id")
+	id := s.Get(userIdKey)
 	if id == nil {
 		return
 	}

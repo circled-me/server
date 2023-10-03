@@ -287,3 +287,9 @@ func UserList(c *gin.Context, user *models.User) {
 	}
 	c.JSON(http.StatusOK, result)
 }
+
+func UserLogout(c *gin.Context, user *models.User) {
+	session := auth.LoadSession(c)
+	session.LogoutUser()
+	c.Redirect(http.StatusTemporaryRedirect, "/")
+}
