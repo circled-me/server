@@ -44,7 +44,7 @@ func ByteArrayToFloat32Array(b []byte) (result []float32) {
 	return
 }
 
-func GetSeason(month time.Month, gpsLat *float32) string {
+func GetSeason(month time.Month, gpsLat *float64) string {
 	if gpsLat == nil {
 		return ""
 	}

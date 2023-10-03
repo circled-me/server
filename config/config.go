@@ -6,12 +6,13 @@ import (
 )
 
 var (
-	TLS_DOMAINS  = "" // e.g. "example.com,example2.com"
-	PUSH_SERVER  = "https://push.circled.me"
-	MYSQL_DSN    = "root:@tcp(127.0.0.1:3306)/circled?charset=utf8mb4&parseTime=True&loc=Local"
-	BIND_ADDRESS = "0.0.0.0:8080"
-	TMP_DIR      = "/tmp" // Used for temporary video conversion, etc (in case of S3 bucket)
-	DEBUG_MODE   = true
+	TLS_DOMAINS        = ""     // e.g. "example.com,example2.com"
+	DEFAULT_ASSET_PATH = "#id#" // also available: #name#, #year#, #month#
+	PUSH_SERVER        = "https://push.circled.me"
+	MYSQL_DSN          = "root:@tcp(127.0.0.1:3306)/circled?charset=utf8mb4&parseTime=True&loc=Local"
+	BIND_ADDRESS       = "0.0.0.0:8080"
+	TMP_DIR            = "/tmp" // Used for temporary video conversion, etc (in case of S3 bucket)
+	DEBUG_MODE         = true
 )
 
 func init() {

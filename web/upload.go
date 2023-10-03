@@ -72,20 +72,31 @@ func UploadRequestNewURL(c *gin.Context) {
 		prefix = prefix[:10]
 	}
 	asset := models.Asset{
-		UserID:   req.UserID,
-		BucketID: *req.User.BucketID,
-		RemoteID: prefix + "_" + strconv.FormatInt(time.Now().UnixNano(), 10),
-		Name:     c.Query("name"),
+		UserID:    req.UserID,
+		BucketID:  *req.User.BucketID,
+		RemoteID:  prefix + "_" + strconv.FormatInt(time.Now().UnixNano(), 10),
+		Name:      c.Query("name"),
+		CreatedAt: time.Now().UnixMilli() / 1000,
 	}
 	result := db.Instance.Create(&asset)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, handlers.DBError1Response)
 		return
 	}
-	c.JSON(http.StatusOK, NewAssetResponse{
+	if db.Instance.Preload("Bucket").Preload("User").First(&asset).Error != nil {
+		c.JSON(http.StatusInternalServerError, handlers.DBError1Response)
+		return
+	}
+	response := NewAssetResponse{
 		ID:  asset.ID,
 		URL: asset.CreateUploadURI(false, req.Token), // TODO: Thumb?
-	})
+	}
+	// Save as Paths are updated
+	if db.Instance.Save(&asset).Error != nil {
+		c.JSON(http.StatusInternalServerError, handlers.DBError2Response)
+		return
+	}
+	c.JSON(http.StatusOK, response)
 }
 
 func UploadRequestConfirm(c *gin.Context) {

@@ -7,7 +7,6 @@ import (
 	"server/utils"
 	"sort"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -73,7 +72,7 @@ func TagList(c *gin.Context, user *models.User) {
 	if isNotModified(c, tx) {
 		return
 	}
-	rows, err := db.Instance.Table("assets").Select("id, mime_type, favourite, created_at, locations.gps_lat, area, city, country").
+	rows, err := db.Instance.Table("assets").Select("id, mime_type, favourite, created_at, locations.gps_lat, locations.gps_long, area, city, country").
 		Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).
 		Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").Order("created_at DESC").
 		Rows()
@@ -85,11 +84,11 @@ func TagList(c *gin.Context, user *models.User) {
 	tags := Tags{}
 	mimeType := ""
 	var assetId, createdAt uint64
-	var gpsLat *float32
+	var gpsLat, gpsLong *float64
 	var area, city, country *string
 	favourite := false
 	for rows.Next() {
-		if err = rows.Scan(&assetId, &mimeType, &favourite, &createdAt, &gpsLat, &area, &city, &country); err != nil {
+		if err = rows.Scan(&assetId, &mimeType, &favourite, &createdAt, &gpsLat, &gpsLong, &area, &city, &country); err != nil {
 			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
@@ -98,7 +97,12 @@ func TagList(c *gin.Context, user *models.User) {
 		tags.add(tagTypePlace, city, assetId)
 		tags.add(tagTypePlace, country, assetId)
 		// Add time tags, e.g "2023", "April", "22"
-		year, month, day := time.Unix(int64(createdAt), 0).Date()
+		tmpAsset := &models.Asset{
+			GpsLat:  gpsLat,
+			GpsLong: gpsLong,
+		}
+		// Time zone for the given GPS coordinates is used
+		year, month, day := tmpAsset.GetCreatedTimeInLocation().Date()
 		tags.add(tagTypeYear, year, assetId)
 		tags.add(tagTypeMonth, month.String(), assetId)
 		tags.add(tagTypeDay, day, assetId)

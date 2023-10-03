@@ -1,6 +1,7 @@
 module server
 
 go 1.20
+
 require (
 	github.com/aws/aws-sdk-go v1.44.211
 	github.com/gin-contrib/cors v1.4.0
@@ -36,6 +37,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	github.com/wader/gormstore/v2 v2.0.0 // indirect
+	github.com/zsefvlol/timezonemapper v1.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90 // indirect
 	golang.org/x/net v0.1.0 // indirect
 	golang.org/x/sync v0.0.0-20220819030929-7fc1605a5dde // indirect

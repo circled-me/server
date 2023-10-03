@@ -99,8 +99,8 @@ func main() {
 	authRouter.POST("/album/remove", handlers.AlbumRemoveAsset, models.PermissionPhotoBackup)
 	authRouter.GET("/album/assets", handlers.AlbumAssets)
 	authRouter.GET("/album/share", handlers.AlbumShare)
-	// TODO: there should be a way to list and remove contributors too
 	authRouter.POST("/album/contributor", handlers.AlbumContributor, models.PermissionPhotoBackup)
+	// authRouter.POST("/album/contributors", handlers.AlbumContributors, models.PermissionPhotoBackup)
 
 	// Upload Request
 	authRouter.GET("/upload/share", handlers.UploadShare, models.PermissionPhotoBackup)

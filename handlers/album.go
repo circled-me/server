@@ -298,7 +298,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 			Where("favourite_assets.user_id = ?", user.ID).
 			Joins("JOIN assets on favourite_assets.asset_id = assets.id").
 			Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
-			Order("assets.created_at ASC").Rows()
+			Order("assets.created_at DESC").Rows()
 	} else {
 		// Normal album - check for access (own album or as a contributor)
 		access := 0
@@ -313,7 +313,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 			Where("album_id = ?", r.AlbumID).
 			Joins("JOIN assets on album_assets.asset_id = assets.id").
 			Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
-			Order("assets.created_at ASC").Rows()
+			Order("assets.created_at DESC").Rows()
 	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)

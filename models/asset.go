@@ -1,13 +1,17 @@
 package models
 
 import (
+	"fmt"
+	"log"
 	"path/filepath"
+	"server/config"
 	"server/db"
 	"server/storage"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/zsefvlol/timezonemapper"
 	"gorm.io/gorm"
 )
 
@@ -66,6 +70,33 @@ func (a *Asset) CreateThumbPath() string {
 	return a.CreatePathOrThumb(true)
 }
 
+func (a *Asset) GetCreatedTimeInLocation() time.Time {
+	if a.GpsLat == nil || a.GpsLong == nil {
+		return time.Unix(a.CreatedAt, 0)
+	}
+	zone, err := time.LoadLocation(timezonemapper.LatLngToTimezoneString(*a.GpsLat, *a.GpsLong))
+	if err != nil {
+		return time.Unix(a.CreatedAt, 0)
+	}
+	return time.Unix(a.CreatedAt, 0).In(zone)
+}
+
+func (a *Asset) getAssetFilePathNoExt() string {
+	result := a.Bucket.AssetPathPattern
+	if result == "" {
+		result = config.DEFAULT_ASSET_PATH
+	}
+	assetTime := a.GetCreatedTimeInLocation()
+	ext := filepath.Ext(a.Name)
+	name := a.Name[:len(a.Name)-len(ext)] // remove extension
+	result = strings.ReplaceAll(result, "#id#", strconv.FormatUint(a.ID, 10))
+	result = strings.ReplaceAll(result, "#name#", name)
+	result = strings.ReplaceAll(result, "#year#", strconv.Itoa(assetTime.Year()))
+	result = strings.ReplaceAll(result, "#month#", fmt.Sprintf("%02d", assetTime.Month()))
+	result = strings.ReplaceAll(result, "#Month#", assetTime.Month().String())
+	return result
+}
+
 func (a *Asset) CreatePathOrThumb(thumb bool) string {
 	subDir := ""
 	if a.GroupID != nil {
@@ -75,7 +106,8 @@ func (a *Asset) CreatePathOrThumb(thumb bool) string {
 		// It must be an asset for a User (private or part of Post on their "wall")
 		subDir = "user/" + strconv.FormatUint(a.UserID, 10)
 	}
-	path := subDir + "/" + strconv.FormatUint(a.ID, 10)
+	path := subDir + "/" + a.getAssetFilePathNoExt()
+	// Add extension
 	if thumb {
 		// Thumbs are always JPEG
 		path += "_thumb.jpg"
@@ -86,23 +118,17 @@ func (a *Asset) CreatePathOrThumb(thumb bool) string {
 }
 
 func (a *Asset) GetPathOrThumb(thumb bool) string {
+	log.Printf("GetPathOrThumb: %d, %b, %+v, %+v", a.ID, thumb, a.Bucket.ID, a.User.ID)
 	if thumb {
+		if a.ThumbPath == "" {
+			a.ThumbPath = a.CreateThumbPath()
+		}
 		return a.ThumbPath
-	}
-	return a.Path
-}
-
-func (a *Asset) AfterCreate(tx *gorm.DB) (err error) {
-	if a.Path != "" && a.ThumbPath != "" {
-		return
 	}
 	if a.Path == "" {
 		a.Path = a.CreatePath()
 	}
-	if a.ThumbPath == "" {
-		a.ThumbPath = a.CreateThumbPath()
-	}
-	return tx.Save(a).Error
+	return a.Path
 }
 
 func (a *Asset) BeforeSave(tx *gorm.DB) (err error) {

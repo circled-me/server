@@ -194,6 +194,8 @@ github.com/wader/gormstore/v2 v2.0.0 h1:Idfd68RXNFibVmkNKgNv8l7BobUfyvwEm1gvWqeA
 github.com/wader/gormstore/v2 v2.0.0/go.mod h1:3BgNKFxRdVo2E4pq3e/eiim8qRDZzaveaIcIvu2T8r0=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 github.com/zenazn/goji v0.9.0/go.mod h1:7S9M489iMyHBNxwZnk9/EHS098H4/F6TATF2mIxtB1Q=
+github.com/zsefvlol/timezonemapper v1.0.0 h1:HXqkOzf01gXYh2nDQcDSROikFgMaximnhE8BY9SyF6E=
+github.com/zsefvlol/timezonemapper v1.0.0/go.mod h1:cVUCOLEmc/VvOMusEhpd2G/UBtadL26ZVz2syODXDoQ=
 go.uber.org/atomic v1.3.2/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/atomic v1.4.0/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/atomic v1.6.0/go.mod h1:sABNBOSYdrvTF6hTgEIbc7YasKWGhgEQZyfxyTvoXHQ=

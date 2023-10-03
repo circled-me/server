@@ -29,9 +29,9 @@ func AlbumNewAssets(count int, albumId uint64, addeByUser *models.User) {
 	notification := Notification{
 		Title: "Album \"" + album.Name + "\"",
 		Body:  addeByUser.Name + " added " + what + " to the album",
-		Data: Data{
-			Type:   NotificationTypeNewAssetsInAlbum,
-			Detail: albumId,
+		Data: map[string]string{
+			"type":  NotificationTypeNewAssetsInAlbum,
+			"album": strconv.Itoa(int(albumId)),
 		},
 	}
 	if album.UserID != addeByUser.ID {

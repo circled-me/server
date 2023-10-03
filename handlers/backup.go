@@ -90,6 +90,7 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 	}
 	asset := models.Asset{
 		UserID:    user.ID,
+		User:      *user,
 		RemoteID:  r.RemoteID,
 		Name:      r.Name,
 		GroupID:   nil,
@@ -148,6 +149,11 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 		Thumb:    asset.CreateUploadURI(true, ""),
 		MimeType: asset.MimeType,
 	})
+	// Save as Paths are updated
+	if db.Instance.Save(&asset).Error != nil {
+		c.JSON(http.StatusInternalServerError, DBError3Response)
+		return nil
+	}
 	return &asset
 }
 
@@ -191,7 +197,7 @@ func BackupLocalAsset(userID uint64, c *gin.Context) {
 	} else {
 		asset.Size = size
 	}
-	// Re-save asset as we have new .Size, .ThumbWidth, .ThumbHeight (TODO: .MimeType)
+	// Re-save asset as we have new .Size, .ThumbWidth, .ThumbHeight
 	db.Instance.Updates(&asset)
 	c.JSON(http.StatusOK, BackupAssetResponse{"", asset.ID})
 }

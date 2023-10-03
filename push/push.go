@@ -11,21 +11,16 @@ import (
 )
 
 const (
-	NotificationTypeNewAssetsInAlbum = 1
+	NotificationTypeNewAssetsInAlbum = "album"
 )
 
 var httpClient = http.Client{}
 
 type Notification struct {
-	UserToken string `json:"user_token" binding:"required"`
-	Title     string `json:"title" binding:"required"`
-	Body      string `json:"body" binding:"required"`
-	Data      Data   `json:"data"`
-}
-
-type Data struct {
-	Type   int         `json:"type"`
-	Detail interface{} `json:"detail"`
+	UserToken string            `json:"user_token" binding:"required"`
+	Title     string            `json:"title" binding:"required"`
+	Body      string            `json:"body" binding:"required"`
+	Data      map[string]string `json:"data"`
 }
 
 func Send(notification *Notification) error {

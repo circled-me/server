@@ -47,7 +47,6 @@ func (t *thumb) process(asset *models.Asset, storage storage.StorageAPI) (status
 	asset.ThumbPath = thumbPath
 	asset.ThumbWidth = uint16(thumb.Bounds().Dx())
 	asset.ThumbHeight = uint16(thumb.Bounds().Dy())
-	asset.MimeType = "image/jpeg"
 	asset.PresignedThumbUntil = 0 // Clear S3 URL cache
 	if err = db.Instance.Save(&asset).Error; err != nil {
 		log.Printf("Error saving asset to DB for ID %d: %v", asset.ID, err)

@@ -176,7 +176,7 @@ func UserSave(c *gin.Context, adminUser *models.User) {
 		token = user.Email
 	}
 	user.BucketID = &req.Bucket
-	user.Quota = req.Quota * 1024 * 1024 // req.Quota is in MB
+	user.Quota = req.Quota
 	user.Name = req.Name
 	for _, g := range user.Grants {
 		db.Instance.Delete(&g)
@@ -251,7 +251,7 @@ func UserGetStatus(c *gin.Context, user *models.User) {
 	if user.PushToken == "" {
 		user.SetNewPushToken()
 	}
-	result := newUserStatusResponse(user.Name, user.GetPermissions())
+	result := newUserStatusResponse(user.Email, user.GetPermissions())
 	result.PushToken = user.PushToken
 	result.BucketUsage, result.BucketQuota = user.GetUsage()
 	if user.HasPermission(models.PermissionAdmin) {
