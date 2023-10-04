@@ -391,5 +391,8 @@ func AlbumContributor(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusInternalServerError, DBError2Response)
 		return
 	}
+	// Push notifications in background
+	go push.AlbumNewContributor(r.UserID, r.AlbumID, models.ContributorCanEdit, user)
+
 	c.JSON(http.StatusOK, OKResponse)
 }

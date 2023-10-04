@@ -89,11 +89,11 @@ func (a *Asset) getAssetFilePathNoExt() string {
 	assetTime := a.GetCreatedTimeInLocation()
 	ext := filepath.Ext(a.Name)
 	name := a.Name[:len(a.Name)-len(ext)] // remove extension
-	result = strings.ReplaceAll(result, "#id#", strconv.FormatUint(a.ID, 10))
-	result = strings.ReplaceAll(result, "#name#", name)
-	result = strings.ReplaceAll(result, "#year#", strconv.Itoa(assetTime.Year()))
-	result = strings.ReplaceAll(result, "#month#", fmt.Sprintf("%02d", assetTime.Month()))
-	result = strings.ReplaceAll(result, "#Month#", assetTime.Month().String())
+	result = strings.ReplaceAll(result, "<id>", strconv.FormatUint(a.ID, 10))
+	result = strings.ReplaceAll(result, "<name>", name)
+	result = strings.ReplaceAll(result, "<year>", strconv.Itoa(assetTime.Year()))
+	result = strings.ReplaceAll(result, "<month>", fmt.Sprintf("%02d", assetTime.Month()))
+	result = strings.ReplaceAll(result, "<Month>", assetTime.Month().String())
 	return result
 }
 

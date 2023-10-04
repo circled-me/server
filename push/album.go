@@ -8,6 +8,36 @@ import (
 	"strconv"
 )
 
+func AlbumNewContributor(newUser, albumId uint64, mode int, addeByUser *models.User) {
+	if config.PUSH_SERVER == "" {
+		return
+	}
+	receiver := models.User{ID: newUser}
+	if err := db.Instance.First(&receiver).Error; err != nil {
+		log.Printf("AlbumNewContributor DB error: %v", err)
+		return
+	}
+	album := models.Album{ID: albumId}
+	if db.Instance.First(&album).Error != nil {
+		log.Print("Cannot find album?")
+		return
+	}
+	what := "a viewer"
+	if mode == models.ContributorCanEdit {
+		what = "an editor"
+	}
+	notification := Notification{
+		UserToken: receiver.PushToken,
+		Title:     "Album \"" + album.Name + "\"",
+		Body:      addeByUser.Name + " added you as " + what,
+		Data: map[string]string{
+			"type":  NotificationTypeNewAssetsInAlbum,
+			"album": strconv.Itoa(int(albumId)),
+		},
+	}
+	Send(&notification)
+}
+
 func AlbumNewAssets(count int, albumId uint64, addeByUser *models.User) {
 	if config.PUSH_SERVER == "" {
 		return
@@ -28,7 +58,7 @@ func AlbumNewAssets(count int, albumId uint64, addeByUser *models.User) {
 	}
 	notification := Notification{
 		Title: "Album \"" + album.Name + "\"",
-		Body:  addeByUser.Name + " added " + what + " to the album",
+		Body:  addeByUser.Name + " added " + what,
 		Data: map[string]string{
 			"type":  NotificationTypeNewAssetsInAlbum,
 			"album": strconv.Itoa(int(albumId)),
