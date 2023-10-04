@@ -10,6 +10,8 @@ Another focus of this project is having the ability to host everything a communi
 I strongly believe in local/focused communities and sharing with the community, but at the same time - keeping everything private, within the community.
 In my personal case, I share mostly photos with my family and close friends.
 
+Logo is <a href="http://madebytow.com/">madebytow.com</a>
+
 ## Mobile app
 The **circled.me** mobile app **works with multiple accounts and servers**. For example, you can have your family server and account, and your gaming/running/reading comunities' accounts on the same app and being able to interact with all of them at the same time.
 
