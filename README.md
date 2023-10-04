@@ -58,6 +58,8 @@ git clone https://github.com/circled-me/server.git
 cd server
 docker-compose -f docker-compose-example.yaml up
 ```
+Now you can use the app and connect to your server at `http://<YOUR_IP>:8080` and create your first admin user.
+Then you need to create a Storage Bucket from Settings and assign that to any User that is going to backup their photos there.
 
 Current configuration environment variables:
 - `MYSQL_DSN` - see example or refer to https://github.com/go-sql-driver/mysql#dsn-data-source-name
