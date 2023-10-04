@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	TLS_DOMAINS        = ""     // e.g. "example.com,example2.com"
-	DEFAULT_ASSET_PATH = "<id>" // also available: #name#, #year#, #month#
+	TLS_DOMAINS        = ""                    // e.g. "example.com,example2.com"
+	DEFAULT_ASSET_PATH = "<year>/<month>/<id>" // also available: <name>, <Month>
 	PUSH_SERVER        = "https://push.circled.me"
 	MYSQL_DSN          = "root:@tcp(127.0.0.1:3306)/circled?charset=utf8mb4&parseTime=True&loc=Local"
 	BIND_ADDRESS       = "0.0.0.0:8080"

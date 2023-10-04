@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"server/config"
 	"server/db"
 	"server/models"
 	"server/storage"
@@ -56,6 +57,9 @@ func BucketSave(c *gin.Context, user *models.User) {
 	}
 	cleanupPath(&bucket)
 
+	if bucket.AssetPathPattern == "" {
+		bucket.AssetPathPattern = config.DEFAULT_ASSET_PATH
+	}
 	if bucket.Name == "" {
 		c.JSON(http.StatusBadRequest, Response{"Empty bucket name"})
 		return
@@ -92,7 +96,7 @@ func BucketSave(c *gin.Context, user *models.User) {
 	if bucket.ID == 0 {
 		err = db.Instance.Create(&bucket).Error
 	} else {
-		err = db.Instance.Save(&bucket).Error
+		err = db.Instance.Updates(&bucket).Error
 	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{err.Error()})
