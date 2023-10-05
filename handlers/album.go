@@ -41,6 +41,11 @@ type AlbumIDRequest struct {
 	AlbumID uint64 `json:"album_id" form:"album_id" binding:"required"`
 }
 
+type AlbumShareRequest struct {
+	AlbumID uint64 `json:"album_id" form:"album_id" binding:"required"`
+	Expires int64  `json:"expires" form:"expires"` // 0 - Never, or number of seconds from now
+}
+
 type AlbumContributeRequest struct {
 	AlbumID uint64 `json:"album_id" binding:"required"`
 	UserID  uint64 `json:"user_id" binding:"required"`
@@ -328,7 +333,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 }
 
 func AlbumShare(c *gin.Context, user *models.User) {
-	r := AlbumIDRequest{} // same for now
+	r := AlbumShareRequest{}
 	err := c.ShouldBindQuery(&r)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
@@ -345,17 +350,27 @@ func AlbumShare(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusUnauthorized, NopeResponse)
 		return
 	}
-	shareInfo := models.NewAlbumShare(user.ID, r.AlbumID)
+	shareInfo := models.NewAlbumShare(user.ID, r.AlbumID, r.Expires)
+	// Try finding the same share (probably with 0 - 'never expires')
 	shareInfoCond := shareInfo
 	shareInfoCond.Token = "" // Token should not be a condition
-	result = db.Instance.Where(shareInfoCond).FirstOrCreate(&shareInfo)
-	if result.Error != nil {
-		fmt.Println(result.Error)
+	result = db.Instance.Where(shareInfoCond).Preload("Album").First(&shareInfo)
+	if result.Error == nil {
+		c.JSON(http.StatusOK, AlbumShareResponse{
+			Title: "[ " + shareInfo.Album.Name + " ]",
+			Path:  "/w/album/" + shareInfo.Token + "/",
+		})
+		return
+	}
+	if db.Instance.Create(&shareInfo).Error != nil {
+		c.JSON(http.StatusInternalServerError, DBError1Response)
+		return
+	}
+	if db.Instance.Preload("Album").Find(&shareInfo).Error != nil {
 		c.JSON(http.StatusInternalServerError, DBError2Response)
 		return
 	}
-	db.Instance.Preload("Album").Find(&shareInfo)
-	// TODO: Make below configurable
+	// TODO: Make below text configurable
 	c.JSON(http.StatusOK, AlbumShareResponse{
 		Title: "[ " + shareInfo.Album.Name + " ]",
 		Path:  "/w/album/" + shareInfo.Token + "/",

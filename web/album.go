@@ -17,7 +17,7 @@ type AssetInfo struct {
 
 func AlbumView(c *gin.Context) {
 	token := c.Param("token")
-	rows, err := db.Instance.Table("album_shares").Select("album_id, albums.name, users.name").Where("token = ?", token).
+	rows, err := db.Instance.Table("album_shares").Select("album_id, albums.name, users.name").Where("token = ? and (expires_at is null or expires_at=0 or expires_at<unix_timestamp())", token).
 		Joins("join albums on album_shares.album_id = albums.id").Joins("join users on album_shares.user_id = users.id").Rows()
 
 	if err != nil {
@@ -81,7 +81,7 @@ func AlbumAssetView(c *gin.Context) {
 		return
 	}
 	// Verify we have permission to view this asset
-	rows, err := db.Instance.Table("album_shares").Select("album_assets.album_id").Where("token = ? and album_assets.asset_id = ?", token, r.ID).
+	rows, err := db.Instance.Table("album_shares").Select("album_assets.album_id").Where("token = ? and album_assets.asset_id = ? and (expires_at is null or expires_at=0 or expires_at<unix_timestamp())", token, r.ID).
 		Joins("join album_assets on album_shares.album_id = album_assets.album_id").Rows()
 
 	if err != nil {
