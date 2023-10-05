@@ -10,6 +10,8 @@ Another focus of this project is having the ability to host everything a communi
 I strongly believe in local/focused communities and sharing with the community, but at the same time - keeping everything private, within the community.
 In my personal case, I share mostly photos with my family and close friends.
 
+Logo is <a href="http://madebytow.com/">madebytow.com</a>
+
 ## Mobile app
 The **circled.me** mobile app **works with multiple accounts and servers**. For example, you can have your family server and account, and your gaming/running/reading comunities' accounts on the same app and being able to interact with all of them at the same time.
 
@@ -49,13 +51,15 @@ ___
 
 ## Compiling and Running the server
 To compile, please use Go 1.20.5 or above.
-The easiest way to try and run the server is within a docker container. There's no image provided on Docker Hub (yet) so needs to be built locally, see example docker-compose file below.
+The easiest way to try and run the server is within a docker container. There's no image provided on Docker Hub (yet) so that needs to be built locally, see example docker-compose file below.
 
 ```bash
 git clone https://github.com/circled-me/server.git
 cd server
 docker-compose -f docker-compose-example.yaml up
 ```
+Now you can use the app and connect to your server at `http://<YOUR_IP>:8080` and create your first admin user.
+Then you need to create a Storage Bucket from Settings and assign that to any User that is going to backup their photos there.
 
 Current configuration environment variables:
 - `MYSQL_DSN` - see example or refer to https://github.com/go-sql-driver/mysql#dsn-data-source-name
