@@ -62,7 +62,6 @@ func (md *metadata) process(asset *models.Asset, storage storage.StorageAPI) (in
 			zone, err := time.LoadLocation(timezonemapper.LatLngToTimezoneString(*asset.GpsLat, *asset.GpsLong))
 			if err == nil && zone != nil {
 				_, offset := time.Now().In(zone).Zone()
-				log.Print(offset)
 				asset.TimeOffset = &offset
 			}
 		}

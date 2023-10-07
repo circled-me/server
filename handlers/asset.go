@@ -40,7 +40,8 @@ type AssetInfo struct {
 }
 
 const (
-	assetsSelectClause = "assets.id, assets.name, assets.created_at, assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display, assets.size"
+	// created_at field is adjusted with time_offset so the time can be shown "as UTC"
+	assetsSelectClause = "assets.id, assets.name, assets.created_at+ifnull(time_offset,0), assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display, assets.size"
 )
 
 type AssetDeleteRequest struct {
