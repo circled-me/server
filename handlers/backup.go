@@ -16,16 +16,17 @@ import (
 )
 
 type BackupRequest struct {
-	RemoteID  string   `json:"id" binding:"required"`
-	Name      string   `json:"name" binding:"required"`
-	MimeType  string   `json:"mimetype"`
-	Lat       *float64 `json:"lat"`
-	Long      *float64 `json:"long"`
-	Created   int64    `json:"created"`
-	Favourite bool     `json:"favourite"`
-	Width     uint16   `json:"width"`
-	Height    uint16   `json:"height"`
-	Duration  uint32   `json:"duration"`
+	RemoteID   string   `json:"id" binding:"required"`
+	Name       string   `json:"name" binding:"required"`
+	MimeType   string   `json:"mimetype"`
+	Lat        *float64 `json:"lat"`
+	Long       *float64 `json:"long"`
+	Created    int64    `json:"created"`
+	Favourite  bool     `json:"favourite"`
+	Width      uint16   `json:"width"`
+	Height     uint16   `json:"height"`
+	Duration   uint32   `json:"duration"`
+	TimeOffset *int     `json:"time_offset"`
 }
 
 type BackupConfirmation struct {
@@ -88,20 +89,28 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 	if user.BucketID == nil {
 		panic("Bucket is nil")
 	}
+	if user.Quota > 0 {
+		used, _ := user.GetUsage()
+		if used > user.Quota {
+			c.JSON(http.StatusForbidden, Response{"Quota exceeded"})
+			return nil
+		}
+	}
 	asset := models.Asset{
-		UserID:    user.ID,
-		User:      *user,
-		RemoteID:  r.RemoteID,
-		Name:      r.Name,
-		GroupID:   nil,
-		BucketID:  *user.BucketID,
-		GpsLat:    r.Lat,
-		GpsLong:   r.Long,
-		CreatedAt: r.Created,
-		Favourite: r.Favourite,
-		Width:     r.Width,
-		Height:    r.Height,
-		Duration:  r.Duration,
+		UserID:     user.ID,
+		User:       *user,
+		RemoteID:   r.RemoteID,
+		Name:       r.Name,
+		GroupID:    nil,
+		BucketID:   *user.BucketID,
+		GpsLat:     r.Lat,
+		GpsLong:    r.Long,
+		CreatedAt:  r.Created,
+		Favourite:  r.Favourite,
+		Width:      r.Width,
+		Height:     r.Height,
+		Duration:   r.Duration,
+		TimeOffset: r.TimeOffset,
 	}
 	if r.MimeType != "" {
 		asset.MimeType = r.MimeType

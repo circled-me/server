@@ -25,6 +25,17 @@ type processingTasks []processingTasksElement
 
 var tasks = processingTasks{}
 
+func Init() {
+	if err := db.Instance.AutoMigrate(&ProcessingTask{}); err != nil {
+		log.Printf("Auto-migrate error: %v", err)
+	}
+	// Register all processing tasks (executed in the same order)
+	tasks.register(&location{})
+	tasks.register(&videoConvert{})
+	tasks.register(&metadata{})
+	tasks.register(&thumb{})
+}
+
 func (ts *processingTasks) register(t processingTask) {
 	*ts = append(*ts, processingTasksElement{
 		name: reflect.TypeOf(t).Elem().Name(),
@@ -75,17 +86,6 @@ func (ts *processingTasks) process(asset *models.Asset, assetStorage storage.Sto
 	for _, clean := range cleanAll {
 		clean()
 	}
-}
-
-func Init() {
-	if err := db.Instance.AutoMigrate(&ProcessingTask{}); err != nil {
-		log.Printf("Auto-migrate error: %v", err)
-	}
-	// Register all processing tasks (executed in the same order)
-	tasks.register(&location{})
-	tasks.register(&videoConvert{})
-	tasks.register(&metadata{})
-	tasks.register(&thumb{})
 }
 
 // TODO: 2 or more in parallel? Depending on CPU count?

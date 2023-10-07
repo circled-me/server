@@ -7,8 +7,8 @@ COPY . /go/src/circled-server
 RUN go build -o circled-server .
 
 
-FROM jrottenberg/ffmpeg:4.1-alpine
-RUN apk --no-cache add ca-certificates exiftool
+FROM jrottenberg/ffmpeg:6-alpine
+RUN apk --no-cache add ca-certificates exiftool tzdata
 WORKDIR /opt/circled
 COPY --from=0 /go/src/circled-server/circled-server .
 COPY --from=0 /go/src/circled-server/templates ./templates

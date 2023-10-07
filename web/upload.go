@@ -25,9 +25,6 @@ type NewAssetResponse struct {
 
 func getUploadRequest(c *gin.Context) (req models.UploadRequest, err error) {
 	token := c.Param("token")
-	// TODO: secure it more - need to make sure we have the client ip (proxy protocol?)
-	// ip := c.ClientIP()
-
 	// Valid for 3 hours
 	err = db.Instance.
 		Where("token = ? and created_at >= unix_timestamp()-3*3600", token).
@@ -70,6 +67,14 @@ func UploadRequestNewURL(c *gin.Context) {
 	prefix := req.Token
 	if len(prefix) > 10 {
 		prefix = prefix[:10]
+	}
+	// TODO: user NewMetadata here too instead of all this
+	if req.User.Quota > 0 {
+		used, _ := req.User.GetUsage()
+		if used > req.User.Quota {
+			c.JSON(http.StatusForbidden, handlers.Response{Error: "Quota exceeded"})
+			return
+		}
 	}
 	asset := models.Asset{
 		UserID:    req.UserID,

@@ -2,7 +2,6 @@ package models
 
 import (
 	"fmt"
-	"log"
 	"path/filepath"
 	"server/config"
 	"server/db"
@@ -43,6 +42,7 @@ type Asset struct {
 	MimeType            string   `gorm:"type:varchar(50)"`
 	GpsLat              *float64 `gorm:"type:double"`
 	GpsLong             *float64 `gorm:"type:double"`
+	TimeOffset          *int     `gorm:"type:int"`
 	Favourite           bool
 	Deleted             bool `gorm:"index:user_asset_created,priority:2;not null;default 0"`
 	Width               uint16
@@ -118,7 +118,6 @@ func (a *Asset) CreatePathOrThumb(thumb bool) string {
 }
 
 func (a *Asset) GetPathOrThumb(thumb bool) string {
-	log.Printf("GetPathOrThumb: %d, %b, %+v, %+v", a.ID, thumb, a.Bucket.ID, a.User.ID)
 	if thumb {
 		if a.ThumbPath == "" {
 			a.ThumbPath = a.CreateThumbPath()
