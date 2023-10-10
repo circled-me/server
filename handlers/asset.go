@@ -218,6 +218,7 @@ func AssetDelete(c *gin.Context, user *models.User) {
 			log.Printf("Asset: %d, save error %s", id, err)
 			continue
 		}
+		db.Instance.Exec("delete from album_assets where asset_id=?", id)
 		storage := storage.StorageFrom(&asset.Bucket)
 		if storage == nil {
 			log.Printf("Asset: %d, error: storage is nil", id)
