@@ -29,6 +29,7 @@ type AssetFetchRequest struct {
 type AssetInfo struct {
 	ID       uint64  `json:"id"`
 	Type     uint    `json:"type"`
+	Owner    uint64  `json:"owner"`
 	Name     string  `json:"name"`
 	Location *string `json:"location"`
 	DID      string  `json:"did"` // DeviceID
@@ -41,7 +42,7 @@ type AssetInfo struct {
 
 const (
 	// created_at field is adjusted with time_offset so the time can be shown "as UTC"
-	assetsSelectClause = "assets.id, assets.name, assets.created_at+ifnull(time_offset,0), assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display, assets.size"
+	assetsSelectClause = "assets.id, assets.name, assets.user_id, assets.created_at+ifnull(time_offset,0), assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display, assets.size"
 )
 
 type AssetDeleteRequest struct {
@@ -69,7 +70,7 @@ func loadAssetsFromRows(c *gin.Context, rows *sql.Rows) *[]AssetInfo {
 	mimeType := ""
 	for rows.Next() {
 		assetInfo := AssetInfo{}
-		if err := rows.Scan(&assetInfo.ID, &assetInfo.Name, &assetInfo.Created, &assetInfo.DID, &mimeType,
+		if err := rows.Scan(&assetInfo.ID, &assetInfo.Name, &assetInfo.Owner, &assetInfo.Created, &assetInfo.DID, &mimeType,
 			&assetInfo.GpsLat, &assetInfo.GpsLong, &assetInfo.Location, &assetInfo.Size); err != nil {
 
 			log.Panicf("DB error: %v", err)
@@ -162,7 +163,7 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 		return
 	}
 	c.Header("cache-control", "private, max-age=604800")
-	if r.Thumb == 1 {
+	if r.Thumb == 1 && asset.ThumbSize > 0 {
 		c.Header("content-type", "image/jpeg")
 		if r.Size == 0 {
 			// Default big (1280) thumb size
@@ -177,6 +178,7 @@ func RealAssetFetch(c *gin.Context, checkUser uint64) {
 			}
 		}
 	} else {
+		// Original
 		c.Header("content-type", asset.MimeType)
 		if r.Download == 1 {
 			c.Header("content-disposition", "attachment; filename=\""+asset.Name+"\"")

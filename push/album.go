@@ -8,7 +8,7 @@ import (
 	"strconv"
 )
 
-func AlbumNewContributor(newUser, albumId uint64, mode int, addeByUser *models.User) {
+func AlbumNewContributor(newUser, albumId uint64, mode uint8, addeByUser *models.User) {
 	if config.PUSH_SERVER == "" {
 		return
 	}
@@ -22,14 +22,14 @@ func AlbumNewContributor(newUser, albumId uint64, mode int, addeByUser *models.U
 		log.Print("Cannot find album?")
 		return
 	}
-	what := "a viewer"
-	if mode == models.ContributorCanEdit {
-		what = "an editor"
+	what := "viewer. You can now see the photos in the album"
+	if mode == models.ContributorCanAdd {
+		what = "contributor. You can now see and add more photos"
 	}
 	notification := Notification{
 		UserToken: receiver.PushToken,
 		Title:     "Album \"" + album.Name + "\"",
-		Body:      addeByUser.Name + " added you as " + what,
+		Body:      addeByUser.Name + " added you as a " + what,
 		Data: map[string]string{
 			"type":  NotificationTypeNewAssetsInAlbum,
 			"album": strconv.Itoa(int(albumId)),

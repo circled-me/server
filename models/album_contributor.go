@@ -1,7 +1,7 @@
 package models
 
 const (
-	ContributorCanEdit  = 0
+	ContributorCanAdd   = 0
 	ContributorViewOnly = 1
 )
 

@@ -78,7 +78,7 @@ func BackupConfirm(c *gin.Context, user *models.User) {
 		Size:      r.Size,
 		ThumbSize: r.ThumbSize,
 	}
-	err = db.Instance.Updates(&asset).Error
+	err = db.Instance.Where("id=? AND user_id=?", r.ID, user.ID).Updates(&asset).Error
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{err.Error()})
 		return
@@ -181,6 +181,10 @@ func BackupLocalAsset(userID uint64, c *gin.Context) {
 	result := db.Instance.Joins("Bucket").Where("user_id = ? AND assets.id = ?", userID, r.ID).Find(&asset)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
+		return
+	}
+	if asset.ID != r.ID {
+		c.JSON(http.StatusForbidden, NopeResponse)
 		return
 	}
 	storage := storage.StorageFrom(&asset.Bucket)

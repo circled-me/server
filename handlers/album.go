@@ -24,6 +24,7 @@ type AlbumInfo struct {
 	Subtitle     string `json:"subtitle"`
 	HeroAssetId  uint64 `json:"hero_asset_id"`
 	Contributors []int  `json:"contributors"`
+	Mode         *uint8 `json:"mode"`
 }
 
 type AlbumSaveRequest struct {
@@ -49,6 +50,7 @@ type AlbumShareRequest struct {
 type AlbumContributeRequest struct {
 	AlbumID uint64 `json:"album_id" binding:"required"`
 	UserID  uint64 `json:"user_id" binding:"required"`
+	Mode    uint8  `json:"mode"` // 0 - ContributorCanAdd or, 1 - ContributorViewOnly
 }
 
 type AlbumShareResponse struct {
@@ -98,6 +100,13 @@ func AlbumList(c *gin.Context, user *models.User) {
 			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
+		// TODO: Optimise this
+		if user.ID != albumInfo.Owner {
+			var mode uint8
+			if db.Instance.Raw("select mode from album_contributors where album_id=? and user_id=?", albumInfo.ID, user.ID).Scan(&mode).Error == nil {
+				albumInfo.Mode = &mode
+			}
+		}
 		if HeroAssetId != nil {
 			albumInfo.HeroAssetId = *HeroAssetId
 		}
@@ -106,10 +115,10 @@ func AlbumList(c *gin.Context, user *models.User) {
 	}
 	for i, a := range result {
 		if a.HeroAssetId > 0 {
+			// TODO: We should save hero id when we add new asset to the album
 			continue
 		}
 		// If we don't have default hero image, pick the first one in the album
-		// TODO: improve here
 		rows, err := db.Instance.Table("album_assets").Select("asset_id").Where("album_id = ?", a.ID).Order("created_at DESC").Limit(1).Rows()
 		if err != nil {
 			fmt.Println(err)
@@ -219,7 +228,7 @@ func AlbumAddAssets(c *gin.Context, user *models.User) {
 	}
 	// Check if this is our album or we are added as a contributor
 	count := int64(0)
-	result := db.Instance.Raw("select 1 from albums where id=? and (user_id=? OR exists(select 1 from album_contributors where album_contributors.album_id = albums.id and album_contributors.user_id=?))", r.AlbumID, user.ID, user.ID).
+	result := db.Instance.Raw("select 1 from albums where id=? and (user_id=? OR exists(select 1 from album_contributors where album_contributors.album_id = albums.id and album_contributors.user_id=? and album_contributors.mode=0))", r.AlbumID, user.ID, user.ID).
 		Scan(&count)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
@@ -384,6 +393,10 @@ func AlbumContributor(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
+	if r.Mode != models.ContributorCanAdd && r.Mode != models.ContributorViewOnly {
+		c.JSON(http.StatusBadRequest, Response{"Invalid share mode"})
+		return
+	}
 	album := models.Album{
 		ID:     r.AlbumID,
 		UserID: user.ID,
@@ -400,6 +413,7 @@ func AlbumContributor(c *gin.Context, user *models.User) {
 	albumContributor := models.AlbumContributor{
 		AlbumID: r.AlbumID,
 		UserID:  r.UserID,
+		Mode:    r.Mode,
 	}
 	result = db.Instance.Create(&albumContributor)
 	if result.Error != nil {
@@ -407,7 +421,7 @@ func AlbumContributor(c *gin.Context, user *models.User) {
 		return
 	}
 	// Push notifications in background
-	go push.AlbumNewContributor(r.UserID, r.AlbumID, models.ContributorCanEdit, user)
+	go push.AlbumNewContributor(r.UserID, r.AlbumID, r.Mode, user)
 
 	c.JSON(http.StatusOK, OKResponse)
 }
