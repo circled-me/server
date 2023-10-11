@@ -252,10 +252,11 @@ func UserGetStatus(c *gin.Context, user *models.User) {
 		user.SetNewPushToken()
 	}
 	result := newUserStatusResponse(user.Email, user.GetPermissions())
+	result.UserID = user.ID
 	result.PushToken = user.PushToken
 	result.BucketUsage, result.BucketQuota = user.GetUsage()
 	if user.HasPermission(models.PermissionAdmin) {
-		// No quota for admins
+		// No quota for admins - show bucket's available space
 		space, _ := user.Bucket.GetSpaceInfo()
 		result.BucketQuota = space / 1024 / 1024
 	}
