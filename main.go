@@ -69,10 +69,10 @@ func main() {
 	// Custom Auth Router
 	authRouter := &auth.Router{Base: router}
 	// Backup handlers
-	authRouter.POST("/backup/check", handlers.BackupCheck, models.PermissionPhotoBackup)
-	authRouter.PUT("/backup/upload", handlers.BackupUpload, models.PermissionPhotoBackup)
-	authRouter.POST("/backup/meta-data", handlers.BackupMetaData, models.PermissionPhotoBackup)
-	authRouter.POST("/backup/confirm", handlers.BackupConfirm, models.PermissionPhotoBackup)
+	authRouter.POST("/backup/check", handlers.BackupCheck, models.PermissionPhotoUpload, models.PermissionPhotoBackup)
+	authRouter.PUT("/backup/upload", handlers.BackupUpload, models.PermissionPhotoUpload)
+	authRouter.POST("/backup/meta-data", handlers.BackupMetaData, models.PermissionPhotoUpload)
+	authRouter.POST("/backup/confirm", handlers.BackupConfirm, models.PermissionPhotoUpload)
 	// Bucket handlers
 	authRouter.GET("/bucket/list", handlers.BucketList, models.PermissionAdmin)
 	authRouter.POST("/bucket/save", handlers.BucketSave, models.PermissionAdmin)
@@ -85,29 +85,29 @@ func main() {
 	authRouter.GET("/user/list", handlers.UserList)
 	authRouter.POST("/user/logout", handlers.UserLogout)
 	// Asset handlers
-	authRouter.GET("/asset/list", handlers.AssetList, models.PermissionPhotoBackup)
-	authRouter.GET("/asset/tags", handlers.TagList, models.PermissionPhotoBackup)
+	authRouter.GET("/asset/list", handlers.AssetList, models.PermissionPhotoUpload)
+	authRouter.GET("/asset/tags", handlers.TagList, models.PermissionPhotoUpload)
 	authRouter.GET("/asset/fetch", handlers.AssetFetch)                                  // Auth checks are done inside the handler
-	authRouter.POST("/asset/delete", handlers.AssetDelete, models.PermissionPhotoBackup) // TODO: S3 Delete done?
+	authRouter.POST("/asset/delete", handlers.AssetDelete, models.PermissionPhotoUpload) // TODO: S3 Delete done?
 	authRouter.POST("/asset/favourite", handlers.AssetFavourite)
 	authRouter.POST("/asset/unfavourite", handlers.AssetUnfavourite)
 	// Album handlers
 	authRouter.GET("/album/list", handlers.AlbumList)
-	authRouter.POST("/album/create", handlers.AlbumCreate, models.PermissionPhotoBackup)
-	authRouter.POST("/album/save", handlers.AlbumSave, models.PermissionPhotoBackup) // TODO: Check hero saved?
-	authRouter.POST("/album/delete", handlers.AlbumDelete, models.PermissionPhotoBackup)
-	authRouter.POST("/album/add", handlers.AlbumAddAssets, models.PermissionPhotoBackup)
-	authRouter.POST("/album/remove", handlers.AlbumRemoveAsset, models.PermissionPhotoBackup)
+	authRouter.POST("/album/create", handlers.AlbumCreate, models.PermissionPhotoUpload)
+	authRouter.POST("/album/save", handlers.AlbumSave, models.PermissionPhotoUpload) // TODO: Check hero saved?
+	authRouter.POST("/album/delete", handlers.AlbumDelete, models.PermissionPhotoUpload)
+	authRouter.POST("/album/add", handlers.AlbumAddAssets, models.PermissionPhotoUpload)
+	authRouter.POST("/album/remove", handlers.AlbumRemoveAsset, models.PermissionPhotoUpload)
 	authRouter.GET("/album/assets", handlers.AlbumAssets)
 	authRouter.GET("/album/share", handlers.AlbumShare)
-	authRouter.POST("/album/contributor", handlers.AlbumContributor, models.PermissionPhotoBackup)
-	// authRouter.POST("/album/contributors", handlers.AlbumContributors, models.PermissionPhotoBackup)
+	authRouter.POST("/album/contributor", handlers.AlbumContributor, models.PermissionPhotoUpload)
+	// authRouter.POST("/album/contributors", handlers.AlbumContributors, models.PermissionPhotoUpload)
 
 	// Upload Request
-	authRouter.GET("/upload/share", handlers.UploadShare, models.PermissionPhotoBackup)
+	authRouter.GET("/upload/share", handlers.UploadShare, models.PermissionPhotoUpload)
 	// Moment handlers
-	authRouter.GET("/moment/list", handlers.MomentList, models.PermissionPhotoBackup)
-	authRouter.GET("/moment/assets", handlers.MomentAssets, models.PermissionPhotoBackup)
+	authRouter.GET("/moment/list", handlers.MomentList, models.PermissionPhotoUpload)
+	authRouter.GET("/moment/assets", handlers.MomentAssets, models.PermissionPhotoUpload)
 	// Group handlers - TODO: review permissions
 	// authRouter.GET("/group/list", handlers.GroupList)
 	// authRouter.POST("/group/create", handlers.GroupCreate)

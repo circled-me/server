@@ -5,9 +5,10 @@ type Permission uint8
 const (
 	PermissionNone            Permission = 0
 	PermissionAdmin           Permission = 1
-	PermissionPhotoBackup     Permission = 2 // photo backup and albums
+	PermissionPhotoUpload     Permission = 2
 	PermissionCanCreateGroups Permission = 3
-	PermissionCanInvite       Permission = 4 // can invite new users to groups
+	PermissionCanInvite       Permission = 4
+	PermissionPhotoBackup     Permission = 5
 )
 
 type Grant struct {
