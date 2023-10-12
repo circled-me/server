@@ -58,6 +58,8 @@ git clone https://github.com/circled-me/server.git
 cd server
 docker-compose -f docker-compose-example.yaml up
 ```
+Note: If you change the source code (e.g. pull new version), you might need to remove your local cached Docker image for the `circled-server` service.
+
 Now you can use the app and connect to your server at `http://<YOUR_IP>:8080` and create your first admin user.
 Then you need to create a Storage Bucket from Settings and assign that to any User that is going to backup their photos there.
 If you used the example docker compose above, then the Path or your new Storage Bucket should be something like `/mnt/data1/some-sub-dir`
@@ -78,6 +80,21 @@ Better though, use your "proper" MySQL server instead of running it in Docker.
 ```yaml:
 version: '2'
 services:
+  circled-server:
+    # image: circled-server:latest
+    build:
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      MYSQL_DSN: "root:@tcp(mysql:3306)/circled?charset=utf8mb4&parseTime=True&loc=Local"
+      BIND_ADDRESS: 0.0.0.0:8080
+    volumes:
+      - <asset-data-dir>:/mnt/data1
   mysql:
     image: mysql:5.7
     command: --default-authentication-plugin=mysql_native_password
@@ -94,19 +111,4 @@ services:
       timeout: 5s
       retries: 20
 
-  circled-server:
-    # image: circled-server:latest
-    build:
-      dockerfile: Dockerfile
-    restart: always
-    depends_on:
-      mysql:
-        condition: service_healthy
-    ports:
-      - "8080:8080"
-    environment:
-      MYSQL_DSN: "root:@tcp(mysql:3306)/circled?charset=utf8mb4&parseTime=True&loc=Local"
-      BIND_ADDRESS: 0.0.0.0:8080
-    volumes:
-      - <asset-data-dir>:/mnt/data1
 ```
