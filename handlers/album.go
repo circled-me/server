@@ -43,8 +43,9 @@ type AlbumIDRequest struct {
 }
 
 type AlbumShareRequest struct {
-	AlbumID uint64 `json:"album_id" form:"album_id" binding:"required"`
-	Expires int64  `json:"expires" form:"expires"` // 0 - Never, or number of seconds from now
+	AlbumID      uint64 `json:"album_id" form:"album_id" binding:"required"`
+	Expires      int64  `json:"expires" form:"expires"` // 0 - Never, or number of seconds from now
+	HideOriginal int    `json:"hide_original" form:"hide_original"`
 }
 
 type AlbumContributeRequest struct {
@@ -359,7 +360,7 @@ func AlbumShare(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusUnauthorized, NopeResponse)
 		return
 	}
-	shareInfo := models.NewAlbumShare(user.ID, r.AlbumID, r.Expires)
+	shareInfo := models.NewAlbumShare(user.ID, r.AlbumID, r.Expires, r.HideOriginal)
 	// Try finding the same share (probably with 0 - 'never expires')
 	shareInfoCond := shareInfo
 	shareInfoCond.Token = "" // Token should not be a condition

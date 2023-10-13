@@ -17,7 +17,7 @@ type AssetInfo struct {
 
 func AlbumView(c *gin.Context) {
 	token := c.Param("token")
-	rows, err := db.Instance.Table("album_shares").Select("album_id, albums.name, users.name").Where("token = ? and (expires_at is null or expires_at=0 or expires_at<unix_timestamp())", token).
+	rows, err := db.Instance.Table("album_shares").Select("album_id, albums.name, users.name, hide_original").Where("token = ? and (expires_at is null or expires_at=0 or expires_at<unix_timestamp())", token).
 		Joins("join albums on album_shares.album_id = albums.id").Joins("join users on album_shares.user_id = users.id").Rows()
 
 	if err != nil {
@@ -29,8 +29,9 @@ func AlbumView(c *gin.Context) {
 	var albumId uint64
 	var albumName string
 	var userName string
+	var hideOriginal int
 	if rows.Next() {
-		if err = rows.Scan(&albumId, &albumName, &userName); err != nil {
+		if err = rows.Scan(&albumId, &albumName, &userName, &hideOriginal); err != nil {
 			c.JSON(http.StatusInternalServerError, handlers.Response{Error: "something went really wrong"})
 			rows.Close()
 			return
@@ -63,12 +64,16 @@ func AlbumView(c *gin.Context) {
 			createdMin = created
 		}
 	}
-
+	downloadParam := "download"
+	if hideOriginal > 0 {
+		downloadParam = "thumb"
+	}
 	c.HTML(http.StatusOK, "album_view.tmpl", gin.H{
-		"subtitle": "@" + userName,
-		"dates":    utils.GetDatesString(createdMin, createdMax),
-		"title":    albumName,
-		"assets":   result,
+		"subtitle":      "@" + userName,
+		"dates":         utils.GetDatesString(createdMin, createdMax),
+		"title":         albumName,
+		"assets":        result,
+		"downloadParam": downloadParam,
 	})
 }
 
@@ -81,7 +86,15 @@ func AlbumAssetView(c *gin.Context) {
 		return
 	}
 	// Verify we have permission to view this asset
-	rows, err := db.Instance.Table("album_shares").Select("album_assets.album_id").Where("token = ? and album_assets.asset_id = ? and (expires_at is null or expires_at=0 or expires_at<unix_timestamp())", token, r.ID).
+	hideOriginalCond := ""
+	if r.Download == 1 {
+		hideOriginalCond = " and album_shares.hide_original = 0"
+	}
+	rows, err := db.Instance.Table("album_shares").Select("album_assets.album_id").
+		Where("token = ? and "+
+			"album_assets.asset_id = ? and "+
+			"(expires_at is null or expires_at=0 or expires_at<unix_timestamp())"+
+			hideOriginalCond, token, r.ID).
 		Joins("join album_assets on album_shares.album_id = album_assets.album_id").Rows()
 
 	if err != nil {

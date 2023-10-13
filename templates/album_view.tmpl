@@ -45,11 +45,11 @@
     <div id="lightgallery">
     {{ range .assets }}
         {{ if eq .Type 1 }}
-            <a href="asset?id={{ .ID }}&thumb=1" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=220')" data-download-url="asset?id={{ .ID }}&download=1"></a>
+            <a href="asset?id={{ .ID }}&thumb=1" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=220')" data-download-url="asset?id={{ .ID }}&{{ $.downloadParam }}=1"></a>
         {{ else if eq .MimeType "video/mp4" }}
             <a data-video='{"source": [{"src":"asset?id={{ .ID }}", "type":"video/mp4"}], "attributes": {"preload": false, "playsinline": true, "controls": true}}'
                data-poster="asset?id={{ .ID }}&thumb=1&size=220" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=220')"
-               data-download-url="asset?id={{ .ID }}&download=1"></a>
+               data-download-url="asset?id={{ .ID }}&{{ $.downloadParam }}=1"></a>
         {{ end }}
     {{ end }}
     </div>    
