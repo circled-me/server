@@ -31,7 +31,7 @@ ___
 - iOS and Android photo backup (using the circled.me app)
   - Supports either locally mounted disks or
   - S3-compatible Services - this allows different users to use their own S3 bucket on the same server
-- iOS Push notifications for new Albums, Photos (in progress)
+- Push notifications for new Album photos, etc
 - Albums
   - Adding local server contributors and viewers
   - Sharing albums with anyone with a "secret" link
