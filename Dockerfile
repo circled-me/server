@@ -1,4 +1,4 @@
-FROM golang:1.20.5-alpine
+FROM golang:1.21.3-alpine
 COPY go.mod /go/src/circled-server/
 COPY go.sum /go/src/circled-server/
 WORKDIR /go/src/circled-server/
