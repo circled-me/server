@@ -31,7 +31,7 @@ ___
 - iOS and Android photo backup (using the circled.me app)
   - Supports either locally mounted disks or
   - S3-compatible Services - this allows different users to use their own S3 bucket on the same server
-- iOS Push notifications for new Albums, Photos (in progress)
+- Push notifications for new Album photos, etc
 - Albums
   - Adding local server contributors and viewers
   - Sharing albums with anyone with a "secret" link
@@ -81,9 +81,9 @@ Better though, use your "proper" MySQL server instead of running it in Docker.
 version: '2'
 services:
   circled-server:
-    # image: circled-server:latest
-    build:
-      dockerfile: Dockerfile
+    image: gubble/circled-server:latest
+    # build:
+    #  dockerfile: Dockerfile
     restart: always
     depends_on:
       mysql:
@@ -94,21 +94,21 @@ services:
       MYSQL_DSN: "root:@tcp(mysql:3306)/circled?charset=utf8mb4&parseTime=True&loc=Local"
       BIND_ADDRESS: 0.0.0.0:8080
     volumes:
-      - <asset-data-dir>:/mnt/data1
+      - ./asset-data:/mnt/data1
   mysql:
     image: mysql:5.7
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     volumes:
-      - <mysql-data-dir>:/var/lib/mysql
+      - ./mysql-data:/var/lib/mysql
     environment:
       MYSQL_DATABASE: circled
-      MYSQL_ALLOW_EMPTY_PASSWORD: yes
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_ROOT_HOST: "%"
     healthcheck:
       test: mysqladmin ping --silent
       start_period: 5s
       interval: 3s
       timeout: 5s
       retries: 20
-
 ```
