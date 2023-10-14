@@ -81,9 +81,9 @@ Better though, use your "proper" MySQL server instead of running it in Docker.
 version: '2'
 services:
   circled-server:
-    # image: circled-server:latest
-    build:
-      dockerfile: Dockerfile
+    image: gubble/circled-server:latest
+    # build:
+    #  dockerfile: Dockerfile
     restart: always
     depends_on:
       mysql:
