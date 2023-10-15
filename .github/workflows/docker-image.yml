@@ -1,0 +1,14 @@
+name: Docker Image CI
+on:
+  push:
+    tags:
+      - '*'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build Docker image
+      run: docker build . --file Dockerfile --tag gubble/circled-server:$TAGS
+      env:
+        TAGS: ${{ inputs.tags }}

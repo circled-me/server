@@ -50,12 +50,9 @@ ___
   - Scanning objects on already existing S3 bucket prefix
 
 ## Compiling and Running the server
-To compile, please use Go 1.20.5 or above.
-The easiest way to try and run the server is within a docker container. There's no image provided on Docker Hub (yet) so that needs to be built locally, see example docker-compose file below.
+The easiest way to try and run the server is within a docker container, see example docker-compose file below.
 
 ```bash
-git clone https://github.com/circled-me/server.git
-cd server
 docker-compose -f docker-compose-example.yaml up
 ```
 Note: If you change the source code (e.g. pull new version), you might need to remove your local cached Docker image for the `circled-server` service.
