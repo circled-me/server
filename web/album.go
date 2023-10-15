@@ -17,14 +17,18 @@ type AssetInfo struct {
 
 func AlbumView(c *gin.Context) {
 	token := c.Param("token")
-	rows, err := db.Instance.Table("album_shares").Select("album_id, albums.name, users.name, hide_original").Where("token = ? and (expires_at is null or expires_at=0 or expires_at<unix_timestamp())", token).
-		Joins("join albums on album_shares.album_id = albums.id").Joins("join users on album_shares.user_id = users.id").Rows()
+	rows, err := db.Instance.
+		Table("album_shares").
+		Select("album_id, albums.name, users.name, hide_original").
+		Where("token = ? and (expires_at is null or expires_at=0 or expires_at>unix_timestamp())", token).
+		Joins("join albums on album_shares.album_id = albums.id").
+		Joins("join users on album_shares.user_id = users.id").
+		Rows()
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, handlers.DBError1Response)
 		return
 	}
-
 	// Get album info
 	var albumId uint64
 	var albumName string
@@ -38,9 +42,15 @@ func AlbumView(c *gin.Context) {
 		}
 	}
 	rows.Close()
-
 	// Get all assets for the album
-	rows, err = db.Instance.Table("album_assets").Select("asset_id, mime_type, assets.created_at").Where("album_id = ?", albumId).Joins("join assets on album_assets.asset_id = assets.id").Order("assets.created_at ASC").Rows()
+	rows, err = db.Instance.
+		Table("album_assets").
+		Select("asset_id, mime_type, assets.created_at").
+		Where("album_id = ?", albumId).
+		Joins("join assets on album_assets.asset_id = assets.id").
+		Order("assets.created_at ASC").
+		Rows()
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, handlers.DBError1Response)
 		return
@@ -93,7 +103,7 @@ func AlbumAssetView(c *gin.Context) {
 	rows, err := db.Instance.Table("album_shares").Select("album_assets.album_id").
 		Where("token = ? and "+
 			"album_assets.asset_id = ? and "+
-			"(expires_at is null or expires_at=0 or expires_at<unix_timestamp())"+
+			"(expires_at is null or expires_at=0 or expires_at>unix_timestamp())"+
 			hideOriginalCond, token, r.ID).
 		Joins("join album_assets on album_shares.album_id = album_assets.album_id").Rows()
 
