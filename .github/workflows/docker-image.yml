@@ -9,6 +9,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build Docker image
-      run: docker build . --file Dockerfile --tag gubble/circled-server:$TAGS
+      run: docker build . --file Dockerfile --tag gubble/circled-server:$TAG
       env:
-        TAGS: ${{ inputs.tags }}
+        TAG: ${{github.ref_name}}
