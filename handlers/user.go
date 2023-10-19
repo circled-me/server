@@ -90,13 +90,23 @@ func createFirstUser(postReq *UserLoginRequest) (err error) {
 	return nil
 }
 
-func newUserStatusResponse(name string, permissions []int) UserStatusResponse {
-	return UserStatusResponse{
-		Name:        name,
-		Permissions: permissions,
+func newUserStatusResponse(user *models.User, details bool) UserStatusResponse {
+	result := UserStatusResponse{
+		UserID:      user.ID,
+		Name:        user.Email,
+		Permissions: user.GetPermissions(),
 		BucketUsage: -1,
 		BucketQuota: -1,
 	}
+	if details {
+		if user.PushToken == "" {
+			user.SetNewPushToken()
+		}
+		result.PushToken = user.PushToken
+		result.BucketQuota = user.Quota
+		result.BucketUsage = user.GetUsage()
+	}
+	return result
 }
 
 func UserLogin(c *gin.Context) {
@@ -129,9 +139,7 @@ func UserLogin(c *gin.Context) {
 	session.Set("id", user.ID)
 	_ = session.Save()
 
-	result := newUserStatusResponse(user.Email, user.GetPermissions())
-	result.UserID = user.ID
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, newUserStatusResponse(&user, false))
 }
 
 func cleanupName(name string) string {
@@ -248,19 +256,7 @@ func UserReInvite(c *gin.Context, currentUser *models.User) {
 }
 
 func UserGetStatus(c *gin.Context, user *models.User) {
-	if user.PushToken == "" {
-		user.SetNewPushToken()
-	}
-	result := newUserStatusResponse(user.Email, user.GetPermissions())
-	result.UserID = user.ID
-	result.PushToken = user.PushToken
-	result.BucketUsage, result.BucketQuota = user.GetUsage()
-	if user.HasPermission(models.PermissionAdmin) {
-		// No quota for admins - show bucket's available space
-		space, _ := user.Bucket.GetSpaceInfo()
-		result.BucketQuota = space / 1024 / 1024
-	}
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, newUserStatusResponse(user, true))
 }
 
 func UserList(c *gin.Context, user *models.User) {

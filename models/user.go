@@ -101,10 +101,14 @@ func (u *User) HasPermissions(required []Permission) bool {
 }
 
 // GetUsage returns the usage for the current bucket (only)
-func (u *User) GetUsage() (used, quota int64) {
+func (u *User) GetUsage() int64 {
 	result := int64(-1)
 	if err := db.Instance.Raw("select ifnull(sum(size+thumb_size), 0) from assets where user_id=? and bucket_id=? and deleted=0", u.ID, u.BucketID).Scan(&result).Error; err != nil {
-		return -1, 0
+		return -1
 	}
-	return result / 1024 / 1024, u.Quota
+	return result / 1024 / 1024
+}
+
+func (u *User) HasNoRemainingQuota() bool {
+	return u.Quota < 0 || (u.Quota > 0 && u.GetUsage() >= u.Quota)
 }
