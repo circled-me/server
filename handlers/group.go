@@ -7,7 +7,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"github.com/gorilla/websocket"
 )
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 type GroupUserInfo struct {
 	ID        uint64 `json:"id"`
@@ -27,7 +34,7 @@ type GroupInfo struct {
 }
 
 type GroupCreateRequest struct {
-	Name string `form:"name" binding:"required"`
+	Name string `json:"name" form:"name" binding:"required"`
 }
 
 type GroupDeleteRequest struct {
@@ -73,7 +80,7 @@ func GroupCreate(c *gin.Context, user *models.User) {
 		return
 	}
 	r := GroupCreateRequest{}
-	err := c.ShouldBindWith(&r, binding.Form)
+	err := c.ShouldBindJSON(&r)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
@@ -108,7 +115,7 @@ func GroupCreate(c *gin.Context, user *models.User) {
 // GroupSave updates the Group and GroupUser objects for the current user
 func GroupSave(c *gin.Context, user *models.User) {
 	r := GroupInfo{}
-	err := c.ShouldBindWith(&r, binding.Form)
+	err := c.ShouldBindJSON(&r)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
