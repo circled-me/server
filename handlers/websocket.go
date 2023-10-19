@@ -21,6 +21,12 @@ func WebSocket(c *gin.Context, user *models.User) {
 			break
 		}
 		log.Printf("recv: %s", message)
+		if string(message) == "ping" {
+			conn.WriteMessage(mt, []byte("pong"))
+		}
+		if string(message) == "pong" {
+			continue
+		}
 		err = conn.WriteMessage(mt, message)
 		if err != nil {
 			log.Println("write:", err)

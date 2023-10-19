@@ -4,24 +4,20 @@ import (
 	"server/db"
 	"server/storage"
 	"server/utils"
-
-	"github.com/pquerna/otp"
 )
 
 type User struct {
 	ID          uint64 `gorm:"primaryKey"`
 	CreatedAt   int
 	UpdatedAt   int
+	LastSeen    uint64 `gorm:"not null"`
 	CreatedByID *uint64
-	CreatedBy   *User         `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	Name        string        `gorm:"type:varchar(100)"`
-	Email       string        `gorm:"type:varchar(150);index:uniq_email,unique"` // TODO: rename Email to Login
-	Password    string        `gorm:"type:varchar(128)"`
-	PassSalt    string        `gorm:"type:varchar(200)"`
-	TotpToken   string        `gorm:"type:varchar(200)"`
-	TotpAlgo    otp.Algorithm `gorm:"type:tinyint(1)"`
-	TotpXOR     uint32        `gorm:"type:int unsigned"`
-	Grants      []Grant       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	CreatedBy   *User   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Name        string  `gorm:"type:varchar(100)"`
+	Email       string  `gorm:"type:varchar(150);index:uniq_email,unique"` // TODO: rename Email to Login
+	Password    string  `gorm:"type:varchar(128)"`
+	PassSalt    string  `gorm:"type:varchar(200)"`
+	Grants      []Grant `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	BucketID    *uint64
 	Bucket      storage.Bucket `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	PushToken   string         `gorm:"type:varchar(128)"`
