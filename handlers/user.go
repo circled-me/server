@@ -105,6 +105,13 @@ func newUserStatusResponse(user *models.User, details bool) UserStatusResponse {
 		result.PushToken = user.PushToken
 		result.BucketQuota = user.Quota
 		result.BucketUsage = user.GetUsage()
+		if result.BucketQuota == 0 {
+			// Unlimited - return the actual storage available space (if possible)
+			available, _ := user.Bucket.GetSpaceInfo()
+			if available >= 0 {
+				result.BucketQuota = available / 1024 / 1024
+			}
+		}
 	}
 	return result
 }
