@@ -69,12 +69,9 @@ func UploadRequestNewURL(c *gin.Context) {
 		prefix = prefix[:10]
 	}
 	// TODO: user NewMetadata here too instead of all this
-	if req.User.Quota > 0 {
-		used, _ := req.User.GetUsage()
-		if used > req.User.Quota {
-			c.JSON(http.StatusForbidden, handlers.Response{Error: "Quota exceeded"})
-			return
-		}
+	if req.User.HasNoRemainingQuota() {
+		c.JSON(http.StatusForbidden, handlers.Response{Error: "Quota exceeded"})
+		return
 	}
 	asset := models.Asset{
 		UserID:    req.UserID,

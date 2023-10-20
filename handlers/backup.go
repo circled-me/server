@@ -89,12 +89,9 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 	if user.BucketID == nil {
 		panic("Bucket is nil")
 	}
-	if user.Quota > 0 {
-		used, _ := user.GetUsage()
-		if used > user.Quota {
-			c.JSON(http.StatusForbidden, Response{"Quota exceeded"})
-			return nil
-		}
+	if user.HasNoRemainingQuota() {
+		c.JSON(http.StatusForbidden, Response{"Quota exceeded"})
+		return nil
 	}
 	asset := models.Asset{
 		UserID:     user.ID,
