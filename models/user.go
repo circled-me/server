@@ -4,6 +4,7 @@ import (
 	"server/db"
 	"server/storage"
 	"server/utils"
+	"strconv"
 )
 
 type User struct {
@@ -107,4 +108,8 @@ func (u *User) GetUsage() int64 {
 
 func (u *User) HasNoRemainingQuota() bool {
 	return u.Quota < 0 || (u.Quota > 0 && u.GetUsage() >= u.Quota)
+}
+
+func GetUserSocketID(uID uint64) string {
+	return strconv.Itoa(int(uID)) // TODO: needs db prefix if we move to multi-db setup
 }
