@@ -6,17 +6,21 @@ import (
 	"log"
 	"server/db"
 	"server/models"
-	"slices"
+	"server/push"
+	"strconv"
 	"time"
 )
+
+const TypeGroupMessage = "group"
 
 type Message struct {
 	Type string `json:"type"`
 }
 
 type GroupMessage struct {
-	Type string              `json:"type"`
-	Data models.GroupMessage `json:"data"`
+	Type  string              `json:"type"`
+	Stamp int64               `json:"stamp"`
+	Data  models.GroupMessage `json:"data"`
 }
 
 func processMessage(user *models.User, data []byte) {
@@ -25,7 +29,7 @@ func processMessage(user *models.User, data []byte) {
 		return
 	}
 	switch message.Type {
-	case "group":
+	case TypeGroupMessage:
 		groupMessage := GroupMessage{}
 		if err := json.Unmarshal(data, &groupMessage); err != nil {
 			log.Printf("Not a Group message: %v", err)
@@ -36,10 +40,23 @@ func processMessage(user *models.User, data []byte) {
 	}
 }
 
+func sendMessagePush(pushToken string, groupMessage *models.GroupMessage) {
+	// TODO: Create notifications object
+	push.Send(&push.Notification{
+		UserToken: pushToken,
+		Title:     groupMessage.UserName,
+		Body:      groupMessage.Content,
+		Data: map[string]string{
+			"type":  TypeGroupMessage,
+			"group": strconv.FormatUint(groupMessage.GroupID, 10),
+		},
+	})
+}
+
 func processGroupMessage(user *models.User, message *GroupMessage) {
 	groupMessage := &message.Data
 	userIDs := models.LoadGroupUserIDs(groupMessage.GroupID)
-	if !slices.Contains(userIDs, user.ID) {
+	if _, ok := userIDs[user.ID]; !ok {
 		log.Printf("User %d does not belong to group %d", user.ID, groupMessage.GroupID)
 	}
 	groupMessage.ServerStamp = time.Now().UnixMilli()
@@ -50,23 +67,28 @@ func processGroupMessage(user *models.User, message *GroupMessage) {
 		log.Printf("Couldn't save GroupMessage: %+v, err: %v", *groupMessage, err)
 		return
 	}
+	message.Stamp = groupMessage.ServerStamp
 	buffer := bytes.Buffer{}
 	_ = json.NewEncoder(&buffer).Encode(*message)
 
-	for _, userID := range userIDs {
-		connections, exist := ConnectedUsers.Get(models.GetUserSocketID(userID))
+	for userID, pushToken := range userIDs {
+		clientID := models.GetUserSocketID(userID)
+		connections, exist := connectedUsers.Get(clientID)
 		if !exist {
-			// TODO: Send as notification
+			sendMessagePush(pushToken, groupMessage)
 			continue
 		}
 		sent := false
 		for _, conn := range connections {
-			if conn.fun(buffer.Bytes()) {
+			if conn.sendFunc(buffer.Bytes()) {
 				sent = true
+			} else {
+				conn.removeFrom(clientID)
 			}
 		}
 		if !sent {
-			// TODO: Send as notification
+			log.Printf("Couldn't send for user %d", userID)
+			sendMessagePush(pushToken, groupMessage)
 		}
 	}
 }

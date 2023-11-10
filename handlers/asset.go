@@ -27,17 +27,16 @@ type AssetFetchRequest struct {
 }
 
 type AssetInfo struct {
-	ID       uint64  `json:"id"`
-	Type     uint    `json:"type"`
-	Owner    uint64  `json:"owner"`
-	Name     string  `json:"name"`
-	Location *string `json:"location"`
-	DID      string  `json:"did"` // DeviceID
-	Created  uint64  `json:"created"`
-	// TODO: fill these for albums and moments
-	GpsLat  *float64 `json:"gps_lat"`
-	GpsLong *float64 `json:"gps_long"`
-	Size    uint64   `json:"size"`
+	ID       uint64   `json:"id"`
+	Type     uint     `json:"type"`
+	Owner    uint64   `json:"owner"`
+	Name     string   `json:"name"`
+	Location *string  `json:"location"`
+	DID      string   `json:"did"` // DeviceID
+	Created  uint64   `json:"created"`
+	GpsLat   *float64 `json:"gps_lat"`
+	GpsLong  *float64 `json:"gps_long"`
+	Size     uint64   `json:"size"`
 }
 
 const (
@@ -73,7 +72,7 @@ func loadAssetsFromRows(c *gin.Context, rows *sql.Rows) *[]AssetInfo {
 		if err := rows.Scan(&assetInfo.ID, &assetInfo.Name, &assetInfo.Owner, &assetInfo.Created, &assetInfo.DID, &mimeType,
 			&assetInfo.GpsLat, &assetInfo.GpsLong, &assetInfo.Location, &assetInfo.Size); err != nil {
 
-			log.Panicf("DB error: %v", err)
+			log.Printf("DB error: %v", err)
 			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return nil
 		}

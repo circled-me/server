@@ -93,7 +93,7 @@ func createFirstUser(postReq *UserLoginRequest) (err error) {
 func newUserStatusResponse(user *models.User, details bool) UserStatusResponse {
 	result := UserStatusResponse{
 		UserID:      user.ID,
-		Name:        user.Email,
+		Name:        user.Name,
 		Permissions: user.GetPermissions(),
 		BucketUsage: -1,
 		BucketQuota: -1,
@@ -295,5 +295,5 @@ func UserList(c *gin.Context, user *models.User) {
 func UserLogout(c *gin.Context, user *models.User) {
 	session := auth.LoadSession(c)
 	session.LogoutUser()
-	c.Redirect(http.StatusTemporaryRedirect, "/")
+	c.Status(http.StatusNoContent)
 }

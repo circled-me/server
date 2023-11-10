@@ -37,6 +37,10 @@ type GroupCreateRequest struct {
 	Name string `json:"name" form:"name" binding:"required"`
 }
 
+type MessagesRequest struct {
+	SinceID uint64 `json:"since_id" form:"since_message"`
+}
+
 type GroupDeleteRequest struct {
 	ID uint64 `json:"id" form:"id" binding:"required"`
 }
@@ -44,12 +48,37 @@ type GroupDeleteRequest struct {
 func InviteToGroup(c *gin.Context) {
 }
 
+func (gi *GroupInfo) loadMembers() {
+	rows, err := db.Instance.
+		Table("group_users").
+		Joins("join `users` on group_users.user_id = `users`.id").
+		Select("user_id, name, can_invite, is_admin").
+		Where("group_id = ?", gi.ID).
+		Order("group_users.created_at").
+		Rows()
+
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	gi.Members = []GroupUserInfo{}
+	for rows.Next() {
+		userInfo := GroupUserInfo{}
+		if err = rows.Scan(&userInfo.ID, &userInfo.Name, &userInfo.CanInvite, &userInfo.IsAdmin); err != nil {
+			continue
+		}
+		gi.Members = append(gi.Members, userInfo)
+	}
+}
+
 func GroupList(c *gin.Context, user *models.User) {
 	rows, err := db.Instance.
 		Table("group_users").
 		Joins("join `groups` on group_users.group_id = `groups`.id").
-		Select("group_id, name, colour, is_favourite, can_invite, is_admin").Where("user_id = ?", user.ID).
-		Order("is_favourite DESC, `groups`.updated_at DESC").Rows()
+		Select("group_id, name, colour, is_favourite, can_invite, is_admin").
+		Where("user_id = ?", user.ID).
+		Order("is_favourite DESC, `groups`.updated_at DESC").
+		Rows()
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
@@ -67,7 +96,7 @@ func GroupList(c *gin.Context, user *models.User) {
 		if isGlobalAdmin {
 			groupInfo.IsAdmin = true
 		}
-		// TODO: Members
+		groupInfo.loadMembers()
 		result = append(result, groupInfo)
 	}
 	c.JSON(http.StatusOK, result)

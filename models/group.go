@@ -11,22 +11,24 @@ type Group struct {
 	Name        string `gorm:"type:varchar(300);unique"`
 }
 
-func LoadGroupUserIDs(groupID uint64) []uint64 {
-	result := []uint64{}
+func LoadGroupUserIDs(groupID uint64) map[uint64]string {
+	result := map[uint64]string{}
 	rows, err := db.Instance.
 		Table("group_users").
-		Select("user_id").
+		Joins("join users on users.id=user_id").
+		Select("user_id, push_token").
 		Where("group_id = ?", groupID).
 		Rows()
 	if err != nil {
 		return result
 	}
+	id := uint64(0)
+	token := ""
 	for rows.Next() {
-		id := uint64(0)
-		if err = rows.Scan(&id); err != nil {
+		if err = rows.Scan(&id, &token); err != nil {
 			continue
 		}
-		result = append(result, id)
+		result[id] = token
 	}
 	rows.Close()
 	return result
