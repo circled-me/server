@@ -83,7 +83,8 @@ func TagList(c *gin.Context, user *models.User) {
 	defer rows.Close()
 	tags := Tags{}
 	mimeType := ""
-	var assetId, createdAt uint64
+	var assetId uint64
+	var createdAt int64
 	var gpsLat, gpsLong *float64
 	var area, city, country *string
 	favourite := false
@@ -98,8 +99,9 @@ func TagList(c *gin.Context, user *models.User) {
 		tags.add(tagTypePlace, country, assetId)
 		// Add time tags, e.g "2023", "April", "22"
 		tmpAsset := &models.Asset{
-			GpsLat:  gpsLat,
-			GpsLong: gpsLong,
+			CreatedAt: createdAt,
+			GpsLat:    gpsLat,
+			GpsLong:   gpsLong,
 		}
 		// Time zone for the given GPS coordinates is used
 		year, month, day := tmpAsset.GetCreatedTimeInLocation().Date()
