@@ -100,8 +100,9 @@ func main() {
 	authRouter.POST("/album/remove", handlers.AlbumRemoveAsset, models.PermissionPhotoUpload)
 	authRouter.GET("/album/assets", handlers.AlbumAssets)
 	authRouter.GET("/album/share", handlers.AlbumShare)
-	authRouter.POST("/album/contributor", handlers.AlbumContributor, models.PermissionPhotoUpload)
-	// authRouter.POST("/album/contributors", handlers.AlbumContributors, models.PermissionPhotoUpload)
+	authRouter.POST("/album/contributor", handlers.AlbumContributorSave, models.PermissionPhotoUpload) // DEPRECATED
+	authRouter.GET("/album/contributors", handlers.AlbumContributorsGet, models.PermissionPhotoUpload)
+	// authRouter.POST("/album/contributors", handlers.AlbumContributorsSave, models.PermissionPhotoUpload)
 
 	// Upload Request
 	authRouter.GET("/upload/share", handlers.UploadShare, models.PermissionPhotoUpload)

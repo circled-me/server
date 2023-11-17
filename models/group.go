@@ -7,8 +7,9 @@ type Group struct {
 	CreatedAt   int64
 	UpdatedAt   int64
 	CreatedByID uint64
-	CreatedBy   User   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	Name        string `gorm:"type:varchar(300);unique"`
+	CreatedBy   User        `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Name        string      `gorm:"type:varchar(300);unique"`
+	Members     []GroupUser `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 func LoadGroupUserIDs(groupID uint64) map[uint64]string {

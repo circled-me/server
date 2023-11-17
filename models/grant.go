@@ -7,7 +7,6 @@ const (
 	PermissionAdmin           Permission = 1
 	PermissionPhotoUpload     Permission = 2
 	PermissionCanCreateGroups Permission = 3
-	PermissionCanInvite       Permission = 4
 	PermissionPhotoBackup     Permission = 5
 )
 

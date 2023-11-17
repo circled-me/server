@@ -54,6 +54,20 @@ type AlbumContributeRequest struct {
 	Mode    uint8  `json:"mode"` // 0 - ContributorCanAdd or, 1 - ContributorViewOnly
 }
 
+type AlbumContributorsGetRequest struct {
+	AlbumID uint64 `form:"album_id" binding:"required"`
+}
+
+type AlbumContributors struct {
+	AlbumID      uint64 `json:"album_id" binding:"required"`
+	Contributors []AlbumContributor
+}
+
+type AlbumContributor struct {
+	UserID uint64 `json:"user_id" binding:"required"`
+	Mode   uint8  `json:"mode"` // 0 - ContributorCanAdd or, 1 - ContributorViewOnly
+}
+
 type AlbumShareResponse struct {
 	Title string `json:"title"`
 	Path  string `json:"path"`
@@ -387,7 +401,7 @@ func AlbumShare(c *gin.Context, user *models.User) {
 	})
 }
 
-func AlbumContributor(c *gin.Context, user *models.User) {
+func AlbumContributorSave(c *gin.Context, user *models.User) {
 	r := AlbumContributeRequest{}
 	err := c.ShouldBindJSON(&r)
 	if err != nil {
@@ -425,4 +439,37 @@ func AlbumContributor(c *gin.Context, user *models.User) {
 	go push.AlbumNewContributor(r.UserID, r.AlbumID, r.Mode, user)
 
 	c.JSON(http.StatusOK, OKResponse)
+}
+
+func AlbumContributorsGet(c *gin.Context, user *models.User) {
+	r := AlbumContributorsGetRequest{}
+	if err := c.ShouldBindWith(&r, binding.Form); err != nil {
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
+		return
+	}
+	album := models.Album{ID: r.AlbumID}
+	if db.Instance.First(&album).Error != nil || album.ID != r.AlbumID || album.UserID != user.ID {
+		c.JSON(http.StatusUnauthorized, Response{"sorry"})
+		return
+	}
+	rows, err := db.Instance.
+		Table("album_contributors").
+		Select("user_id, mode").
+		Where("album_id = ?", r.AlbumID).
+		Order("created_at DESC").
+		Rows()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, DBError1Response)
+		return
+	}
+	result := AlbumContributors{AlbumID: album.ID}
+	for rows.Next() {
+		contributor := AlbumContributor{}
+		if err = rows.Scan(&contributor.UserID, &contributor.Mode); err != nil {
+			c.JSON(http.StatusInternalServerError, DBError2Response)
+			return
+		}
+		result.Contributors = append(result.Contributors, contributor)
+	}
+	c.JSON(http.StatusOK, result)
 }
