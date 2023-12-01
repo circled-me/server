@@ -13,10 +13,11 @@ func AlbumView(c *gin.Context) {
 	token := c.Param("token")
 	rows, err := db.Instance.
 		Table("album_shares").
-		Select("album_id, albums.name, users.name, hide_original, hero_asset_id").
+		Select("album_id, albums.name, owners.name, hide_original, hero_asset_id").
 		Where("token = ? and (expires_at is null or expires_at=0 or expires_at>unix_timestamp())", token).
 		Joins("join albums on album_shares.album_id = albums.id").
 		Joins("join users on album_shares.user_id = users.id").
+		Joins("join users as owners on albums.user_id = owners.id").
 		Rows()
 
 	if err != nil {
