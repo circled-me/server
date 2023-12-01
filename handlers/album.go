@@ -323,7 +323,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 		// Favourite album
 		rows, err = db.Instance.
 			Table("favourite_assets").
-			Select(assetsSelectClause).
+			Select(AssetsSelectClause).
 			Where("favourite_assets.user_id = ?", user.ID).
 			Joins("JOIN assets on favourite_assets.asset_id = assets.id").
 			Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
@@ -338,7 +338,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 		}
 		rows, err = db.Instance.
 			Table("album_assets").
-			Select(assetsSelectClause).
+			Select(AssetsSelectClause).
 			Where("album_id = ?", r.AlbumID).
 			Joins("JOIN assets on album_assets.asset_id = assets.id").
 			Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
@@ -349,7 +349,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 		return
 	}
 	defer rows.Close()
-	result := loadAssetsFromRows(c, rows)
+	result := LoadAssetsFromRows(c, rows)
 	if result == nil {
 		return
 	}

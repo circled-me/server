@@ -9,17 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AssetInfo struct {
-	ID       uint64
-	Type     uint
-	MimeType string
-}
-
 func AlbumView(c *gin.Context) {
 	token := c.Param("token")
 	rows, err := db.Instance.
 		Table("album_shares").
-		Select("album_id, albums.name, users.name, hide_original").
+		Select("album_id, albums.name, users.name, hide_original, hero_asset_id").
 		Where("token = ? and (expires_at is null or expires_at=0 or expires_at>unix_timestamp())", token).
 		Joins("join albums on album_shares.album_id = albums.id").
 		Joins("join users on album_shares.user_id = users.id").
@@ -34,8 +28,9 @@ func AlbumView(c *gin.Context) {
 	var albumName string
 	var userName string
 	var hideOriginal int
+	var heroAssetID *uint64
 	if rows.Next() {
-		if err = rows.Scan(&albumId, &albumName, &userName, &hideOriginal); err != nil {
+		if err = rows.Scan(&albumId, &albumName, &userName, &hideOriginal, &heroAssetID); err != nil {
 			c.JSON(http.StatusInternalServerError, handlers.Response{Error: "something went really wrong"})
 			rows.Close()
 			return
@@ -45,9 +40,10 @@ func AlbumView(c *gin.Context) {
 	// Get all assets for the album
 	rows, err = db.Instance.
 		Table("album_assets").
-		Select("asset_id, mime_type, assets.created_at").
-		Where("album_id = ?", albumId).
+		Select(handlers.AssetsSelectClause).
 		Joins("join assets on album_assets.asset_id = assets.id").
+		Joins("left join locations on locations.gps_lat = truncate(assets.gps_lat, 4) and locations.gps_long = truncate(assets.gps_long, 4)").
+		Where("album_assets.album_id = ? and assets.deleted=0 and assets.size>0 and assets.thumb_size>0", albumId).
 		Order("assets.created_at ASC").
 		Rows()
 
@@ -56,35 +52,48 @@ func AlbumView(c *gin.Context) {
 		return
 	}
 	defer rows.Close()
-	result := []AssetInfo{}
-	var created, createdMin, createdMax int64
+	result := handlers.LoadAssetsFromRows(c, rows)
+	if result == nil {
+		return
+	}
+	var createdMin, createdMax uint64
 	createdMin = 100000000000
-	for rows.Next() {
-		assetInfo := AssetInfo{}
-		if err = rows.Scan(&assetInfo.ID, &assetInfo.MimeType, &created); err != nil {
-			c.JSON(http.StatusInternalServerError, handlers.DBError2Response)
-			return
+	for i, row := range *result {
+		// Hide private information
+		(*result)[i].Owner = 0
+		(*result)[i].DID = ""
+		if hideOriginal > 0 {
+			(*result)[i].GpsLat = nil
+			(*result)[i].GpsLong = nil
+			(*result)[i].Location = nil
 		}
-		assetInfo.Type = handlers.GetTypeFrom(assetInfo.MimeType)
-		result = append(result, assetInfo)
-		if createdMax < created {
-			createdMax = created
+		if createdMax < row.Created {
+			createdMax = row.Created
 		}
-		if createdMin > created {
-			createdMin = created
+		if createdMin > row.Created {
+			createdMin = row.Created
 		}
 	}
 	downloadParam := "download"
 	if hideOriginal > 0 {
 		downloadParam = "thumb"
 	}
-	c.HTML(http.StatusOK, "album_view.tmpl", gin.H{
-		"subtitle":      "@" + userName,
-		"dates":         utils.GetDatesString(createdMin, createdMax),
-		"title":         albumName,
+	json := gin.H{
+		"ownerName":     "@" + userName,
+		"subtitle":      utils.GetDatesString(int64(createdMin), int64(createdMax)),
+		"name":          albumName,
 		"assets":        result,
 		"downloadParam": downloadParam,
-	})
+		"heroAssetID":   0,
+	}
+	if heroAssetID != nil {
+		json["heroAssetID"] = *heroAssetID
+	}
+	if c.Query("format") == "json" {
+		c.JSON(http.StatusOK, json)
+		return
+	}
+	c.HTML(http.StatusOK, "album_view.tmpl", json)
 }
 
 func AlbumAssetView(c *gin.Context) {

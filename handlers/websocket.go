@@ -128,13 +128,13 @@ func WebSocket(c *gin.Context, user *models.User) {
 			isConnected = false
 			break
 		}
-		log.Printf("recv: %s", message)
 		if string(message) == "ping" {
 			conn.WriteMessage(mt, []byte("pong"))
 		}
 		if string(message) == "pong" {
 			continue
 		}
+		log.Printf("recv: %s", message)
 		processMessage(user, message)
 	}
 }
