@@ -24,7 +24,7 @@ type GroupUserInfo struct {
 
 type GroupInfo struct {
 	ID        uint64          `json:"id" form:"id" binding:"required"`
-	Name      string          `json:"name" form:"name" binding:"required"`
+	Name      string          `json:"name" form:"name"`
 	Colour    string          `json:"colour" form:"colour"`
 	Favourite bool            `json:"favourite" form:"favourite"`
 	IsAdmin   bool            `json:"is_admin"`
@@ -32,7 +32,7 @@ type GroupInfo struct {
 }
 
 type GroupCreateRequest struct {
-	Name string `json:"name" form:"name" binding:"required"`
+	Members []GroupUserInfo `json:"members" binding:"required"`
 }
 
 type MessagesRequest struct {
@@ -40,7 +40,7 @@ type MessagesRequest struct {
 }
 
 type GroupDeleteRequest struct {
-	ID uint64 `json:"id" form:"id" binding:"required"`
+	ID uint64 `json:"id" binding:"required"`
 }
 
 func InviteToGroup(c *gin.Context) {
@@ -113,7 +113,6 @@ func GroupCreate(c *gin.Context, user *models.User) {
 		return
 	}
 	group := models.Group{
-		Name:        r.Name,
 		CreatedByID: user.ID,
 	}
 	result := db.Instance.Create(&group)
@@ -122,19 +121,22 @@ func GroupCreate(c *gin.Context, user *models.User) {
 		return
 	}
 	// Now create the Group <-> User link
-	groupUser := models.GroupUser{
-		GroupID: group.ID,
-		UserID:  user.ID,
-		IsAdmin: true,
-	}
-	result = db.Instance.Create(&groupUser)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, DBError2Response)
-		return
+	for _, gu := range r.Members {
+		groupUser := models.GroupUser{
+			GroupID: group.ID,
+			UserID:  gu.ID,
+			IsAdmin: gu.IsAdmin,
+		}
+		result = db.Instance.Create(&groupUser)
+		if result.Error != nil {
+			c.JSON(http.StatusInternalServerError, DBError2Response)
+			return
+		}
 	}
 	c.JSON(http.StatusOK, GroupInfo{
-		ID:   group.ID,
-		Name: group.Name,
+		ID:      group.ID,
+		Members: r.Members,
+		IsAdmin: true,
 	})
 }
 
@@ -219,7 +221,7 @@ func GroupSave(c *gin.Context, user *models.User) {
 // GroupDelete deletes the Group and all of its dependants (via foreign keys)
 func GroupDelete(c *gin.Context, user *models.User) {
 	r := GroupDeleteRequest{}
-	err := c.ShouldBindWith(&r, binding.Form)
+	err := c.ShouldBindWith(&r, binding.JSON)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
