@@ -59,13 +59,8 @@ type AlbumContributorsGetRequest struct {
 }
 
 type AlbumContributors struct {
-	AlbumID      uint64 `json:"album_id" binding:"required"`
-	Contributors []AlbumContributor
-}
-
-type AlbumContributor struct {
-	UserID uint64 `json:"user_id" binding:"required"`
-	Mode   uint8  `json:"mode"` // 0 - ContributorCanAdd or, 1 - ContributorViewOnly
+	AlbumID      uint64           `json:"album_id" binding:"required"`
+	Contributors map[uint64]uint8 `json:"contributors" binding:"required"` // id -> mode (0 - ContributorCanAdd or, 1 - ContributorViewOnly)
 }
 
 type AlbumShareResponse struct {
@@ -401,6 +396,7 @@ func AlbumShare(c *gin.Context, user *models.User) {
 	})
 }
 
+// AlbumContributorSave is DEPRECATED now
 func AlbumContributorSave(c *gin.Context, user *models.User) {
 	r := AlbumContributeRequest{}
 	err := c.ShouldBindJSON(&r)
@@ -462,14 +458,72 @@ func AlbumContributorsGet(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
-	result := AlbumContributors{AlbumID: album.ID}
+	uid := uint64(0)
+	mode := uint8(0)
+	result := AlbumContributors{AlbumID: album.ID, Contributors: map[uint64]uint8{}}
 	for rows.Next() {
-		contributor := AlbumContributor{}
-		if err = rows.Scan(&contributor.UserID, &contributor.Mode); err != nil {
+		if err = rows.Scan(&uid, &mode); err != nil {
 			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
-		result.Contributors = append(result.Contributors, contributor)
+		if uid == album.UserID {
+			// Skip album owner
+			continue
+		}
+		result.Contributors[uid] = mode
 	}
 	c.JSON(http.StatusOK, result)
+}
+
+func AlbumContributorsSave(c *gin.Context, user *models.User) {
+	r := AlbumContributors{}
+	if err := c.ShouldBindWith(&r, binding.JSON); err != nil {
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
+		return
+	}
+	album := models.Album{ID: r.AlbumID}
+	// Currently only the album owner can edit contributors
+	if db.Instance.First(&album).Error != nil || album.ID != r.AlbumID || album.UserID != user.ID {
+		c.JSON(http.StatusUnauthorized, Response{"sorry"})
+		return
+	}
+	oldMembers := map[uint64]uint8{}
+	// Load current ones
+	rows, err := db.Instance.Raw("select user_id, mode from album_contributors where album_id=?", album.ID).Rows()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, DBError1Response)
+		return
+	}
+	uid := uint64(0)
+	mode := uint8(0)
+	for rows.Next() {
+		if err = rows.Scan(&uid, &mode); err != nil {
+			break
+		}
+		oldMembers[uid] = mode
+	}
+	// Delete current contributor assignments
+	db.Instance.Exec("delete from album_contributors where album_id=?", album.ID)
+	var finalErr error
+	for uid, mode := range r.Contributors {
+		albumContributor := models.AlbumContributor{
+			AlbumID: album.ID,
+			UserID:  uid,
+			Mode:    mode,
+		}
+		if err := db.Instance.Create(&albumContributor).Error; err != nil {
+			fmt.Printf("Contributor save error: %v", err)
+			finalErr = err
+		}
+		oldMode, existed := oldMembers[uid]
+		if !existed || oldMode != mode {
+			// Push notifications in background
+			go push.AlbumNewContributor(uid, album.ID, mode, user)
+		}
+	}
+	if finalErr != nil {
+		c.JSON(http.StatusInternalServerError, DBError1Response)
+		return
+	}
+	c.JSON(http.StatusOK, OKResponse)
 }
