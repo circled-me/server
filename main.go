@@ -113,7 +113,7 @@ func main() {
 	authRouter.GET("/group/list", handlers.GroupList)
 	authRouter.POST("/group/create", handlers.GroupCreate)
 	authRouter.POST("/group/save", handlers.GroupSave)
-	authRouter.POST("/group/delete", handlers.GroupDelete, models.PermissionAdmin)
+	authRouter.POST("/group/delete", handlers.GroupDelete)
 
 	// WebSocket handler
 	authRouter.GET("/ws", handlers.WebSocket)

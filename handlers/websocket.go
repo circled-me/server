@@ -109,7 +109,7 @@ func WebSocket(c *gin.Context, user *models.User) {
 	}
 	r := MessagesRequest{}
 	if err = c.ShouldBindWith(&r, binding.Form); err == nil {
-		message := GroupMessage{Type: TypeGroupMessage}
+		message := NewGroupMessage()
 		for _, groupMessage := range getMessagesFor(user, int64(r.SinceID)) {
 			message.Data = groupMessage
 			message.Stamp = groupMessage.ServerStamp

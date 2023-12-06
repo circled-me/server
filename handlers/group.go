@@ -133,6 +133,12 @@ func GroupCreate(c *gin.Context, user *models.User) {
 			return
 		}
 	}
+	// Send notification to all members
+	newMembersMessage := NewSystemMessage(SystemValueNewGroup, user.Name+" added you to a new chat", "Check your groups and start chatting")
+	members := models.LoadGroupUserIDs(group.ID)
+	delete(members, user.ID)
+	go sendToSocketOrPush(&newMembersMessage, members)
+
 	c.JSON(http.StatusOK, GroupInfo{
 		ID:      group.ID,
 		Members: r.Members,
@@ -176,8 +182,10 @@ func GroupSave(c *gin.Context, user *models.User) {
 	if groupUser.IsAdmin || user.HasPermission(models.PermissionAdmin) {
 		// We can edit the Group object...
 		newMembersMap := map[uint64]bool{}
+		retiredMembersTokenMap := models.LoadGroupUserIDs(group.ID)
 		for _, m := range r.Members {
 			newMembersMap[m.ID] = m.IsAdmin
+			delete(retiredMembersTokenMap, m.ID)
 		}
 		oldMembersMap := map[uint64]bool{}
 		// Modify the current members
@@ -208,6 +216,18 @@ func GroupSave(c *gin.Context, user *models.User) {
 			c.JSON(http.StatusInternalServerError, DBError4Response)
 			return
 		}
+		// Send notification to new members
+		newMembersTokenMap := models.LoadGroupUserIDs(group.ID)
+		for k, _ := range newMembersTokenMap {
+			if _, exists := newMembersMap[k]; !exists {
+				delete(newMembersTokenMap, k)
+			}
+		}
+		newMembersMessage := NewSystemMessage(SystemValueNewGroup, user.Name+" added you to a new chat", "Check your groups and start chatting")
+		go sendToSocketOrPush(&newMembersMessage, newMembersTokenMap)
+		// Send notification to retired members
+		retiredMembersMessage := NewSystemMessage(SystemValueLeftGroup, "", "")
+		go sendToSocketOrPush(&retiredMembersMessage, retiredMembersTokenMap)
 	}
 	c.JSON(http.StatusOK, GroupInfo{
 		ID:        group.ID,
@@ -226,6 +246,25 @@ func GroupDelete(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusBadRequest, Response{err.Error()})
 		return
 	}
+	// Load the GroupUser object
+	groupUser := models.GroupUser{
+		GroupID: r.ID,
+		UserID:  user.ID,
+	}
+	if db.Instance.First(&groupUser).Error != nil {
+		c.JSON(http.StatusInternalServerError, DBError1Response)
+		return
+	}
+	if !groupUser.IsAdmin && !user.HasPermission(models.PermissionAdmin) {
+		c.JSON(http.StatusUnauthorized, NopeResponse)
+		return
+	}
+	// Send WS message to ex-members
+	members := models.LoadGroupUserIDs(r.ID)
+	delete(members, user.ID)
+	leftMessage := NewSystemMessage(SystemValueLeftGroup, "", "")
+	go sendToSocketOrPush(&leftMessage, members)
+
 	// Delete the Group object
 	group := models.Group{ID: r.ID}
 	result := db.Instance.Delete(&group)

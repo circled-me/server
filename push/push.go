@@ -23,7 +23,12 @@ type Notification struct {
 	Data      map[string]string `json:"data"`
 }
 
-func Send(notification *Notification) error {
+func (notification *Notification) SendTo(UserToken string) error {
+	notification.UserToken = UserToken
+	return notification.Send()
+}
+
+func (notification *Notification) Send() error {
 	buf := bytes.Buffer{}
 	json.NewEncoder(&buf).Encode(*notification)
 	resp, err := httpClient.Post(config.PUSH_SERVER+"/send", "application/json", &buf)
