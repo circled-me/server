@@ -25,12 +25,14 @@ type AlbumInfo struct {
 	HeroAssetId  uint64 `json:"hero_asset_id"`
 	Contributors []int  `json:"contributors"`
 	Mode         *uint8 `json:"mode"`
+	Hidden       bool   `json:"hidden"`
 }
 
 type AlbumSaveRequest struct {
 	ID          uint64 `json:"id"`
 	Name        string `json:"name" binding:"required"`
 	HeroAssetId uint64 `json:"hero_asset_id"`
+	Hidden      bool   `json:"hidden"`
 }
 
 type AlbumAssetsRequest struct {
@@ -78,11 +80,11 @@ func getFirstFavouriteAssetID(userID uint64) uint64 {
 func AlbumList(c *gin.Context, user *models.User) {
 	rows, err := db.Instance.
 		Table("albums").
-		Select("albums.id, albums.name, albums.user_id, albums.hero_asset_id, ifnull(min(assets.created_at), 0), ifnull(max(assets.created_at), 0)").
+		Select("albums.id, albums.name, albums.user_id, albums.hidden, albums.hero_asset_id, ifnull(min(assets.created_at), 0), ifnull(max(assets.created_at), 0)").
 		Joins("left join album_contributors on album_contributors.album_id = albums.id").
 		Joins("left join album_assets on album_assets.album_id = albums.id").
 		Joins("left join assets on asset_id = assets.id").
-		Where("albums.user_id = ? OR album_contributors.user_id = ?", user.ID, user.ID).
+		Where("albums.hidden = 0 AND albums.user_id = ? OR album_contributors.user_id = ?", user.ID, user.ID).
 		Group("albums.id, albums.name, albums.hero_asset_id").
 		Order("albums.created_at DESC").
 		Rows()
@@ -106,7 +108,7 @@ func AlbumList(c *gin.Context, user *models.User) {
 	for rows.Next() {
 		albumInfo := AlbumInfo{}
 		var HeroAssetId *uint64
-		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name, &albumInfo.Owner, &HeroAssetId, &minDate, &maxDate); err != nil {
+		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name, &albumInfo.Owner, &albumInfo.Hidden, &HeroAssetId, &minDate, &maxDate); err != nil {
 			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
@@ -157,6 +159,7 @@ func AlbumCreate(c *gin.Context, user *models.User) {
 	album := models.Album{
 		Name:   r.Name,
 		UserID: user.ID,
+		Hidden: r.Hidden,
 	}
 	if r.HeroAssetId > 0 {
 		album.HeroAssetID = &r.HeroAssetId
@@ -170,6 +173,7 @@ func AlbumCreate(c *gin.Context, user *models.User) {
 		ID:          album.ID,
 		Name:        album.Name,
 		HeroAssetId: 0,
+		Hidden:      album.Hidden,
 	})
 }
 
@@ -211,6 +215,7 @@ func AlbumSave(c *gin.Context, user *models.User) {
 		ID:          album.ID,
 		Name:        album.Name,
 		HeroAssetId: 0,
+		Hidden:      album.Hidden,
 	})
 }
 

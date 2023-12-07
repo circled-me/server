@@ -4,6 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#292929" />
+    <meta property="og:url" content="{{ .baseURL }}">
+    <meta property="og:title" content="{{ .name }} {{ .ownerName }}">
+    <meta property="og:type" content="website">
+    <meta property="og:description" content="{{ .ownerName }} shared photos and videos">
+    <meta property="og:image" content="{{ .baseURL }}asset?id={{ .heroAssetID }}&thumb=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/2.6.1/css/lightgallery.min.css" integrity="sha512-F2E+YYE1gkt0T5TVajAslgDfTEUQKtlu4ralVq78ViNxhKXQLrgQLLie8u1tVdG2vWnB3ute4hcdbiBtvJQh0g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/2.6.1/css/lg-zoom.min.css" integrity="sha512-vIrTyLijDDcUJrQGs1jduUCSVa3+A2DaWpVfNyj4lmXkqURVQJ8LL62nebC388QV3P4yFBSt/ViDX8LRW0U6uw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/2.6.1/css/lg-thumbnail.min.css" integrity="sha512-GRxDpj/bx6/I4y6h2LE5rbGaqRcbTu4dYhaTewlS8Nh9hm/akYprvOTZD7GR+FRCALiKfe8u1gjvWEEGEtoR6g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -22,7 +27,13 @@
         .lg-backdrop {background-color: #292929;}
         #lightgallery a { display: inline-block; width: 165px; height: 165px; background-size: cover; background-position: center; float: left; margin: 2px; padding: 2px}
         @media only screen and (max-device-width: 660px) {
-            #lightgallery a {width: 32.8vw; height: 32.8vw; margin: 0.25vw; padding: 0.25vw;}
+            {{ if eq (len .assets) 1 }}
+                #lightgallery a {width: 98.8vw; height: 98.8vw; margin: 0.25vw; padding: 0.25vw;}
+            {{ else if lt (len .assets) 5 }}
+                #lightgallery a {width: 49.5vw; height: 49.5vw; margin: 0.25vw; padding: 0.25vw;}
+            {{ else }}
+                #lightgallery a {width: 32.8vw; height: 32.8vw; margin: 0.25vw; padding: 0.25vw;}
+            {{ end }}
         }
     </style>
   </head>
@@ -45,10 +56,10 @@
     <div id="lightgallery">
     {{ range .assets }}
         {{ if eq .Type 1 }}
-            <a href="asset?id={{ .ID }}&thumb=1" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=220')" data-download-url="asset?id={{ .ID }}&{{ $.downloadParam }}=1"></a>
+            <a href="asset?id={{ .ID }}&thumb=1" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=440')" data-download-url="asset?id={{ .ID }}&{{ $.downloadParam }}=1"></a>
         {{ else if eq .MimeType "video/mp4" }}
             <a data-video='{"source": [{"src":"asset?id={{ .ID }}", "type":"video/mp4"}], "attributes": {"preload": false, "playsinline": true, "controls": true}}'
-               data-poster="asset?id={{ .ID }}&thumb=1&size=220" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=220')"
+               data-poster="asset?id={{ .ID }}&thumb=1&size=440" style="background-image: url('asset?id={{ .ID }}&thumb=1&size=440')"
                data-download-url="asset?id={{ .ID }}&{{ $.downloadParam }}=1"></a>
         {{ end }}
     {{ end }}

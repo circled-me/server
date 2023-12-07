@@ -12,10 +12,11 @@ import (
 )
 
 const (
-	TypeGroupMessage     = "group"
-	TypeSystemMessage    = "system"
-	SystemValueNewGroup  = "new_group"
-	SystemValueLeftGroup = "left_group"
+	TypeGroupMessage = "group_message"
+	TypeGroupUpdate  = "group_update"
+
+	GroupUpdateValueNew  = "new"
+	GroupUpdateValueLeft = "left"
 )
 
 type NotificationGetter interface {
@@ -32,12 +33,16 @@ type GroupMessage struct {
 	Data models.GroupMessage `json:"data"`
 }
 
-type SystemMessage struct {
+type GroupUpdateDetails struct {
+	GroupID uint64 `json:"group_id"`
+	Value   string `json:"value"`
+	Title   string `json:"title"`
+	Body    string `json:"body"`
+}
+
+type GroupUpdate struct {
 	Message
-	Value string            `json:"value"`
-	Title string            `json:"title"`
-	Body  string            `json:"body"`
-	Data  map[string]string `json:"data"`
+	Data GroupUpdateDetails `json:"data"`
 }
 
 func (gm *GroupMessage) getNotification() *push.Notification {
@@ -51,14 +56,14 @@ func (gm *GroupMessage) getNotification() *push.Notification {
 	}
 }
 
-func (sm *SystemMessage) getNotification() *push.Notification {
-	if sm.Title == "" {
+func (sm *GroupUpdate) getNotification() *push.Notification {
+	if sm.Data.Title == "" {
 		return nil
 	}
 	return &push.Notification{
-		Title: sm.Title,
-		Body:  sm.Body,
-		Data:  sm.Data,
+		Title: sm.Data.Title,
+		Body:  sm.Data.Body,
+		// TODO: Data
 	}
 }
 
@@ -68,17 +73,13 @@ func NewGroupMessage() (m GroupMessage) {
 	return
 }
 
-func NewSystemMessage(value, title, body string) (m SystemMessage) {
-	m.Message.Type = TypeSystemMessage
+func NewGroupUpdate(groupID uint64, value, title, body string) (m GroupUpdate) {
+	m.Message.Type = TypeGroupUpdate
 	m.Message.Stamp = time.Now().UnixMilli()
-	m.Value = value
-	m.Title = title
-	m.Body = body
-	m.Data = map[string]string{
-		"value": value,
-		"title": title,
-		"body":  body,
-	}
+	m.Data.GroupID = groupID
+	m.Data.Value = value
+	m.Data.Title = title
+	m.Data.Body = body
 	return
 }
 

@@ -134,7 +134,7 @@ func GroupCreate(c *gin.Context, user *models.User) {
 		}
 	}
 	// Send notification to all members
-	newMembersMessage := NewSystemMessage(SystemValueNewGroup, user.Name+" added you to a new chat", "Check your groups and start chatting")
+	newMembersMessage := NewGroupUpdate(group.ID, GroupUpdateValueNew, user.Name+" added you to a new group", "Check your groups and start chatting")
 	members := models.LoadGroupUserIDs(group.ID)
 	delete(members, user.ID)
 	go sendToSocketOrPush(&newMembersMessage, members)
@@ -223,10 +223,10 @@ func GroupSave(c *gin.Context, user *models.User) {
 				delete(newMembersTokenMap, k)
 			}
 		}
-		newMembersMessage := NewSystemMessage(SystemValueNewGroup, user.Name+" added you to a new chat", "Check your groups and start chatting")
+		newMembersMessage := NewGroupUpdate(group.ID, GroupUpdateValueNew, user.Name+" added you to a new chat", "Check your groups and start chatting")
 		go sendToSocketOrPush(&newMembersMessage, newMembersTokenMap)
 		// Send notification to retired members
-		retiredMembersMessage := NewSystemMessage(SystemValueLeftGroup, "", "")
+		retiredMembersMessage := NewGroupUpdate(group.ID, GroupUpdateValueLeft, "", "")
 		go sendToSocketOrPush(&retiredMembersMessage, retiredMembersTokenMap)
 	}
 	c.JSON(http.StatusOK, GroupInfo{
@@ -259,11 +259,9 @@ func GroupDelete(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusUnauthorized, NopeResponse)
 		return
 	}
-	// Send WS message to ex-members
 	members := models.LoadGroupUserIDs(r.ID)
 	delete(members, user.ID)
-	leftMessage := NewSystemMessage(SystemValueLeftGroup, "", "")
-	go sendToSocketOrPush(&leftMessage, members)
+	leftMessage := NewGroupUpdate(r.ID, GroupUpdateValueLeft, "", "")
 
 	// Delete the Group object
 	group := models.Group{ID: r.ID}
@@ -272,5 +270,8 @@ func GroupDelete(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
+	// Send WS message to ex-members
+	go sendToSocketOrPush(&leftMessage, members)
+
 	c.JSON(http.StatusOK, OKResponse)
 }

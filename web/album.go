@@ -55,6 +55,7 @@ func AlbumView(c *gin.Context) {
 	defer rows.Close()
 	result := handlers.LoadAssetsFromRows(c, rows)
 	if result == nil {
+		c.HTML(http.StatusOK, "album_view.tmpl", gin.H{})
 		return
 	}
 	var createdMin, createdMax uint64
@@ -89,11 +90,14 @@ func AlbumView(c *gin.Context) {
 	}
 	if heroAssetID != nil {
 		json["heroAssetID"] = *heroAssetID
+	} else if len(*result) > 0 {
+		json["heroAssetID"] = (*result)[0].ID
 	}
 	if c.Query("format") == "json" {
 		c.JSON(http.StatusOK, json)
 		return
 	}
+	json["baseURL"] = c.Request.URL.String()
 	c.HTML(http.StatusOK, "album_view.tmpl", json)
 }
 
