@@ -7,7 +7,6 @@ const (
 	PermissionAdmin           Permission = 1
 	PermissionPhotoUpload     Permission = 2
 	PermissionCanCreateGroups Permission = 3
-	PermissionCanInvite       Permission = 4
 	PermissionPhotoBackup     Permission = 5
 )
 
@@ -19,6 +18,4 @@ type Grant struct {
 	UserID     uint64     `gorm:"index:user_permission,unique"`
 	User       User       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Permission Permission `gorm:"index:user_permission,unique"`
-	// In case of `PermissionAdmin` and `PermissionCanInvite` this could be the ID of a Group
-	// Subject *uint64 `gorm:"null;default null"`
 }

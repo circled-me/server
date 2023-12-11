@@ -35,7 +35,7 @@ func AlbumNewContributor(newUser, albumId uint64, mode uint8, addeByUser *models
 			"album": strconv.Itoa(int(albumId)),
 		},
 	}
-	Send(&notification)
+	notification.Send()
 }
 
 func AlbumNewAssets(count int, albumId uint64, addeByUser *models.User) {
@@ -66,7 +66,7 @@ func AlbumNewAssets(count int, albumId uint64, addeByUser *models.User) {
 	}
 	if album.UserID != addeByUser.ID {
 		notification.UserToken = album.User.PushToken
-		Send(&notification)
+		notification.Send()
 	}
 	for _, c := range album.Contributors {
 		if addeByUser.ID == c.UserID {
@@ -80,6 +80,6 @@ func AlbumNewAssets(count int, albumId uint64, addeByUser *models.User) {
 			continue
 		}
 		notification.UserToken = c.User.PushToken
-		Send(&notification)
+		notification.Send()
 	}
 }

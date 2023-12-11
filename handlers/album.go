@@ -25,12 +25,14 @@ type AlbumInfo struct {
 	HeroAssetId  uint64 `json:"hero_asset_id"`
 	Contributors []int  `json:"contributors"`
 	Mode         *uint8 `json:"mode"`
+	Hidden       bool   `json:"hidden"`
 }
 
 type AlbumSaveRequest struct {
 	ID          uint64 `json:"id"`
 	Name        string `json:"name" binding:"required"`
 	HeroAssetId uint64 `json:"hero_asset_id"`
+	Hidden      bool   `json:"hidden"`
 }
 
 type AlbumAssetsRequest struct {
@@ -54,6 +56,15 @@ type AlbumContributeRequest struct {
 	Mode    uint8  `json:"mode"` // 0 - ContributorCanAdd or, 1 - ContributorViewOnly
 }
 
+type AlbumContributorsGetRequest struct {
+	AlbumID uint64 `form:"album_id" binding:"required"`
+}
+
+type AlbumContributors struct {
+	AlbumID      uint64           `json:"album_id" binding:"required"`
+	Contributors map[uint64]uint8 `json:"contributors" binding:"required"` // id -> mode (0 - ContributorCanAdd or, 1 - ContributorViewOnly)
+}
+
 type AlbumShareResponse struct {
 	Title string `json:"title"`
 	Path  string `json:"path"`
@@ -69,11 +80,11 @@ func getFirstFavouriteAssetID(userID uint64) uint64 {
 func AlbumList(c *gin.Context, user *models.User) {
 	rows, err := db.Instance.
 		Table("albums").
-		Select("albums.id, albums.name, albums.user_id, albums.hero_asset_id, ifnull(min(assets.created_at), 0), ifnull(max(assets.created_at), 0)").
+		Select("albums.id, albums.name, albums.user_id, albums.hidden, albums.hero_asset_id, ifnull(min(assets.created_at), 0), ifnull(max(assets.created_at), 0)").
 		Joins("left join album_contributors on album_contributors.album_id = albums.id").
 		Joins("left join album_assets on album_assets.album_id = albums.id").
 		Joins("left join assets on asset_id = assets.id").
-		Where("albums.user_id = ? OR album_contributors.user_id = ?", user.ID, user.ID).
+		Where("albums.hidden = 0 AND albums.user_id = ? OR album_contributors.user_id = ?", user.ID, user.ID).
 		Group("albums.id, albums.name, albums.hero_asset_id").
 		Order("albums.created_at DESC").
 		Rows()
@@ -97,7 +108,7 @@ func AlbumList(c *gin.Context, user *models.User) {
 	for rows.Next() {
 		albumInfo := AlbumInfo{}
 		var HeroAssetId *uint64
-		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name, &albumInfo.Owner, &HeroAssetId, &minDate, &maxDate); err != nil {
+		if err = rows.Scan(&albumInfo.ID, &albumInfo.Name, &albumInfo.Owner, &albumInfo.Hidden, &HeroAssetId, &minDate, &maxDate); err != nil {
 			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
@@ -148,6 +159,7 @@ func AlbumCreate(c *gin.Context, user *models.User) {
 	album := models.Album{
 		Name:   r.Name,
 		UserID: user.ID,
+		Hidden: r.Hidden,
 	}
 	if r.HeroAssetId > 0 {
 		album.HeroAssetID = &r.HeroAssetId
@@ -161,6 +173,7 @@ func AlbumCreate(c *gin.Context, user *models.User) {
 		ID:          album.ID,
 		Name:        album.Name,
 		HeroAssetId: 0,
+		Hidden:      album.Hidden,
 	})
 }
 
@@ -202,6 +215,7 @@ func AlbumSave(c *gin.Context, user *models.User) {
 		ID:          album.ID,
 		Name:        album.Name,
 		HeroAssetId: 0,
+		Hidden:      album.Hidden,
 	})
 }
 
@@ -309,7 +323,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 		// Favourite album
 		rows, err = db.Instance.
 			Table("favourite_assets").
-			Select(assetsSelectClause).
+			Select(AssetsSelectClause).
 			Where("favourite_assets.user_id = ?", user.ID).
 			Joins("JOIN assets on favourite_assets.asset_id = assets.id").
 			Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
@@ -324,7 +338,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 		}
 		rows, err = db.Instance.
 			Table("album_assets").
-			Select(assetsSelectClause).
+			Select(AssetsSelectClause).
 			Where("album_id = ?", r.AlbumID).
 			Joins("JOIN assets on album_assets.asset_id = assets.id").
 			Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
@@ -335,7 +349,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 		return
 	}
 	defer rows.Close()
-	result := loadAssetsFromRows(c, rows)
+	result := LoadAssetsFromRows(c, rows)
 	if result == nil {
 		return
 	}
@@ -387,7 +401,8 @@ func AlbumShare(c *gin.Context, user *models.User) {
 	})
 }
 
-func AlbumContributor(c *gin.Context, user *models.User) {
+// AlbumContributorSave is DEPRECATED now
+func AlbumContributorSave(c *gin.Context, user *models.User) {
 	r := AlbumContributeRequest{}
 	err := c.ShouldBindJSON(&r)
 	if err != nil {
@@ -424,5 +439,96 @@ func AlbumContributor(c *gin.Context, user *models.User) {
 	// Push notifications in background
 	go push.AlbumNewContributor(r.UserID, r.AlbumID, r.Mode, user)
 
+	c.JSON(http.StatusOK, OKResponse)
+}
+
+func AlbumContributorsGet(c *gin.Context, user *models.User) {
+	r := AlbumContributorsGetRequest{}
+	if err := c.ShouldBindWith(&r, binding.Form); err != nil {
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
+		return
+	}
+	album := models.Album{ID: r.AlbumID}
+	if db.Instance.First(&album).Error != nil || album.ID != r.AlbumID || album.UserID != user.ID {
+		c.JSON(http.StatusUnauthorized, Response{"sorry"})
+		return
+	}
+	rows, err := db.Instance.
+		Table("album_contributors").
+		Select("user_id, mode").
+		Where("album_id = ?", r.AlbumID).
+		Order("created_at DESC").
+		Rows()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, DBError1Response)
+		return
+	}
+	uid := uint64(0)
+	mode := uint8(0)
+	result := AlbumContributors{AlbumID: album.ID, Contributors: map[uint64]uint8{}}
+	for rows.Next() {
+		if err = rows.Scan(&uid, &mode); err != nil {
+			c.JSON(http.StatusInternalServerError, DBError2Response)
+			return
+		}
+		if uid == album.UserID {
+			// Skip album owner
+			continue
+		}
+		result.Contributors[uid] = mode
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func AlbumContributorsSave(c *gin.Context, user *models.User) {
+	r := AlbumContributors{}
+	if err := c.ShouldBindWith(&r, binding.JSON); err != nil {
+		c.JSON(http.StatusBadRequest, Response{err.Error()})
+		return
+	}
+	album := models.Album{ID: r.AlbumID}
+	// Currently only the album owner can edit contributors
+	if db.Instance.First(&album).Error != nil || album.ID != r.AlbumID || album.UserID != user.ID {
+		c.JSON(http.StatusUnauthorized, Response{"sorry"})
+		return
+	}
+	oldMembers := map[uint64]uint8{}
+	// Load current ones
+	rows, err := db.Instance.Raw("select user_id, mode from album_contributors where album_id=?", album.ID).Rows()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, DBError1Response)
+		return
+	}
+	uid := uint64(0)
+	mode := uint8(0)
+	for rows.Next() {
+		if err = rows.Scan(&uid, &mode); err != nil {
+			break
+		}
+		oldMembers[uid] = mode
+	}
+	// Delete current contributor assignments
+	db.Instance.Exec("delete from album_contributors where album_id=?", album.ID)
+	var finalErr error
+	for uid, mode := range r.Contributors {
+		albumContributor := models.AlbumContributor{
+			AlbumID: album.ID,
+			UserID:  uid,
+			Mode:    mode,
+		}
+		if err := db.Instance.Create(&albumContributor).Error; err != nil {
+			fmt.Printf("Contributor save error: %v", err)
+			finalErr = err
+		}
+		oldMode, existed := oldMembers[uid]
+		if !existed || oldMode != mode {
+			// Push notifications in background
+			go push.AlbumNewContributor(uid, album.ID, mode, user)
+		}
+	}
+	if finalErr != nil {
+		c.JSON(http.StatusInternalServerError, DBError1Response)
+		return
+	}
 	c.JSON(http.StatusOK, OKResponse)
 }

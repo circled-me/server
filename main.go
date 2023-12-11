@@ -100,30 +100,28 @@ func main() {
 	authRouter.POST("/album/remove", handlers.AlbumRemoveAsset, models.PermissionPhotoUpload)
 	authRouter.GET("/album/assets", handlers.AlbumAssets)
 	authRouter.GET("/album/share", handlers.AlbumShare)
-	authRouter.POST("/album/contributor", handlers.AlbumContributor, models.PermissionPhotoUpload)
-	// authRouter.POST("/album/contributors", handlers.AlbumContributors, models.PermissionPhotoUpload)
+	authRouter.POST("/album/contributor", handlers.AlbumContributorSave, models.PermissionPhotoUpload) // DEPRECATED
+	authRouter.GET("/album/contributors", handlers.AlbumContributorsGet, models.PermissionPhotoUpload)
+	authRouter.POST("/album/contributors", handlers.AlbumContributorsSave, models.PermissionPhotoUpload)
 
 	// Upload Request
 	authRouter.GET("/upload/share", handlers.UploadShare, models.PermissionPhotoUpload)
 	// Moment handlers
 	authRouter.GET("/moment/list", handlers.MomentList, models.PermissionPhotoUpload)
 	authRouter.GET("/moment/assets", handlers.MomentAssets, models.PermissionPhotoUpload)
-	// Group handlers - TODO: review permissions
-	// authRouter.GET("/group/list", handlers.GroupList)
-	// authRouter.POST("/group/create", handlers.GroupCreate)
-	// authRouter.POST("/group/save", handlers.GroupSave)
-	// authRouter.POST("/group/delete", handlers.GroupDelete, models.PermissionAdmin)
-	// authRouter.POST("/group/members", handlers.GroupMembers)
-	// Face recognition related
-	// authRouter.GET("/faces/get", handlers.GetFaces)
+	// Group handlers
+	authRouter.GET("/group/list", handlers.GroupList)
+	authRouter.POST("/group/create", handlers.GroupCreate)
+	authRouter.POST("/group/save", handlers.GroupSave)
+	authRouter.POST("/group/delete", handlers.GroupDelete)
 
-	/*
-	 *	Web interface
-	 */
-	// Albums
+	// WebSocket handler
+	authRouter.GET("/ws", handlers.WebSocket)
+
+	// Web albums
 	router.GET("/w/album/:token/", web.AlbumView)
 	router.GET("/w/album/:token/asset", web.AlbumAssetView)
-	// File uploads
+	// Web file uploads
 	router.GET("/w/upload/:token/", web.UploadRequestView)
 	router.GET("/w/upload/:token/new-url/", web.UploadRequestNewURL)
 	router.POST("/w/upload/:token/confirm/", web.UploadRequestConfirm)

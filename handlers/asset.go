@@ -27,22 +27,22 @@ type AssetFetchRequest struct {
 }
 
 type AssetInfo struct {
-	ID       uint64  `json:"id"`
-	Type     uint    `json:"type"`
-	Owner    uint64  `json:"owner"`
-	Name     string  `json:"name"`
-	Location *string `json:"location"`
-	DID      string  `json:"did"` // DeviceID
-	Created  uint64  `json:"created"`
-	// TODO: fill these for albums and moments
-	GpsLat  *float64 `json:"gps_lat"`
-	GpsLong *float64 `json:"gps_long"`
-	Size    uint64   `json:"size"`
+	ID       uint64   `json:"id"`
+	Type     uint     `json:"type"`
+	Owner    uint64   `json:"owner"`
+	Name     string   `json:"name"`
+	Location *string  `json:"location"`
+	DID      string   `json:"did"` // DeviceID
+	Created  uint64   `json:"created"`
+	GpsLat   *float64 `json:"gps_lat"`
+	GpsLong  *float64 `json:"gps_long"`
+	Size     uint64   `json:"size"`
+	MimeType string   `json:"mime_type"`
 }
 
 const (
 	// created_at field is adjusted with time_offset so the time can be shown "as UTC"
-	assetsSelectClause = "assets.id, assets.name, assets.user_id, assets.created_at+ifnull(time_offset,0), assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display, assets.size"
+	AssetsSelectClause = "assets.id, assets.name, assets.user_id, assets.created_at+ifnull(time_offset,0), assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display, assets.size, assets.mime_type"
 )
 
 type AssetDeleteRequest struct {
@@ -65,15 +65,15 @@ func GetTypeFrom(mimeType string) uint {
 	return models.AssetTypeOther
 }
 
-func loadAssetsFromRows(c *gin.Context, rows *sql.Rows) *[]AssetInfo {
+func LoadAssetsFromRows(c *gin.Context, rows *sql.Rows) *[]AssetInfo {
 	result := []AssetInfo{}
 	mimeType := ""
 	for rows.Next() {
 		assetInfo := AssetInfo{}
 		if err := rows.Scan(&assetInfo.ID, &assetInfo.Name, &assetInfo.Owner, &assetInfo.Created, &assetInfo.DID, &mimeType,
-			&assetInfo.GpsLat, &assetInfo.GpsLong, &assetInfo.Location, &assetInfo.Size); err != nil {
+			&assetInfo.GpsLat, &assetInfo.GpsLong, &assetInfo.Location, &assetInfo.Size, &assetInfo.MimeType); err != nil {
 
-			log.Panicf("DB error: %v", err)
+			log.Printf("DB error: %v", err)
 			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return nil
 		}
@@ -92,15 +92,15 @@ func AssetList(c *gin.Context, user *models.User) {
 	// TODO: For big sets maybe dynamically load asset info individually
 	rows, err := db.Instance.
 		Table("assets").
-		Select(assetsSelectClause).
-		Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
-		Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).Order("created_at DESC").Rows()
+		Select(AssetsSelectClause).
+		Joins("left join locations on locations.gps_lat = truncate(assets.gps_lat, 4) and locations.gps_long = truncate(assets.gps_long, 4)").
+		Where("user_id=? and deleted=0 and size>0 and thumb_size>0", user.ID).Order("created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
 	defer rows.Close()
-	result := loadAssetsFromRows(c, rows)
+	result := LoadAssetsFromRows(c, rows)
 	if result == nil {
 		return
 	}
