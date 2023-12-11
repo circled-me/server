@@ -179,10 +179,19 @@ func GroupSave(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusInternalServerError, DBError3Response)
 		return
 	}
-	if groupUser.IsAdmin || user.HasPermission(models.PermissionAdmin) {
+	retiredMembersTokenMap := models.LoadGroupUserIDs(group.ID)
+	sameMembers := len(retiredMembersTokenMap) == len(r.Members)
+	if sameMembers {
+		for _, member := range r.Members {
+			if _, present := retiredMembersTokenMap[member.ID]; !present {
+				sameMembers = false
+			}
+		}
+	}
+	// Update members?
+	if (groupUser.IsAdmin || user.HasPermission(models.PermissionAdmin)) && !sameMembers {
 		// We can edit the Group object...
 		newMembersMap := map[uint64]bool{}
-		retiredMembersTokenMap := models.LoadGroupUserIDs(group.ID)
 		for _, m := range r.Members {
 			newMembersMap[m.ID] = m.IsAdmin
 			delete(retiredMembersTokenMap, m.ID)

@@ -116,6 +116,11 @@ func newUserStatusResponse(user *models.User, details bool) UserStatusResponse {
 	return result
 }
 
+func numUsers() (result int) {
+	db.Instance.Raw("select count(*) from users").Scan(&result)
+	return
+}
+
 func UserLogin(c *gin.Context) {
 	postReq := UserLoginRequest{}
 	err := c.ShouldBindJSON(&postReq)
@@ -131,6 +136,10 @@ func UserLogin(c *gin.Context) {
 		}
 	} else if postReq.New {
 		// Check if we have a brand new instance
+		if numUsers() != 0 {
+			c.JSON(http.StatusForbidden, NopeResponse)
+			return
+		}
 		if err = createFirstUser(&postReq); err != nil {
 			c.JSON(http.StatusBadRequest, Response{err.Error()})
 			return
