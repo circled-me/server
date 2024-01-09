@@ -94,7 +94,7 @@ func processPending() {
 	// status has fewer tasks performed than the currently available ones
 	rows, err := db.Instance.
 		Table("assets").
-		Joins("LEFT JOIN processing_tasks ON (assets.id = processing_tasks.asset_id)").
+		Joins("left join processing_tasks ON (assets.id = processing_tasks.asset_id)").
 		Select("assets.id, IFNULL(processing_tasks.status, ''), processing_tasks.asset_id").
 		Where("assets.deleted=0 AND "+
 			"assets.size>0 AND "+

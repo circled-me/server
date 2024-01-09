@@ -57,8 +57,8 @@ func getMessagesFor(user *models.User, since int64) []models.GroupMessage {
 	rows, err := db.Instance.
 		Table("group_messages").
 		Select("group_messages.id, group_messages.group_id, server_stamp, client_stamp, users.id, users.name, content").
-		Joins("JOIN group_users ON group_users.user_id = ? AND group_users.group_id = group_messages.group_id", user.ID).
-		Joins("JOIN users ON users.id = group_messages.user_id").
+		Joins("join group_users ON group_users.user_id = ? AND group_users.group_id = group_messages.group_id", user.ID).
+		Joins("join users ON users.id = group_messages.user_id").
 		Where("group_messages.id > ?", since).
 		Order("group_messages.id DESC").
 		Rows()
@@ -134,7 +134,7 @@ func WebSocket(c *gin.Context, user *models.User) {
 		if string(message) == "pong" {
 			continue
 		}
-		log.Printf("recv: %s", message)
+		// log.Printf("recv: %s", message)
 		processMessage(user, message)
 	}
 }

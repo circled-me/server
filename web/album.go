@@ -43,6 +43,7 @@ func AlbumView(c *gin.Context) {
 		Table("album_assets").
 		Select(handlers.AssetsSelectClause).
 		Joins("join assets on album_assets.asset_id = assets.id").
+		Joins("left join favourite_assets on favourite_assets.asset_id = assets.id").
 		Joins("left join locations on locations.gps_lat = truncate(assets.gps_lat, 4) and locations.gps_long = truncate(assets.gps_long, 4)").
 		Where("album_assets.album_id = ? and assets.deleted=0 and assets.size>0 and assets.thumb_size>0", albumId).
 		Order("assets.created_at ASC").

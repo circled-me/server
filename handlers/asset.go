@@ -27,22 +27,23 @@ type AssetFetchRequest struct {
 }
 
 type AssetInfo struct {
-	ID       uint64   `json:"id"`
-	Type     uint     `json:"type"`
-	Owner    uint64   `json:"owner"`
-	Name     string   `json:"name"`
-	Location *string  `json:"location"`
-	DID      string   `json:"did"` // DeviceID
-	Created  uint64   `json:"created"`
-	GpsLat   *float64 `json:"gps_lat"`
-	GpsLong  *float64 `json:"gps_long"`
-	Size     uint64   `json:"size"`
-	MimeType string   `json:"mime_type"`
+	ID        uint64   `json:"id"`
+	Type      uint     `json:"type"`
+	Owner     uint64   `json:"owner"`
+	Name      string   `json:"name"`
+	Location  *string  `json:"location"`
+	DID       string   `json:"did"` // DeviceID
+	Created   uint64   `json:"created"`
+	GpsLat    *float64 `json:"gps_lat"`
+	GpsLong   *float64 `json:"gps_long"`
+	Size      uint64   `json:"size"`
+	MimeType  string   `json:"mime_type"`
+	Favourite bool     `json:"favourite"`
 }
 
 const (
 	// created_at field is adjusted with time_offset so the time can be shown "as UTC"
-	AssetsSelectClause = "assets.id, assets.name, assets.user_id, assets.created_at+ifnull(time_offset,0), assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display, assets.size, assets.mime_type"
+	AssetsSelectClause = "assets.id, assets.name, assets.user_id, assets.created_at+ifnull(time_offset,0), assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display, assets.size, assets.mime_type, favourite_assets.asset_id is not null as f"
 )
 
 type AssetDeleteRequest struct {
@@ -71,7 +72,7 @@ func LoadAssetsFromRows(c *gin.Context, rows *sql.Rows) *[]AssetInfo {
 	for rows.Next() {
 		assetInfo := AssetInfo{}
 		if err := rows.Scan(&assetInfo.ID, &assetInfo.Name, &assetInfo.Owner, &assetInfo.Created, &assetInfo.DID, &mimeType,
-			&assetInfo.GpsLat, &assetInfo.GpsLong, &assetInfo.Location, &assetInfo.Size, &assetInfo.MimeType); err != nil {
+			&assetInfo.GpsLat, &assetInfo.GpsLong, &assetInfo.Location, &assetInfo.Size, &assetInfo.MimeType, &assetInfo.Favourite); err != nil {
 
 			log.Printf("DB error: %v", err)
 			c.JSON(http.StatusInternalServerError, DBError2Response)
@@ -93,8 +94,9 @@ func AssetList(c *gin.Context, user *models.User) {
 	rows, err := db.Instance.
 		Table("assets").
 		Select(AssetsSelectClause).
+		Joins("left join favourite_assets on favourite_assets.asset_id = assets.id").
 		Joins("left join locations on locations.gps_lat = truncate(assets.gps_lat, 4) and locations.gps_long = truncate(assets.gps_long, 4)").
-		Where("user_id=? and deleted=0 and size>0 and thumb_size>0", user.ID).Order("created_at DESC").Rows()
+		Where("assets.user_id=? and assets.deleted=0 and assets.size>0 and assets.thumb_size>0", user.ID).Order("assets.created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return

@@ -104,9 +104,10 @@ func MomentAssets(c *gin.Context, user *models.User) {
 	rows, err := db.Instance.
 		Table("assets").
 		Select(AssetsSelectClause).
-		Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
-		Where("user_id = ? and place_id in (?) and deleted=0 and created_at>=? and created_at<=?", user.ID, strings.Split(r.Places, ","), r.Start, r.End).
-		Order("created_at DESC").Rows()
+		Joins("left join favourite_assets on favourite_assets.asset_id = assets.id").
+		Joins("left join locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
+		Where("assets.user_id = ? and place_id in (?) and assets.deleted=0 and assets.created_at>=? and assets.created_at<=?", user.ID, strings.Split(r.Places, ","), r.Start, r.End).
+		Order("assets.created_at DESC").Rows()
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)

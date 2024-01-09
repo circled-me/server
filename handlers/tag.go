@@ -74,7 +74,7 @@ func TagList(c *gin.Context, user *models.User) {
 	}
 	rows, err := db.Instance.Table("assets").Select("id, mime_type, favourite, created_at, locations.gps_lat, locations.gps_long, area, city, country").
 		Where("user_id=? AND deleted=0 AND size>0 AND thumb_size>0", user.ID).
-		Joins("LEFT JOIN locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").Order("created_at DESC").
+		Joins("left join locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").Order("created_at DESC").
 		Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
