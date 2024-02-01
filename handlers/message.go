@@ -101,10 +101,10 @@ func sendToSocketAndPush(message NotificationGetter, recipients map[uint64]strin
 	notification := message.getNotification()
 	pushTokens := make([]string, 0, len(recipients))
 	for userID, pushToken := range recipients {
-		pushTokens = append(pushTokens, pushToken)
 		clientID := models.GetUserSocketID(userID)
 		connections, exist := connectedUsers.Get(clientID)
 		if !exist {
+			pushTokens = append(pushTokens, pushToken)
 			continue
 		}
 		// TODO: If initiator, send only confirmation
