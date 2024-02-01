@@ -17,14 +17,15 @@ const (
 var httpClient = http.Client{}
 
 type Notification struct {
-	UserToken string            `json:"user_token" binding:"required"`
-	Title     string            `json:"title" binding:"required"`
-	Body      string            `json:"body" binding:"required"`
-	Data      map[string]string `json:"data"`
+	UserToken  string            `json:"user_token" binding:"required"` // TODO: deprecate
+	UserTokens []string          `json:"user_tokens" binding:"required"`
+	Title      string            `json:"title" binding:"required"`
+	Body       string            `json:"body" binding:"required"`
+	Data       map[string]string `json:"data"`
 }
 
-func (notification *Notification) SendTo(UserToken string) error {
-	notification.UserToken = UserToken
+func (notification *Notification) SendTo(UserTokens []string) error {
+	notification.UserTokens = UserTokens
 	return notification.Send()
 }
 
@@ -36,6 +37,7 @@ func (notification *Notification) Send() error {
 		log.Printf("SendPushNotification, error: %v", err)
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		buf.Reset()
 		io.Copy(&buf, resp.Body)

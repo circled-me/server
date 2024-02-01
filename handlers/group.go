@@ -134,10 +134,10 @@ func GroupCreate(c *gin.Context, user *models.User) {
 		}
 	}
 	// Send notification to all members
-	newMembersMessage := NewGroupUpdate(group.ID, GroupUpdateValueNew, user.Name+" added you to a new group", "Check your groups and start chatting")
+	newMembersMessage := NewGroupUpdate(group.ID, GroupUpdateValueNew, user.Name+" added you to a new group", "Check your groups and start chatting", "")
 	members := models.LoadGroupUserIDs(group.ID)
 	delete(members, user.ID)
-	go sendToSocketOrPush(&newMembersMessage, members)
+	go sendToSocketAndPush(&newMembersMessage, members)
 
 	c.JSON(http.StatusOK, GroupInfo{
 		ID:      group.ID,
@@ -179,14 +179,25 @@ func GroupSave(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusInternalServerError, DBError3Response)
 		return
 	}
-	retiredMembersTokenMap := models.LoadGroupUserIDs(group.ID)
-	sameMembers := len(retiredMembersTokenMap) == len(r.Members)
+	lastMembersTokenMap := models.LoadGroupUserIDs(group.ID)
+	sameMembers := len(lastMembersTokenMap) == len(r.Members)
 	if sameMembers {
 		for _, member := range r.Members {
-			if _, present := retiredMembersTokenMap[member.ID]; !present {
+			if _, present := lastMembersTokenMap[member.ID]; !present {
 				sameMembers = false
 			}
 		}
+	}
+	// Update name
+	if (groupUser.IsAdmin || user.HasPermission(models.PermissionAdmin)) && group.Name != r.Name {
+		group.Name = r.Name
+		if db.Instance.Omit("Members").Save(&group).Error != nil {
+			c.JSON(http.StatusInternalServerError, DBError4Response)
+			return
+		}
+		// Send notification to current members
+		updateMessage := NewGroupUpdate(group.ID, GroupUpdateValueNameChange, user.Name+" changed the group name to '"+r.Name+"'", "Check '"+r.Name+"'", r.Name)
+		go sendToSocketAndPush(&updateMessage, lastMembersTokenMap)
 	}
 	// Update members?
 	if (groupUser.IsAdmin || user.HasPermission(models.PermissionAdmin)) && !sameMembers {
@@ -194,7 +205,7 @@ func GroupSave(c *gin.Context, user *models.User) {
 		newMembersMap := map[uint64]bool{}
 		for _, m := range r.Members {
 			newMembersMap[m.ID] = m.IsAdmin
-			delete(retiredMembersTokenMap, m.ID)
+			delete(lastMembersTokenMap, m.ID)
 		}
 		oldMembersMap := map[uint64]bool{}
 		// Modify the current members
@@ -220,23 +231,22 @@ func GroupSave(c *gin.Context, user *models.User) {
 				IsAdmin: m.IsAdmin,
 			})
 		}
-		group.Name = r.Name
 		if db.Instance.Omit("Members").Save(&group).Error != nil {
 			c.JSON(http.StatusInternalServerError, DBError4Response)
 			return
 		}
 		// Send notification to new members
 		newMembersTokenMap := models.LoadGroupUserIDs(group.ID)
-		for k, _ := range newMembersTokenMap {
+		for k := range newMembersTokenMap {
 			if _, exists := newMembersMap[k]; !exists {
 				delete(newMembersTokenMap, k)
 			}
 		}
-		newMembersMessage := NewGroupUpdate(group.ID, GroupUpdateValueNew, user.Name+" added you to a new chat", "Check your groups and start chatting")
-		go sendToSocketOrPush(&newMembersMessage, newMembersTokenMap)
+		newMembersMessage := NewGroupUpdate(group.ID, GroupUpdateValueNew, user.Name+" added you to a new chat", "Check your groups and start chatting", "")
+		go sendToSocketAndPush(&newMembersMessage, newMembersTokenMap)
 		// Send notification to retired members
-		retiredMembersMessage := NewGroupUpdate(group.ID, GroupUpdateValueLeft, "", "")
-		go sendToSocketOrPush(&retiredMembersMessage, retiredMembersTokenMap)
+		retiredMembersMessage := NewGroupUpdate(group.ID, GroupUpdateValueLeft, "", "", "")
+		go sendToSocketAndPush(&retiredMembersMessage, lastMembersTokenMap)
 	}
 	c.JSON(http.StatusOK, GroupInfo{
 		ID:        group.ID,
@@ -270,7 +280,7 @@ func GroupDelete(c *gin.Context, user *models.User) {
 	}
 	members := models.LoadGroupUserIDs(r.ID)
 	delete(members, user.ID)
-	leftMessage := NewGroupUpdate(r.ID, GroupUpdateValueLeft, "", "")
+	leftMessage := NewGroupUpdate(r.ID, GroupUpdateValueLeft, "", "", "")
 
 	// Delete the Group object
 	group := models.Group{ID: r.ID}
@@ -280,7 +290,7 @@ func GroupDelete(c *gin.Context, user *models.User) {
 		return
 	}
 	// Send WS message to ex-members
-	go sendToSocketOrPush(&leftMessage, members)
+	go sendToSocketAndPush(&leftMessage, members)
 
 	c.JSON(http.StatusOK, OKResponse)
 }
