@@ -27,7 +27,7 @@ func getUploadRequest(c *gin.Context) (req models.UploadRequest, err error) {
 	token := c.Param("token")
 	// Valid for 3 hours
 	err = db.Instance.
-		Where("token = ? and created_at >= unix_timestamp()-3*3600", token).
+		Where("token = ? and created_at >= "+db.TimestampFunc+"-3*3600", token).
 		Preload("User").
 		Find(&req).Error
 	return
@@ -51,7 +51,7 @@ func UploadRequestView(c *gin.Context) {
 		return
 	}
 	// Some cleanup
-	db.Instance.Exec("delete from upload_requests where created_at < unix_timestamp()-7200")
+	db.Instance.Exec("delete from upload_requests where created_at < " + db.TimestampFunc + "-7200")
 
 	c.HTML(http.StatusOK, "upload_files.tmpl", gin.H{
 		"who": "@" + req.User.Name,
@@ -129,5 +129,6 @@ func UploadRequestConfirm(c *gin.Context) {
 }
 
 func DisallowRobots(c *gin.Context) {
-	c.String(http.StatusOK, "User-agent: *\nDisallow: /\n")
+	// c.String(http.StatusOK, "User-agent: *\nDisallow: /\n")
+	c.String(http.StatusOK, "User-agent: facebookexternalhit\nAllow: /w/*\n\n"+"User-agent: *\nDisallow: /\n")
 }

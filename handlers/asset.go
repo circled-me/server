@@ -43,7 +43,8 @@ type AssetInfo struct {
 
 const (
 	// created_at field is adjusted with time_offset so the time can be shown "as UTC"
-	AssetsSelectClause = "assets.id, assets.name, assets.user_id, assets.created_at+ifnull(time_offset,0), assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display, assets.size, assets.mime_type, favourite_assets.asset_id is not null as f"
+	AssetsSelectClause   = "assets.id, assets.name, assets.user_id, assets.created_at+ifnull(time_offset,0), assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display, assets.size, assets.mime_type, favourite_assets.asset_id is not null as f"
+	LeftJoinForLocations = "left join locations ON locations.gps_lat = round(assets.gps_lat*10000-0.5)/10000.0 AND locations.gps_long = round(assets.gps_long*10000-0.5)/10000.0"
 )
 
 type AssetDeleteRequest struct {
@@ -86,16 +87,19 @@ func LoadAssetsFromRows(c *gin.Context, rows *sql.Rows) *[]AssetInfo {
 
 func AssetList(c *gin.Context, user *models.User) {
 	// Modified depends on deleted assets as well, that's why the where condition is different
-	tx := db.Instance.Table("assets").Select("max(updated_at)").Where("user_id=? AND size>0 AND thumb_size>0", user.ID)
+	tx := db.Instance.
+		Table("assets").
+		Select("max(updated_at)").
+		Where("user_id=? AND size>0 AND thumb_size>0", user.ID)
 	if isNotModified(c, tx) {
 		return
 	}
-	// TODO: For big sets maybe dynamically load asset info individually
+	// TODO: For big sets maybe dynamically load asset info individually?
 	rows, err := db.Instance.
 		Table("assets").
 		Select(AssetsSelectClause).
 		Joins("left join favourite_assets on favourite_assets.asset_id = assets.id").
-		Joins("left join locations on locations.gps_lat = truncate(assets.gps_lat, 4) and locations.gps_long = truncate(assets.gps_long, 4)").
+		Joins(LeftJoinForLocations).
 		Where("assets.user_id=? and assets.deleted=0 and assets.size>0 and assets.thumb_size>0", user.ID).Order("assets.created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
@@ -220,7 +224,9 @@ func AssetDelete(c *gin.Context, user *models.User) {
 			log.Printf("Asset: %d, save error %s", id, err)
 			continue
 		}
+		// TODO: Delete record better (and rely on cascaded deletes) and reinsert with same RemoteID (to stop re-uploading)?
 		db.Instance.Exec("delete from album_assets where asset_id=?", id)
+		db.Instance.Exec("delete from favourite_assets where asset_id=?", id)
 		storage := storage.StorageFrom(&asset.Bucket)
 		if storage == nil {
 			log.Printf("Asset: %d, error: storage is nil", id)

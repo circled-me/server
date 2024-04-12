@@ -4,9 +4,8 @@ COPY go.sum /go/src/circled-server/
 WORKDIR /go/src/circled-server/
 RUN go mod download
 COPY . /go/src/circled-server
-RUN go build -o circled-server .
-RUN apk add mailcap
-
+RUN apk add mailcap gcc musl-dev
+RUN CGO_ENABLED=1 go build -o circled-server .
 
 FROM jrottenberg/ffmpeg:6-alpine
 RUN apk --no-cache add ca-certificates exiftool tzdata

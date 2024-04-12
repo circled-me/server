@@ -14,7 +14,7 @@ func AlbumView(c *gin.Context) {
 	rows, err := db.Instance.
 		Table("album_shares").
 		Select("album_id, albums.name, owners.name, hide_original, hero_asset_id").
-		Where("token = ? and (expires_at is null or expires_at=0 or expires_at>unix_timestamp())", token).
+		Where("token = ? and (expires_at is null or expires_at=0 or expires_at>"+db.TimestampFunc+")", token).
 		Joins("join albums on album_shares.album_id = albums.id").
 		Joins("join users on album_shares.user_id = users.id").
 		Joins("join users as owners on albums.user_id = owners.id").
@@ -44,7 +44,7 @@ func AlbumView(c *gin.Context) {
 		Select(handlers.AssetsSelectClause).
 		Joins("join assets on album_assets.asset_id = assets.id").
 		Joins("left join favourite_assets on favourite_assets.asset_id = assets.id").
-		Joins("left join locations on locations.gps_lat = truncate(assets.gps_lat, 4) and locations.gps_long = truncate(assets.gps_long, 4)").
+		Joins(handlers.LeftJoinForLocations).
 		Where("album_assets.album_id = ? and assets.deleted=0 and assets.size>0 and assets.thumb_size>0", albumId).
 		Order("assets.created_at ASC").
 		Rows()
@@ -98,6 +98,7 @@ func AlbumView(c *gin.Context) {
 		c.JSON(http.StatusOK, json)
 		return
 	}
+	// json["baseURL"] = config.SELF_BASE_URL + c.Request.URL.String()
 	json["baseURL"] = c.Request.URL.String()
 	c.HTML(http.StatusOK, "album_view.tmpl", json)
 }
@@ -118,7 +119,7 @@ func AlbumAssetView(c *gin.Context) {
 	rows, err := db.Instance.Table("album_shares").Select("album_assets.album_id").
 		Where("token = ? and "+
 			"album_assets.asset_id = ? and "+
-			"(expires_at is null or expires_at=0 or expires_at>unix_timestamp())"+
+			"(expires_at is null or expires_at=0 or expires_at>"+db.TimestampFunc+")"+
 			hideOriginalCond, token, r.ID).
 		Joins("join album_assets on album_shares.album_id = album_assets.album_id").Rows()
 

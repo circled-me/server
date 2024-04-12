@@ -21,6 +21,12 @@ type processingTasksElement struct {
 	task processingTask
 }
 
+type pendingTask struct {
+	assetID  uint64
+	status   string
+	recordID *uint64
+}
+
 type processingTasks []processingTasksElement
 
 var tasks = processingTasks{}
@@ -98,7 +104,7 @@ func processPending() {
 		Select("assets.id, IFNULL(processing_tasks.status, ''), processing_tasks.asset_id").
 		Where("assets.deleted=0 AND "+
 			"assets.size>0 AND "+
-			"unix_timestamp()-assets.updated_at>30 AND "+
+			db.TimestampFunc+"-assets.updated_at>30 AND "+
 			"(processing_tasks.status IS NULL OR "+
 			"  LENGTH(processing_tasks.status)-LENGTH(REPLACE(processing_tasks.status, ',', ''))+1 < ?)", len(tasks)).
 		Order("assets.created_at").Rows()
@@ -106,14 +112,27 @@ func processPending() {
 		log.Printf("processPending error: %v", err)
 		return
 	}
-	defer rows.Close()
+	// Create an array of temp structs to hold the fetched data
+	pendingTasks := []pendingTask{}
 	for rows.Next() {
-		asset := models.Asset{}
+		assetID := uint64(0)
 		status := ""
 		var recordId *uint64
-		if err = rows.Scan(&asset.ID, &status, &recordId); err != nil {
+		if err = rows.Scan(&assetID, &status, &recordId); err != nil {
 			log.Printf("processPending row error: %v", err)
 			break
+		}
+		pendingTasks = append(pendingTasks, pendingTask{
+			assetID:  assetID,
+			status:   status,
+			recordID: recordId,
+		})
+	}
+	rows.Close()
+	// Above was needed as sqlite3 was locking
+	for _, task := range pendingTasks {
+		asset := models.Asset{
+			ID: task.assetID,
 		}
 		if err = db.Instance.Preload("Bucket").Preload("User").First(&asset).Error; err != nil {
 			log.Printf("processPending load asset error: %v, asset: %d", err, asset.ID)
@@ -121,7 +140,7 @@ func processPending() {
 		}
 		current := ProcessingTask{
 			AssetID: asset.ID,
-			Status:  status,
+			Status:  task.status,
 		}
 		var assetStorage storage.StorageAPI
 		if tasks.requireContent(&asset) {
@@ -142,7 +161,7 @@ func processPending() {
 		statusMap := current.statusToMap()
 		tasks.process(&asset, assetStorage, statusMap)
 		current.updateWith(statusMap)
-		if recordId == nil {
+		if task.recordID == nil {
 			// This is a new record
 			err = db.Instance.Create(&current).Error
 		} else {

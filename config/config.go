@@ -9,7 +9,8 @@ var (
 	TLS_DOMAINS        = ""                    // e.g. "example.com,example2.com"
 	DEFAULT_ASSET_PATH = "<year>/<month>/<id>" // also available: <name>, <Month>
 	PUSH_SERVER        = "https://push.circled.me"
-	MYSQL_DSN          = "root:@tcp(127.0.0.1:3306)/circled?charset=utf8mb4&parseTime=True&loc=Local"
+	MYSQL_DSN          = "" // MySQL will be used if this is set
+	SQLITE_FILE        = "" // SQLite will be used if MYSQL_DSN is not configured and this is set
 	BIND_ADDRESS       = "0.0.0.0:8080"
 	TMP_DIR            = "/tmp" // Used for temporary video conversion, etc (in case of S3 bucket)
 	DEBUG_MODE         = true
@@ -19,6 +20,7 @@ func init() {
 	readEnvString("TLS_DOMAINS", &TLS_DOMAINS)
 	readEnvString("PUSH_SERVER", &PUSH_SERVER)
 	readEnvString("MYSQL_DSN", &MYSQL_DSN)
+	readEnvString("SQLITE_FILE", &SQLITE_FILE)
 	readEnvString("BIND_ADDRESS", &BIND_ADDRESS)
 	readEnvString("TMP_DIR", &TMP_DIR)
 	readEnvBool("DEBUG_MODE", &DEBUG_MODE)

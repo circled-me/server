@@ -72,7 +72,7 @@ type AlbumShareResponse struct {
 
 func getFirstFavouriteAssetID(userID uint64) uint64 {
 	fav := models.FavouriteAsset{}
-	db.Instance.First(&fav, "user_id = ?", userID)
+	db.Instance.Order("asset_id DESC").Limit(1).Find(&fav, "user_id = ?", userID)
 	return fav.AssetID
 }
 
@@ -324,9 +324,9 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 		rows, err = db.Instance.
 			Table("favourite_assets").
 			Select(AssetsSelectClause).
-			Where("favourite_assets.user_id = ?", user.ID).
 			Joins("join assets on favourite_assets.asset_id = assets.id").
-			Joins("left join locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
+			Joins(LeftJoinForLocations).
+			Where("favourite_assets.user_id = ? and assets.deleted = 0", user.ID).
 			Order("assets.created_at DESC").Rows()
 	} else {
 		// Normal album - check for access (own album or as a contributor)
@@ -342,7 +342,7 @@ func AlbumAssets(c *gin.Context, user *models.User) {
 			Where("album_id = ?", r.AlbumID).
 			Joins("join assets on album_assets.asset_id = assets.id").
 			Joins("left join favourite_assets on favourite_assets.asset_id = assets.id").
-			Joins("left join locations ON locations.gps_lat = truncate(assets.gps_lat, 4) AND locations.gps_long = truncate(assets.gps_long, 4)").
+			Joins(LeftJoinForLocations).
 			Order("assets.created_at DESC").Rows()
 	}
 	if err != nil {
