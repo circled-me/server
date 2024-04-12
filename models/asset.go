@@ -84,7 +84,7 @@ func (a *Asset) GetCreatedTimeInLocation() time.Time {
 func (a *Asset) getAssetFilePathNoExt() string {
 	result := a.Bucket.AssetPathPattern
 	if result == "" {
-		result = config.DEFAULT_ASSET_PATH
+		result = config.DEFAULT_ASSET_PATH_PATTERN
 	}
 	assetTime := a.GetCreatedTimeInLocation()
 	ext := filepath.Ext(a.Name)

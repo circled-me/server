@@ -58,7 +58,7 @@ func BucketSave(c *gin.Context, user *models.User) {
 	cleanupPath(&bucket)
 
 	if bucket.AssetPathPattern == "" {
-		bucket.AssetPathPattern = config.DEFAULT_ASSET_PATH
+		bucket.AssetPathPattern = config.DEFAULT_ASSET_PATH_PATTERN
 	}
 	if bucket.Name == "" {
 		c.JSON(http.StatusBadRequest, Response{"Empty bucket name"})

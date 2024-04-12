@@ -10,6 +10,15 @@ const (
 	PermissionPhotoBackup     Permission = 5
 )
 
+var (
+	AllPermissions = []Permission{
+		PermissionAdmin,
+		PermissionPhotoUpload,
+		PermissionCanCreateGroups,
+		PermissionPhotoBackup,
+	}
+)
+
 type Grant struct {
 	ID         uint64 `gorm:"primaryKey"`
 	CreatedAt  int64

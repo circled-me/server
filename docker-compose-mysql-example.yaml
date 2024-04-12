@@ -13,6 +13,8 @@ services:
     environment:
       MYSQL_DSN: "root:@tcp(mysql:3306)/circled?charset=utf8mb4&parseTime=True&loc=Local"
       BIND_ADDRESS: 0.0.0.0:8080
+      DEFAULT_BUCKET_DIR: "/mnt/data1"
+      DEFAULT_ASSET_PATH_PATTERN: "<year>/<month>/<id>"
     volumes:
       - ./asset-data:/mnt/data1
 

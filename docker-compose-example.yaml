@@ -8,5 +8,7 @@ services:
     environment:
       SQLITE_FILE: "/mnt/data1/circled.db"
       BIND_ADDRESS: "0.0.0.0:8080"
+      DEFAULT_BUCKET_DIR: "/mnt/data1"
+      DEFAULT_ASSET_PATH_PATTERN: "<year>/<month>/<id>"
     volumes:
       - ./circled-data:/mnt/data1

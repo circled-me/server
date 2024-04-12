@@ -79,13 +79,16 @@ func createFirstUser(postReq *UserLoginRequest) (err error) {
 	if err != nil {
 		return errors.New("DB error 2")
 	}
-	err = db.Instance.Save(&models.Grant{
-		GrantorID:  user.ID,
-		UserID:     user.ID,
-		Permission: models.PermissionAdmin,
-	}).Error
-	if err != nil {
-		return errors.New("DB error 3")
+	// Add all permissions to the first user
+	for _, permission := range models.AllPermissions {
+		err = db.Instance.Save(&models.Grant{
+			GrantorID:  user.ID,
+			UserID:     user.ID,
+			Permission: permission,
+		}).Error
+		if err != nil {
+			return errors.New("DB error 3")
+		}
 	}
 	return nil
 }

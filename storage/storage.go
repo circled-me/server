@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"server/config"
 	"server/db"
 )
 
@@ -52,7 +53,26 @@ func Init() {
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("Storage Buckets found: %d", len(buckets))
+	if len(buckets) == 0 {
+		log.Printf("No Storage Buckets found")
+		// Create default bucket if MAIN_BUCKET_DIR is set
+		if config.DEFAULT_BUCKET_DIR != "" {
+			log.Printf("Creating default bucket in directory: %s", config.DEFAULT_BUCKET_DIR)
+			bucket := Bucket{
+				Name:             "Main",
+				Path:             config.DEFAULT_BUCKET_DIR,
+				AssetPathPattern: config.DEFAULT_ASSET_PATH_PATTERN,
+				StorageType:      StorageTypeFile,
+			}
+			err := db.Instance.Create(&bucket).Error
+			if err != nil {
+				log.Fatalf("Error creating default bucket: %v", err)
+			}
+			log.Printf("Default bucket created!")
+			// Reload buckets
+			_ = db.Instance.Find(&buckets)
+		}
+	}
 	for _, bucket := range buckets {
 		log.Printf("Bucket: %+v\n", bucket)
 		storage := NewStorage(&bucket)
