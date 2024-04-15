@@ -26,7 +26,7 @@ ___
 
 
 ## Main features:
-- Fast response times and low CPU and memory usage
+- Fast response times and low CPU and memory footprint
 - iOS and Android photo backup (using the circled.me app available on the AppStore and Google Play)
   - Supports either locally mounted disks or
   - S3-compatible Services - this allows different users to use their own S3 bucket on the same server
@@ -34,7 +34,7 @@ ___
 - Albums
   - Adding local server contributors and viewers
   - Sharing albums with anyone with a "secret" link
-- Chat over websockets and with push notifications
+- Chat with push notifications
 - Filtering photos by year, month, location, etc
 - Moments - automatically grouping photos by time and location
 - Reverse geocoding for all assets
@@ -54,10 +54,13 @@ docker-compose -f docker-compose-example.yaml up
 Now you can use the app and connect to your server at `http://<YOUR_IP>:8080` and create your first (admin) user.
 
 Current configuration environment variables:
+- `SQLITE_FILE` - location of the SQLite file. If non-existent, a new DB file will be created with the given name. Note that MySQL below takes precedence (if both configured)
 - `MYSQL_DSN` - see example or refer to https://github.com/go-sql-driver/mysql#dsn-data-source-name
 - `BIND_ADDRESS` - IP and port to bind to (incompatible with `TLS_DOMAINS`). This is useful if your server is, say, behind reverse proxy
 - `TLS_DOMAINS` - a list of comma-separated domain names. This uses the Let's Encrypt Gin implementation (https://github.com/gin-gonic/autotls)
 - `DEBUG_MODE` - currently defaults to `yes`
+- `DEFAULT_BUCKET_DIR` - a directory that will be used as default bucket if no other buckets exist (i.e. the first time you run the server)
+- `DEFAULT_ASSET_PATH_PATTERN` - the default path pattern to create subdirectories and file names based on asset info. Defaults to `<year>/<month>/<id>`
 
 ## docker-compose example
 ```yaml
