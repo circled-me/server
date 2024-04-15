@@ -12,7 +12,7 @@ In my personal case, I share mostly photos with my family and close friends.
 Logo is <a href="http://madebytow.com/">madebytow.com</a>
 
 ## Mobile app
-The **circled.me** mobile app **works with multiple accounts and servers**. For example, you can have your family server and account, and your gaming/running/reading comunities' accounts on the same app and being able to interact with all of them at the same time. It is currently the only way to interface with the server. Go to https://circled.me to download it.
+The **circled.me** mobile app **works with multiple accounts and servers**. For example, you can have your family server and account, and your gaming/running/reading comunities' accounts on the same app and being able to interact with all of them at the same time. It is currently the only way to interface with the server. Go to https://circled.me to download it or go to the source repo here: https://github.com/circled-me/app
 
 <img src="https://app.circled.me/screenshots.jpg"/>
 
