@@ -55,7 +55,7 @@ func Init() {
 	}
 	if len(buckets) == 0 {
 		log.Printf("No Storage Buckets found")
-		// Create default bucket if MAIN_BUCKET_DIR is set
+		// Create default bucket if DEFAULT_BUCKET_DIR is set
 		if config.DEFAULT_BUCKET_DIR != "" {
 			log.Printf("Creating default bucket in directory: %s", config.DEFAULT_BUCKET_DIR)
 			bucket := Bucket{
