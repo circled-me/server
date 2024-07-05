@@ -18,6 +18,7 @@ func Init() {
 	es = append(es, db.Instance.AutoMigrate(&AlbumAsset{}))
 	es = append(es, db.Instance.AutoMigrate(&AlbumShare{}))
 	es = append(es, db.Instance.AutoMigrate(&Asset{}))
+	es = append(es, db.Instance.AutoMigrate(&Face{}))
 	es = append(es, db.Instance.AutoMigrate(&FavouriteAsset{}))
 	es = append(es, db.Instance.AutoMigrate(&Grant{}))
 	es = append(es, db.Instance.AutoMigrate(&Group{}))

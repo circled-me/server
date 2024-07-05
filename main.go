@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"server/faces"
 	"server/handlers"
 	"server/models"
 	"server/storage"
@@ -66,6 +67,7 @@ func main() {
 		router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/asset/fetch"})))
 	}
 	router.Use((&utils.CacheRouter{CacheTime: utils.CacheNoCache}).Handler()) // No cache by default, individual end-points can override that
+	router.GET("/detect", faces.DetectHandler)
 	// Custom Auth Router
 	authRouter := &auth.Router{Base: router}
 	// Backup handlers

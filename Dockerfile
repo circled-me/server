@@ -196,14 +196,23 @@ COPY --from=compile \
     /lib/x86_64-linux-gnu/libc.so.6 \
     /lib/x86_64-linux-gnu/
 
-WORKDIR /opt/circled
-COPY --from=go-server-build /go/src/circled-server/circled-server .
-COPY --from=go-server-build /go/src/circled-server/templates ./templates
-
 RUN python3 -m pip install --upgrade Pillow face-recognition
+# Downgrade numpy to 1.26.4
+RUN pip3 install --upgrade numpy==1.26.4
 
 RUN apt-get clean
 RUN apt-get autoclean
 RUN apt-get autoremove
-# ENTRYPOINT ["./circled-server"]
-ENTRYPOINT [ "/bin/bash" ]
+
+WORKDIR /opt/circled
+COPY --from=go-server-build /go/src/circled-server/circled-server .
+COPY --from=go-server-build /go/src/circled-server/templates ./templates
+COPY --from=go-server-build /go/src/circled-server/faces/*.py ./faces/
+
+# Move up
+RUN apt-get install -y exiftool
+
+ENV DEFAULT_BUCKET_DIR /mnt/down/c1
+ENV SQLITE_FILE /mnt/down/c1/circled.db
+ENTRYPOINT ["./circled-server"]
+# ENTRYPOINT [ "/bin/bash" ]

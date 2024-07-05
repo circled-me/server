@@ -40,6 +40,7 @@ func Init() {
 	tasks.register(&videoConvert{})
 	tasks.register(&metadata{})
 	tasks.register(&thumb{})
+	tasks.register(&detectfaces{})
 }
 
 func (ts *processingTasks) register(t processingTask) {
