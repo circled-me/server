@@ -88,7 +88,7 @@ func (ts *processingTasks) process(asset *models.Asset, assetStorage storage.Sto
 		if cleanup != nil {
 			cleanAll = append(cleanAll, cleanup)
 		}
-		log.Printf("Task \"%s\", asset ID: %d, result: %d, time: %v", e.name, asset.ID, statusMap[e.name], timeConsumed)
+		log.Printf("Task \"%s\", asset ID: %d, result: %s, time: %v", e.name, asset.ID, statusConstMap[statusMap[e.name]], timeConsumed)
 	}
 	for _, clean := range cleanAll {
 		clean()

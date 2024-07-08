@@ -2,6 +2,13 @@ package faces
 
 import "encoding/json"
 
+const (
+	IndexTop    = 0
+	IndexRight  = 1
+	IndexBottom = 2
+	IndexLeft   = 3
+)
+
 type (
 	FaceBoundaries      [4]int
 	FaceBoundariesList  []FaceBoundaries

@@ -2,10 +2,12 @@ package processing
 
 import (
 	"log"
+	"reflect"
 	"server/db"
 	"server/faces"
 	"server/models"
 	"server/storage"
+	"strconv"
 )
 
 type detectfaces struct{}
@@ -45,10 +47,16 @@ func (t *detectfaces) process(asset *models.Asset, storage storage.StorageAPI) (
 			break
 		}
 		faceModel := models.Face{
-			AssetID:  asset.ID,
-			Num:      i,
-			Location: face.ToJSONString(),
-			Encoding: result.Encodings[i].ToJSONString(),
+			AssetID: asset.ID,
+			Num:     i,
+			Top:     face[faces.IndexTop],
+			Right:   face[faces.IndexRight],
+			Bottom:  face[faces.IndexBottom],
+			Left:    face[faces.IndexLeft],
+		}
+		// Use reflection to set Vx fields to the corresponding value from the array
+		for j, value := range result.Encodings[i] {
+			reflect.ValueOf(&faceModel).Elem().FieldByName("V" + strconv.Itoa(j)).SetFloat(value)
 		}
 		if err := db.Instance.Create(&faceModel).Error; err != nil {
 			log.Printf("Error saving face location for asset %d: %v", asset.ID, err)

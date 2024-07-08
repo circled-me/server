@@ -323,3 +323,39 @@ func AssetUnfavourite(c *gin.Context, user *models.User) {
 	}
 	c.JSON(http.StatusOK, OKResponse)
 }
+
+func GetFacesForAsset(c *gin.Context, user *models.User) {
+	assetIDSt, exists := c.GetQuery("id")
+	if !exists {
+		c.JSON(http.StatusBadRequest, Response{"Missing asset ID"})
+		return
+	}
+	assetID, err := strconv.ParseUint(assetIDSt, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{"Invalid asset ID"})
+		return
+	}
+	// asset := models.Asset{ID: assetID}
+	// db.Instance.First(&asset)
+	// if asset.ID != assetID || asset.UserID != user.ID {
+	// 	c.JSON(http.StatusUnauthorized, NopeResponse)
+	// 	return
+	// }
+	rows, err := db.Instance.Raw("select num, top, right, bottom, left from faces where asset_id=? order by num asc", assetID).Rows()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, DBError1Response)
+		return
+	}
+	defer rows.Close()
+	result := []models.Face{}
+	for rows.Next() {
+		face := models.Face{}
+		if err = rows.Scan(&face.Num, &face.Top, &face.Right, &face.Bottom, &face.Left); err != nil {
+
+			c.JSON(http.StatusInternalServerError, DBError2Response)
+			return
+		}
+		result = append(result, face)
+	}
+	c.JSON(http.StatusOK, result)
+}

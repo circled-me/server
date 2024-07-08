@@ -38,14 +38,8 @@ func shutdown() {
 func backgroundChecker() {
 	for {
 		mutex.Lock()
-		if scriptRunning {
-			if time.Since(lastUsed) > 20*time.Second && stdin != nil && stdout != nil {
-				shutdown()
-			} else {
-				if writeAndRead("ping") != "pong" {
-					shutdown()
-				}
-			}
+		if scriptRunning && time.Since(lastUsed) > 120*time.Second && stdin != nil && stdout != nil {
+			shutdown()
 		}
 		mutex.Unlock()
 		time.Sleep(10 * time.Second)

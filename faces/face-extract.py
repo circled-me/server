@@ -15,10 +15,6 @@ while True:
     line = sys.stdin.readline().strip()
     if not line or line == '':
         break
-    if line == 'ping':
-        print('pong')
-        sys.stdout.flush()
-        continue
 
     # Load the image from the line
     image = face_recognition.load_image_file(line)
