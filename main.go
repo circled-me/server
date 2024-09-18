@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"server/faces"
 	"server/handlers"
 	"server/models"
 	"server/storage"
@@ -67,7 +66,6 @@ func main() {
 		router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/asset/fetch"})))
 	}
 	router.Use((&utils.CacheRouter{CacheTime: utils.CacheNoCache}).Handler()) // No cache by default, individual end-points can override that
-	router.GET("/detect", faces.DetectHandler)
 	// Custom Auth Router
 	authRouter := &auth.Router{Base: router}
 	// Backup handlers
@@ -93,7 +91,7 @@ func main() {
 	authRouter.POST("/asset/delete", handlers.AssetDelete, models.PermissionPhotoUpload) // TODO: S3 Delete done?
 	authRouter.POST("/asset/favourite", handlers.AssetFavourite)
 	authRouter.POST("/asset/unfavourite", handlers.AssetUnfavourite)
-	authRouter.GET("/asset/faces", handlers.GetFacesForAsset) // TODO: Fix permissions
+	authRouter.GET("/asset/faces", handlers.FacesForAsset)
 	// Album handlers
 	authRouter.GET("/album/list", handlers.AlbumList)
 	authRouter.POST("/album/create", handlers.AlbumCreate, models.PermissionPhotoUpload)

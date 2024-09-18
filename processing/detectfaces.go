@@ -40,23 +40,18 @@ func (t *detectfaces) process(asset *models.Asset, storage storage.StorageAPI) (
 		return Failed, nil
 	}
 	// Save faces' data to DB
-	for i, face := range result.Locations {
-		if i >= len(result.Encodings) {
-			// There should be always a corresponding encoding for each face location
-			log.Printf("Error: face location %d without encoding for asset %d", i, asset.ID)
-			break
-		}
+	for i, face := range result {
 		faceModel := models.Face{
 			AssetID: asset.ID,
 			Num:     i,
-			Top:     face[faces.IndexTop],
-			Right:   face[faces.IndexRight],
-			Bottom:  face[faces.IndexBottom],
-			Left:    face[faces.IndexLeft],
+			X1:      face.Rectangle.Min.X,
+			Y1:      face.Rectangle.Min.Y,
+			X2:      face.Rectangle.Max.X,
+			Y2:      face.Rectangle.Max.Y,
 		}
 		// Use reflection to set Vx fields to the corresponding value from the array
-		for j, value := range result.Encodings[i] {
-			reflect.ValueOf(&faceModel).Elem().FieldByName("V" + strconv.Itoa(j)).SetFloat(value)
+		for j, value := range face.Descriptor {
+			reflect.ValueOf(&faceModel).Elem().FieldByName("V" + strconv.Itoa(j)).SetFloat(float64(value))
 		}
 		if err := db.Instance.Create(&faceModel).Error; err != nil {
 			log.Printf("Error saving face location for asset %d: %v", asset.ID, err)
