@@ -3,6 +3,7 @@ package faces
 import (
 	"log"
 	"path/filepath"
+	"server/config"
 
 	"github.com/Kagami/go-face"
 )
@@ -25,5 +26,9 @@ func init() {
 func Detect(imgPath string) ([]face.Face, error) {
 	log.Printf("Detecting faces in %s", imgPath)
 	// Recognize faces on that image.
-	return rec.RecognizeFile(imgPath)
+	if !config.FACEDETECT_CNN {
+		return rec.RecognizeFile(imgPath)
+	}
+	// Default is CNN (Convolutional Neural Network) based detection
+	return rec.RecognizeFileCNN(imgPath)
 }

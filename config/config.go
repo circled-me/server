@@ -5,6 +5,10 @@ import (
 	"strings"
 )
 
+const (
+	FaceThresholdSquared = 0.36 // 0.6^2
+)
+
 var (
 	TLS_DOMAINS                = ""                    // e.g. "example.com,example2.com"
 	DEFAULT_ASSET_PATH_PATTERN = "<year>/<month>/<id>" // also available: <name>, <Month>
@@ -15,6 +19,7 @@ var (
 	TMP_DIR                    = "/tmp" // Used for temporary video conversion, etc (in case of S3 bucket)
 	DEFAULT_BUCKET_DIR         = ""     // Used for creating initial bucket
 	DEBUG_MODE                 = true
+	FACEDETECT_CNN             = true // Use Convolutional Neural Network for face detection (as opposed to HOG)
 )
 
 func init() {
@@ -27,6 +32,7 @@ func init() {
 	readEnvString("DEFAULT_BUCKET_DIR", &DEFAULT_BUCKET_DIR)
 	readEnvString("DEFAULT_ASSET_PATH_PATTERN", &DEFAULT_ASSET_PATH_PATTERN)
 	readEnvBool("DEBUG_MODE", &DEBUG_MODE)
+	readEnvBool("FACEDETECT_CNN", &FACEDETECT_CNN)
 }
 
 func readEnvString(name string, value *string) {
