@@ -15,6 +15,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	backUpCheckSize = 900
+)
+
 type BackupRequest struct {
 	RemoteID   string   `json:"id" binding:"required"`
 	Name       string   `json:"name" binding:"required"`
@@ -220,22 +224,33 @@ func BackupCheck(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusInternalServerError, Response{err.Error()})
 		return
 	}
-	rows, err := db.Instance.Table("assets").Select("remote_id").
-		Where("user_id = ? AND remote_id IN (?) AND (thumb_size>0 OR (mime_type NOT LIKE 'image/%' AND mime_type NOT LIKE 'video/%'))", user.ID, r.IDs).Rows()
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, DBError1Response)
-		return
-	}
-	defer rows.Close()
-	var remoteID string
 	result := []string{}
-	for rows.Next() {
-		if err = rows.Scan(&remoteID); err != nil {
-			c.JSON(http.StatusInternalServerError, DBError2Response)
+	var ids []string
+	// Check in batches as SQLite has a limit of 999 variables
+	for i := 0; i < 1+len(r.IDs)/backUpCheckSize; i++ {
+		if i == len(r.IDs)/backUpCheckSize {
+			// Last batch
+			ids = r.IDs[i*backUpCheckSize:]
+		} else {
+			ids = r.IDs[i*backUpCheckSize : (i+1)*backUpCheckSize]
+		}
+		rows, err := db.Instance.Table("assets").Select("remote_id").
+			Where("user_id = ? AND remote_id IN (?) AND (thumb_size>0 OR (mime_type NOT LIKE 'image/%' AND mime_type NOT LIKE 'video/%'))", user.ID, ids).Rows()
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, DBError1Response)
 			return
 		}
-		result = append(result, remoteID)
+		var remoteID string
+		for rows.Next() {
+			if err = rows.Scan(&remoteID); err != nil {
+				c.JSON(http.StatusInternalServerError, DBError2Response)
+				rows.Close()
+				return
+			}
+			result = append(result, remoteID)
+		}
+		rows.Close()
 	}
 	c.JSON(http.StatusOK, result)
 }
