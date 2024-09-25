@@ -227,12 +227,11 @@ func BackupCheck(c *gin.Context, user *models.User) {
 	result := []string{}
 	var ids []string
 	// Check in batches as SQLite has a limit of 999 variables
-	for i := 0; i < 1+len(r.IDs)/backUpCheckSize; i++ {
-		if i == len(r.IDs)/backUpCheckSize {
-			// Last batch
-			ids = r.IDs[i*backUpCheckSize:]
+	for current := 0; current < len(r.IDs); current += backUpCheckSize {
+		if current+backUpCheckSize > len(r.IDs) {
+			ids = r.IDs[current:]
 		} else {
-			ids = r.IDs[i*backUpCheckSize : (i+1)*backUpCheckSize]
+			ids = r.IDs[current : current+backUpCheckSize]
 		}
 		rows, err := db.Instance.Table("assets").Select("remote_id").
 			Where("user_id = ? AND remote_id IN (?) AND (thumb_size>0 OR (mime_type NOT LIKE 'image/%' AND mime_type NOT LIKE 'video/%'))", user.ID, ids).Rows()
