@@ -95,7 +95,10 @@ func main() {
 	authRouter.POST("/asset/delete", handlers.AssetDelete, models.PermissionPhotoUpload) // TODO: S3 Delete done?
 	authRouter.POST("/asset/favourite", handlers.AssetFavourite)
 	authRouter.POST("/asset/unfavourite", handlers.AssetUnfavourite)
-	authRouter.GET("/asset/faces", handlers.FacesForAsset)
+	authRouter.GET("/faces/for-asset", handlers.FacesForAsset)
+	authRouter.GET("/faces/people", handlers.PeopleList)
+	authRouter.POST("/faces/create-person", handlers.CreatePerson)
+	authRouter.POST("/faces/assign", handlers.PersonAssignFace)
 	// Album handlers
 	authRouter.GET("/album/list", handlers.AlbumList)
 	authRouter.POST("/album/create", handlers.AlbumCreate, models.PermissionPhotoUpload)

@@ -26,6 +26,7 @@ func Init() {
 	es = append(es, db.Instance.AutoMigrate(&GroupUser{}))
 	es = append(es, db.Instance.AutoMigrate(&Location{}))
 	es = append(es, db.Instance.AutoMigrate(&Place{}))
+	es = append(es, db.Instance.AutoMigrate(&Person{}))
 	es = append(es, db.Instance.AutoMigrate(&UploadRequest{}))
 	es = append(es, db.Instance.AutoMigrate(&User{}))
 

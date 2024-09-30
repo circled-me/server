@@ -41,22 +41,6 @@ type AssetInfo struct {
 	Favourite bool     `json:"favourite"`
 }
 
-type FaceInfo struct {
-	ID         uint64 `json:"id"`
-	Num        int    `json:"num"`
-	PersonID   uint64 `json:"person_id"`
-	PersonName string `json:"person_name"`
-	X1         int    `json:"x1"`
-	Y1         int    `json:"y1"`
-	X2         int    `json:"x2"`
-	Y2         int    `json:"y2"`
-}
-
-type AssetsForFaceRequest struct {
-	FaceID    uint64  `form:"face_id"`
-	Threshold float64 `form:"threshold"`
-}
-
 const (
 	// created_at field is adjusted with time_offset so the time can be shown "as UTC"
 	AssetsSelectClause   = "assets.id, assets.name, assets.user_id, assets.created_at+ifnull(time_offset,0), assets.remote_id, assets.mime_type, assets.gps_lat, assets.gps_long, locations.display, assets.size, assets.mime_type, favourite_assets.asset_id is not null as f"
@@ -346,39 +330,4 @@ func AssetUnfavourite(c *gin.Context, user *models.User) {
 		return
 	}
 	c.JSON(http.StatusOK, OKResponse)
-}
-
-func FacesForAsset(c *gin.Context, user *models.User) {
-	assetIDSt, exists := c.GetQuery("asset_id")
-	if !exists {
-		c.JSON(http.StatusBadRequest, Response{"Missing asset ID"})
-		return
-	}
-	assetID, err := strconv.ParseUint(assetIDSt, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, Response{"Invalid asset ID"})
-		return
-	}
-	asset := models.Asset{ID: assetID}
-	db.Instance.First(&asset)
-	if asset.ID != assetID || asset.UserID != user.ID {
-		c.JSON(http.StatusUnauthorized, NopeResponse)
-		return
-	}
-	rows, err := db.Instance.Raw("select id, num, x1, y1, x2, y2 from faces where asset_id=? order by num asc", assetID).Rows()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, DBError1Response)
-		return
-	}
-	defer rows.Close()
-	result := []FaceInfo{}
-	for rows.Next() {
-		face := FaceInfo{}
-		if err = rows.Scan(&face.ID, &face.Num, &face.X1, &face.Y1, &face.X2, &face.Y2); err != nil {
-			c.JSON(http.StatusInternalServerError, DBError2Response)
-			return
-		}
-		result = append(result, face)
-	}
-	c.JSON(http.StatusOK, result)
 }

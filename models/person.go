@@ -7,3 +7,8 @@ type Person struct {
 	User      User   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Name      string `gorm:"type:varchar(300);index:uniq_user_person,unique;priority:2"`
 }
+
+// TableName overrides the table name
+func (Person) TableName() string {
+	return "people"
+}
