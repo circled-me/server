@@ -16,6 +16,18 @@ const (
 	FailedDB      = 5
 )
 
+var (
+	// Map containing the status codes from above and their string representation
+	statusConstMap = map[int]string{
+		Skipped:       "Skipped",
+		UserSkipped:   "UserSkipped",
+		Done:          "Done",
+		Failed:        "Failed",
+		FailedStorage: "FailedStorage",
+		FailedDB:      "FailedDB",
+	}
+)
+
 type ProcessingTask struct {
 	AssetID uint64       `gorm:"primaryKey"`
 	Asset   models.Asset `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`

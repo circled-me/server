@@ -38,7 +38,6 @@ func TestAsset_GetCreatedTimeInLocation(t *testing.T) {
 		Duration            uint32
 		Path                string
 		ThumbPath           string
-		Processed           bool
 		PresignedUntil      int64
 		PresignedURL        string
 		PresignedThumbUntil int64
@@ -97,7 +96,6 @@ func TestAsset_GetCreatedTimeInLocation(t *testing.T) {
 				Duration:            tt.fields.Duration,
 				Path:                tt.fields.Path,
 				ThumbPath:           tt.fields.ThumbPath,
-				Processed:           tt.fields.Processed,
 				PresignedUntil:      tt.fields.PresignedUntil,
 				PresignedURL:        tt.fields.PresignedURL,
 				PresignedThumbUntil: tt.fields.PresignedThumbUntil,
