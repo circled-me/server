@@ -1,4 +1,6 @@
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/Kagami/go-face v0.0.0-20210630145111-0c14797b4d0e h1:lqIUFzxaqyYqUn4MhzAvSAh4wIte/iLNcIEWxpT/qbc=
+github.com/Kagami/go-face v0.0.0-20210630145111-0c14797b4d0e/go.mod h1:9wdDJkRgo3SGTcFwbQ7elVIQhIr2bbBjecuY7VoqmPU=
 github.com/Masterminds/semver/v3 v3.1.1/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=
 github.com/aws/aws-sdk-go v1.45.25 h1:c4fLlh5sLdK2DCRTY1z0hyuJZU4ygxX8m1FswL6/nF4=
 github.com/aws/aws-sdk-go v1.45.25/go.mod h1:aVsgQcEevwlmQ7qHE9I3h+dtQgpqhFB+i8Phjh7fkwI=
