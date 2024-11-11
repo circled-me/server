@@ -44,16 +44,16 @@ func MomentList(c *gin.Context, user *models.User) {
 	rows, err := db.Instance.Raw(`
 	select date,
 		if(city = '', area, city),
-		group_concat(place_id separator ',') places,
+		group_concat(place_id) places,
 		max(hero),
 		min(start),
 		max(end)
 	from   (select place_id,
-				from_unixtime(created_at, '%Y-%m-%d') date,
-				max(id)								  hero,
-				count(*)                              cnt,
-				min(created_at)                       start,
-				max(created_at)                       end
+				`+db.CreatedDateFunc+`   date,
+				max(id)                  hero,
+				count(*)                 cnt,
+				min(created_at)          start,
+				max(created_at)          end
 		from   assets
 		where  user_id = ?
 				and deleted = 0

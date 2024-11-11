@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	Instance      *gorm.DB
-	TimestampFunc = ""
+	Instance        *gorm.DB
+	TimestampFunc   = ""
+	CreatedDateFunc = ""
 )
 
 func Init() {
@@ -26,6 +27,7 @@ func Init() {
 			log.Fatalf("MySQL DB error: %v", err)
 		}
 		TimestampFunc = "unix_timestamp()"
+		CreatedDateFunc = "date(from_unixtime(created_at))"
 	} else if config.SQLITE_FILE != "" {
 		// Sqlite setup
 		db, err = gorm.Open(sqlite.Open(config.SQLITE_FILE), &gorm.Config{})
@@ -37,6 +39,7 @@ func Init() {
 		// 	sqliteDB.SetMaxOpenConns(1)
 		// }
 		TimestampFunc = "strftime('%s', 'now')"
+		CreatedDateFunc = "date(created_at, 'unixepoch')"
 	} else {
 		log.Fatal("No database configuration found")
 	}
