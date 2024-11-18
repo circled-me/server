@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"server/config"
 	"server/db"
 	"server/models"
 	"strconv"
@@ -74,7 +75,7 @@ func FacesForAsset(c *gin.Context, user *models.User) {
 
 func PeopleList(c *gin.Context, user *models.User) {
 	// Do this in two steps. First load all people information
-	rows, err := db.Instance.Raw("select id, name from people").Rows()
+	rows, err := db.Instance.Raw("select id, name from people where user_id=?", user.ID).Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
@@ -144,9 +145,27 @@ func PersonAssignFace(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusBadRequest, Response{"Empty person or face ID"})
 		return
 	}
+	// Check if this face.PersonID is the same as current user.ID
+	person := models.Person{ID: face.PersonID}
+	if db.Instance.First(&person).Error != nil || person.UserID != user.ID {
+		c.JSON(http.StatusUnauthorized, NopeResponse)
+		return
+	}
 	if db.Instance.Exec("update faces set person_id=? where id=?", face.PersonID, face.ID).Error != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
+	// threshold is squared by default
+	threshold := c.GetFloat64("threshold")
+	if threshold == 0 {
+		threshold = config.FACE_MAX_DISTANCE_SQ
+	}
+	// Set PersonID to all assets with faces similar to the given face based on threshold
+	// Also, make sure the distance is greater than the current face's distance (i.e. the new face is more similar to the one detected before)
+	if db.Instance.Exec("update faces set person_id=? where id in (select t2.id from faces t1 join faces t2 where t1.id=? and t1.id!=t2.id and "+models.FacesVectorDistance+" <= ? and (t2.distance == 0 OR t2.distance > "+models.FacesVectorDistance+"))", face.PersonID, face.ID, threshold).Error != nil {
+		c.JSON(http.StatusInternalServerError, DBError2Response)
+		return
+	}
+	face.PersonName = person.Name
 	c.JSON(http.StatusOK, face)
 }

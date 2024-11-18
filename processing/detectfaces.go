@@ -3,6 +3,7 @@ package processing
 import (
 	"log"
 	"reflect"
+	"server/config"
 	"server/db"
 	"server/faces"
 	"server/models"
@@ -42,12 +43,13 @@ func (t *detectfaces) process(asset *models.Asset, storage storage.StorageAPI) (
 	// Save faces' data to DB
 	for i, face := range result {
 		faceModel := models.Face{
-			AssetID: asset.ID,
-			Num:     i,
-			X1:      face.Rectangle.Min.X,
-			Y1:      face.Rectangle.Min.Y,
-			X2:      face.Rectangle.Max.X,
-			Y2:      face.Rectangle.Max.Y,
+			AssetID:  asset.ID,
+			Num:      i,
+			X1:       face.Rectangle.Min.X,
+			Y1:       face.Rectangle.Min.Y,
+			X2:       face.Rectangle.Max.X,
+			Y2:       face.Rectangle.Max.Y,
+			PersonID: nil,
 		}
 		// Use reflection to set Vx fields to the corresponding value from the array
 		for j, value := range face.Descriptor {
@@ -56,6 +58,17 @@ func (t *detectfaces) process(asset *models.Asset, storage storage.StorageAPI) (
 		if err := db.Instance.Create(&faceModel).Error; err != nil {
 			log.Printf("Error saving face location for asset %d: %v", asset.ID, err)
 			return Failed, nil
+		}
+		// Find the face that is most similar (least distance) to this one and fetch it's person_id
+		db.Instance.Raw(`select t2.person_id, `+models.FacesVectorDistance+` as threshold 
+						 from faces t1 join faces t2 
+						 where t1.id=? and t2.person_id is not null and t1.id != t2.id 
+						 order by threshold limit 1`, faceModel.ID).Debug().Row().Scan(&faceModel.PersonID, &faceModel.Distance)
+		log.Printf("Face %d, threshold: %f\n", faceModel.ID, faceModel.Distance)
+		if faceModel.PersonID != nil && faceModel.Distance <= config.FACE_MAX_DISTANCE_SQ {
+			// Update the current face with the found person_id
+			db.Instance.Save(&faceModel)
+			log.Printf("Updated face %d, person_id: %d\n", faceModel.ID, *faceModel.PersonID)
 		}
 	}
 	return Done, clean

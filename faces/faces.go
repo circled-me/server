@@ -26,9 +26,10 @@ func init() {
 func Detect(imgPath string) ([]face.Face, error) {
 	log.Printf("Detecting faces in %s", imgPath)
 	// Recognize faces on that image.
-	if !config.FACEDETECT_CNN {
+	if !config.FACE_DETECT_CNN {
+		// HOG (Histogram of Oriented Gradients) based detection
 		return rec.RecognizeFile(imgPath)
 	}
-	// Default is CNN (Convolutional Neural Network) based detection
+	// CNN (Convolutional Neural Network) based detection
 	return rec.RecognizeFileCNN(imgPath)
 }

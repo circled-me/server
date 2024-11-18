@@ -43,7 +43,10 @@ func MomentList(c *gin.Context, user *models.User) {
 	// TODO: Minimum number of assets for a location should be configurable (now 6 below)
 	rows, err := db.Instance.Raw(`
 	select date,
-		if(city = '', area, city),
+		CASE 
+			WHEN city = '' THEN area 
+			ELSE city 
+		END,
 		group_concat(place_id) places,
 		max(hero),
 		min(start),
