@@ -141,8 +141,19 @@ func PersonAssignFace(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusInternalServerError, Response{err.Error()})
 		return
 	}
-	if face.PersonID == 0 || face.ID == 0 {
-		c.JSON(http.StatusBadRequest, Response{"Empty person or face ID"})
+	if face.PersonID == 0 {
+		if face.ID == 0 {
+			c.JSON(http.StatusBadRequest, Response{"Empty face ID and person ID"})
+			return
+		}
+		// We want to unassign a face from a person
+		if db.Instance.Exec("update faces set person_id=null where id=?", face.ID).Error != nil {
+			c.JSON(http.StatusInternalServerError, DBError1Response)
+			return
+		}
+		face.PersonID = 0
+		face.PersonName = ""
+		c.JSON(http.StatusOK, face)
 		return
 	}
 	// Check if this face.PersonID is the same as current user.ID
