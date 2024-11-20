@@ -6,7 +6,9 @@ const (
 
 type Face struct {
 	ID        uint64  `gorm:"primaryKey"`
-	CreatedAt int64   `gorm:""`
+	UserID    uint64  `gorm:"index:user_index,priority:1"`
+	User      User    `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	CreatedAt int64   `gorm:"index:user_index,priority:2"`
 	AssetID   uint64  `gorm:"index:uniq_asset_face,unique;priority:1"`
 	Asset     Asset   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	PersonID  *uint64 `gorm:""`

@@ -20,8 +20,8 @@ var (
 	TMP_DIR                    = "/tmp" // Used for temporary video conversion, etc (in case of S3 bucket)
 	DEFAULT_BUCKET_DIR         = ""     // Used for creating initial bucket
 	DEBUG_MODE                 = true
-	FACE_DETECT_CNN            = false // Use Convolutional Neural Network for face detection (as opposed to HOG). Much slower, supposedly more accurate at different angles
-	FACE_MAX_DISTANCE_SQ       = 0.11  // Squared distance between faces to consider them similar
+	FACE_DETECT_CNN            = true // Use Convolutional Neural Network for face detection (as opposed to HOG). Much slower, supposedly more accurate at different angles
+	FACE_MAX_DISTANCE_SQ       = 0.11 // Squared distance between faces to consider them similar
 )
 
 func init() {

@@ -167,13 +167,27 @@ func PersonAssignFace(c *gin.Context, user *models.User) {
 		return
 	}
 	// threshold is squared by default
-	threshold := c.GetFloat64("threshold")
+	thresholdStr := c.Query("threshold")
+	threshold, _ := strconv.ParseFloat(thresholdStr, 64)
 	if threshold == 0 {
 		threshold = config.FACE_MAX_DISTANCE_SQ
 	}
 	// Set PersonID to all assets with faces similar to the given face based on threshold
 	// Also, make sure the distance is greater than the current face's distance (i.e. the new face is more similar to the one detected before)
-	if db.Instance.Exec("update faces set person_id=? where id in (select t2.id from faces t1 join faces t2 where t1.id=? and t1.id!=t2.id and "+models.FacesVectorDistance+" <= ? and (t2.distance == 0 OR t2.distance > "+models.FacesVectorDistance+"))", face.PersonID, face.ID, threshold).Error != nil {
+	if db.Instance.Exec(`update faces 
+						set person_id=? 
+						where id in (
+							select t2.id 
+							from faces t1 join faces t2 
+							where t1.id=? and 
+								t1.id!=t2.id and 
+								t1.user_id=? and 
+								t1.user_id=t2.user_id and 
+								`+models.FacesVectorDistance+` <= ? and 
+								(t2.distance == 0 OR t2.distance > `+models.FacesVectorDistance+`)
+							)`,
+		face.PersonID, face.ID, user.ID, threshold).Error != nil {
+
 		c.JSON(http.StatusInternalServerError, DBError2Response)
 		return
 	}
