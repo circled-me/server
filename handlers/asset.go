@@ -225,24 +225,22 @@ func AssetDelete(c *gin.Context, user *models.User) {
 			log.Printf("Asset: %d, auth error", id)
 			continue
 		}
-		asset.Deleted = true
-		err = db.Instance.Save(&asset).Error
-		if err != nil {
+		// Delete asset record and rely on cascaded deletes
+		if db.Instance.Exec("delete from assets where id=?", id).Error != nil {
 			failed = append(failed, id)
-			log.Printf("Asset: %d, save error %s", id, err)
+			log.Printf("Asset: %d, delete error %s", id, err)
 			continue
 		}
-		// TODO: Delete record better (and rely on cascaded deletes) and reinsert with same RemoteID (to stop re-uploading)?
-		db.Instance.Exec("delete from album_assets where asset_id=?", id)
-		db.Instance.Exec("delete from favourite_assets where asset_id=?", id)
-		db.Instance.Exec("delete from faces where asset_id=?", id)
+		// Re-insert with same RemoteID to stop backing up the same asset
+		db.Instance.Exec("insert into assets (user_id, remote_id, updated_at, deleted) values (?, ?, ?, 1)", asset.UserID, asset.RemoteID, time.Now().Unix())
+
 		storage := storage.StorageFrom(&asset.Bucket)
 		if storage == nil {
 			log.Printf("Asset: %d, error: storage is nil", id)
 			failed = append(failed, id)
 			continue
 		}
-		// Finally delete
+		// Finally delete the files
 		if err = storage.Delete(asset.ThumbPath); err != nil {
 			log.Printf("Asset: %d, thumb delete error: %s", id, err.Error())
 		}

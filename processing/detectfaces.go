@@ -68,7 +68,7 @@ func (t *detectfaces) process(asset *models.Asset, storage storage.StorageAPI) (
 		log.Printf("Face %d, threshold: %f\n", faceModel.ID, faceModel.Distance)
 		if faceModel.PersonID != nil && faceModel.Distance <= config.FACE_MAX_DISTANCE_SQ {
 			// Update the current face with the found person_id
-			db.Instance.Save(&faceModel)
+			db.Instance.Exec("update faces set person_id=? where id=?", *faceModel.PersonID, faceModel.ID)
 			log.Printf("Updated face %d, person_id: %d\n", faceModel.ID, *faceModel.PersonID)
 		}
 	}
