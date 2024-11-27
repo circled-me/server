@@ -31,11 +31,12 @@ ___
   - Supports either locally mounted disks or
   - S3-compatible Services - this allows different users to use their own S3 bucket on the same server
 - Push notifications for new Album photos, etc
+- Face detection and tagging
 - Albums
   - Adding local server contributors and viewers
   - Sharing albums with anyone with a "secret" link
 - Chat with push notifications
-- Filtering photos by year, month, location, etc
+- Filtering photos by tagged person, year, month, location, etc
 - Moments - automatically grouping photos by time and location
 - Reverse geocoding for all assets
 - Automatic video conversion to web-compatible H.264 format
@@ -61,6 +62,9 @@ Current configuration environment variables:
 - `DEBUG_MODE` - currently defaults to `yes`
 - `DEFAULT_BUCKET_DIR` - a directory that will be used as default bucket if no other buckets exist (i.e. the first time you run the server)
 - `DEFAULT_ASSET_PATH_PATTERN` - the default path pattern to create subdirectories and file names based on asset info. Defaults to `<year>/<month>/<id>`
+- `PUSH_SERVER` - the push server URL. Defaults to `https://push.circled.me`
+- `FACE_DETECT_CNN` - use Convolutional Neural Network for face detection (as opposed to HOG). Much slower, but more accurate at different angles. Defaults to `no`
+- `FACE_MAX_DISTANCE_SQ` - squared distance between faces to consider them similar. Defaults to `0.11`
 
 ## docker-compose example
 ```yaml

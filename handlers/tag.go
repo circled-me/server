@@ -69,7 +69,7 @@ func (t *Tags) add(typ int, val any, assetId uint64) {
 func TagList(c *gin.Context, user *models.User) {
 	// Modified depends on deleted assets as well, that's why the where condition is different
 	tx := db.Instance.Table("assets").Select("max(updated_at)").Where("user_id=? AND size>0 AND thumb_size>0", user.ID)
-	if isNotModified(c, tx) {
+	if c.Query("reload") != "1" && isNotModified(c, tx) {
 		return
 	}
 	rows, err := db.Instance.Table("assets").Select("id, mime_type, favourite, created_at, locations.gps_lat, locations.gps_long, area, city, country").
@@ -121,6 +121,23 @@ func TagList(c *gin.Context, user *models.User) {
 			tags.add(tagTypeFavourite, "Favourite", assetId)
 		}
 	}
+	// Find all people, all their faces in assets and add them as tags
+	rows, err = db.Instance.Raw("select p.id, p.name, f.asset_id from people p join faces f on f.person_id=p.id").Rows()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, DBError3Response)
+		return
+	}
+	var personId uint64
+	var personName string
+	defer rows.Close()
+	for rows.Next() {
+		if err = rows.Scan(&personId, &personName, &assetId); err != nil {
+			c.JSON(http.StatusInternalServerError, DBError4Response)
+			return
+		}
+		tags.add(tagTypePerson, personName, assetId)
+	}
+
 	result := tags.toArray()
 	// Sort tags by popularity (num assets)
 	sort.Slice(result, func(i, j int) bool {

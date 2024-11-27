@@ -17,10 +17,6 @@ type MultiResponse struct {
 	Failed []uint64 `json:"failed"`
 }
 
-const (
-	etagHeader = "ETag"
-)
-
 var (
 	// Predefined errors
 	OKResponse       = Response{}
@@ -42,10 +38,10 @@ func isNotModified(c *gin.Context, tx *gorm.DB) bool {
 	}
 	// Set the current ETag
 	c.Header("cache-control", "private, max-age=1")
-	c.Header(etagHeader, strconv.FormatUint(lastUpdatedAt, 10))
+	c.Header("etag", strconv.FormatUint(lastUpdatedAt, 10))
 
 	// ETag contains last updated asset time
-	remoteLastUpdatedAt, _ := strconv.ParseUint(c.Request.Header.Get("If-None-Match"), 10, 64)
+	remoteLastUpdatedAt, _ := strconv.ParseUint(c.Request.Header.Get("if-none-match"), 10, 64)
 	if remoteLastUpdatedAt == lastUpdatedAt {
 		c.Status(http.StatusNotModified)
 		return true

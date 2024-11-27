@@ -86,20 +86,28 @@ func LoadAssetsFromRows(c *gin.Context, rows *sql.Rows) *[]AssetInfo {
 }
 
 func AssetList(c *gin.Context, user *models.User) {
+	fr := AssetsForFaceRequest{}
+	_ = c.ShouldBindQuery(&fr)
+
 	// Modified depends on deleted assets as well, that's why the where condition is different
 	tx := db.Instance.
 		Table("assets").
 		Select("max(updated_at)").
 		Where("user_id=? AND size>0 AND thumb_size>0", user.ID)
-	if isNotModified(c, tx) {
+	if fr.FaceID == 0 && c.Query("reload") != "1" && isNotModified(c, tx) {
 		return
 	}
 	// TODO: For big sets maybe dynamically load asset info individually?
-	rows, err := db.Instance.
+	tmp := db.Instance.
 		Table("assets").
 		Select(AssetsSelectClause).
 		Joins("left join favourite_assets on favourite_assets.asset_id = assets.id").
-		Joins(LeftJoinForLocations).
+		Joins(LeftJoinForLocations)
+	if fr.FaceID > 0 {
+		// Find assets with faces similar to the given face or with the same person already assigned
+		tmp = tmp.Joins("join (select distinct t2.asset_id from faces t1 join faces t2 where t1.id=? and (t1.person_id = t2.person_id OR "+models.FacesVectorDistance+" <= ?)) f on f.asset_id = assets.id", fr.FaceID, fr.Threshold)
+	}
+	rows, err := tmp.
 		Where("assets.user_id=? and assets.deleted=0 and assets.size>0 and assets.thumb_size>0", user.ID).Order("assets.created_at DESC").Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
@@ -217,23 +225,22 @@ func AssetDelete(c *gin.Context, user *models.User) {
 			log.Printf("Asset: %d, auth error", id)
 			continue
 		}
-		asset.Deleted = true
-		err = db.Instance.Save(&asset).Error
-		if err != nil {
+		// Delete asset record and rely on cascaded deletes
+		if db.Instance.Exec("delete from assets where id=?", id).Error != nil {
 			failed = append(failed, id)
-			log.Printf("Asset: %d, save error %s", id, err)
+			log.Printf("Asset: %d, delete error %s", id, err)
 			continue
 		}
-		// TODO: Delete record better (and rely on cascaded deletes) and reinsert with same RemoteID (to stop re-uploading)?
-		db.Instance.Exec("delete from album_assets where asset_id=?", id)
-		db.Instance.Exec("delete from favourite_assets where asset_id=?", id)
+		// Re-insert with same RemoteID to stop backing up the same asset
+		db.Instance.Exec("insert into assets (user_id, remote_id, updated_at, deleted) values (?, ?, ?, 1)", asset.UserID, asset.RemoteID, time.Now().Unix())
+
 		storage := storage.StorageFrom(&asset.Bucket)
 		if storage == nil {
 			log.Printf("Asset: %d, error: storage is nil", id)
 			failed = append(failed, id)
 			continue
 		}
-		// Finally delete
+		// Finally delete the files
 		if err = storage.Delete(asset.ThumbPath); err != nil {
 			log.Printf("Asset: %d, thumb delete error: %s", id, err.Error())
 		}

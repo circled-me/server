@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -15,6 +16,8 @@ var (
 	TMP_DIR                    = "/tmp" // Used for temporary video conversion, etc (in case of S3 bucket)
 	DEFAULT_BUCKET_DIR         = ""     // Used for creating initial bucket
 	DEBUG_MODE                 = true
+	FACE_DETECT_CNN            = false // Use Convolutional Neural Network for face detection (as opposed to HOG). Much slower, supposedly more accurate at different angles
+	FACE_MAX_DISTANCE_SQ       = 0.11  // Squared distance between faces to consider them similar
 )
 
 func init() {
@@ -27,6 +30,8 @@ func init() {
 	readEnvString("DEFAULT_BUCKET_DIR", &DEFAULT_BUCKET_DIR)
 	readEnvString("DEFAULT_ASSET_PATH_PATTERN", &DEFAULT_ASSET_PATH_PATTERN)
 	readEnvBool("DEBUG_MODE", &DEBUG_MODE)
+	readEnvBool("FACE_DETECT_CNN", &FACE_DETECT_CNN)
+	readEnvFloat("FACE_MAX_DISTANCE_SQ", &FACE_MAX_DISTANCE_SQ)
 }
 
 func readEnvString(name string, value *string) {
@@ -44,4 +49,16 @@ func readEnvBool(name string, value *bool) {
 	} else if v == "false" || v == "0" || v == "no" || v == "off" {
 		*value = false
 	}
+}
+
+func readEnvFloat(name string, value *float64) {
+	v := os.Getenv(name)
+	if v == "" {
+		return
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return
+	}
+	*value = f
 }

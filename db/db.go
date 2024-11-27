@@ -30,14 +30,10 @@ func Init() {
 		CreatedDateFunc = "date(from_unixtime(created_at))"
 	} else if config.SQLITE_FILE != "" {
 		// Sqlite setup
-		db, err = gorm.Open(sqlite.Open(config.SQLITE_FILE), &gorm.Config{})
+		db, err = gorm.Open(sqlite.Open(config.SQLITE_FILE+"?_foreign_keys=on"), &gorm.Config{})
 		if err != nil || db == nil {
 			log.Fatalf("SQLite DB error: %v", err)
 		}
-		db.Exec("PRAGMA foreign_keys = ON")
-		// if sqliteDB, err := db.DB(); err == nil && sqliteDB != nil {
-		// 	sqliteDB.SetMaxOpenConns(1)
-		// }
 		TimestampFunc = "strftime('%s', 'now')"
 		CreatedDateFunc = "date(created_at, 'unixepoch')"
 	} else {

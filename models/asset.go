@@ -52,7 +52,6 @@ type Asset struct {
 	Duration            uint32
 	Path                string `gorm:"type:varchar(2048)"` // Full path of the asset, including file/object name
 	ThumbPath           string `gorm:"type:varchar(2048)"` // Same but for thumbnail
-	Processed           bool   `gorm:"not null;default 0"`
 	PresignedUntil      int64
 	PresignedURL        string `gorm:"type:varchar(2000)"`
 	PresignedThumbUntil int64
