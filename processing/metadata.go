@@ -33,7 +33,7 @@ func (md *metadata) process(asset *models.Asset, storage storage.StorageAPI) (in
 	cmd := exec.Command("exiftool", "-n", "-T", "-gpslatitude", "-gpslongitude", "-imagewidth", "-imageheight", "-duration", "-createdate", "-offsettime", storage.GetFullPath(asset.Path))
 	output, err := cmd.Output()
 	if err != nil {
-		log.Printf("Metadata processing error: %v", err)
+		log.Printf("Metadata processing error: %v; output: %s", err, output)
 		return Failed, nil
 	}
 	result := strings.Split(strings.Trim(string(output), "\n\t\r "), "\t")
