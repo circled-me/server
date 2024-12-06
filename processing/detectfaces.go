@@ -22,6 +22,9 @@ func (t *detectfaces) requiresContent(asset *models.Asset) bool {
 }
 
 func (t *detectfaces) process(asset *models.Asset, storage storage.StorageAPI) (status int, clean func()) {
+	if !config.FACE_DETECT {
+		return Skipped, nil
+	}
 
 	if asset.ThumbPath == "" {
 		return Failed, nil

@@ -63,6 +63,7 @@ Current configuration environment variables:
 - `DEFAULT_BUCKET_DIR` - a directory that will be used as default bucket if no other buckets exist (i.e. the first time you run the server)
 - `DEFAULT_ASSET_PATH_PATTERN` - the default path pattern to create subdirectories and file names based on asset info. Defaults to `<year>/<month>/<id>`
 - `PUSH_SERVER` - the push server URL. Defaults to `https://push.circled.me`
+- `FACE_DETECT` - enable/disable face detection. Defaults to `yes`
 - `FACE_DETECT_CNN` - use Convolutional Neural Network for face detection (as opposed to HOG). Much slower, but more accurate at different angles. Defaults to `no`
 - `FACE_MAX_DISTANCE_SQ` - squared distance between faces to consider them similar. Defaults to `0.11`
 

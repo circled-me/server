@@ -14,6 +14,10 @@ var (
 )
 
 func init() {
+	if !config.FACE_DETECT {
+		log.Println("Face detection is disabled")
+		return
+	}
 	log.Println("Loading face recognition models...")
 	// Init the recognizer.
 	var err error

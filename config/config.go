@@ -16,6 +16,7 @@ var (
 	TMP_DIR                    = "/tmp" // Used for temporary video conversion, etc (in case of S3 bucket)
 	DEFAULT_BUCKET_DIR         = ""     // Used for creating initial bucket
 	DEBUG_MODE                 = true
+	FACE_DETECT                = true  // Enable/disable face detection
 	FACE_DETECT_CNN            = false // Use Convolutional Neural Network for face detection (as opposed to HOG). Much slower, supposedly more accurate at different angles
 	FACE_MAX_DISTANCE_SQ       = 0.11  // Squared distance between faces to consider them similar
 )
@@ -30,6 +31,7 @@ func init() {
 	readEnvString("DEFAULT_BUCKET_DIR", &DEFAULT_BUCKET_DIR)
 	readEnvString("DEFAULT_ASSET_PATH_PATTERN", &DEFAULT_ASSET_PATH_PATTERN)
 	readEnvBool("DEBUG_MODE", &DEBUG_MODE)
+	readEnvBool("FACE_DETECT", &FACE_DETECT)
 	readEnvBool("FACE_DETECT_CNN", &FACE_DETECT_CNN)
 	readEnvFloat("FACE_MAX_DISTANCE_SQ", &FACE_MAX_DISTANCE_SQ)
 }
