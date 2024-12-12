@@ -15,7 +15,7 @@ require (
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/zsefvlol/timezonemapper v1.0.0
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.28.0
 	gorm.io/driver/mysql v1.5.2
 	gorm.io/driver/sqlite v1.4.1
 	gorm.io/gorm v1.25.5
@@ -49,10 +49,10 @@ require (
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	github.com/wader/gormstore/v2 v2.0.3 // indirect
 	golang.org/x/arch v0.7.0 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/sync v0.4.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 // github.com/Kagami/go-face v0.0.0-20210630145111-0c14797b4d0e // indirect
