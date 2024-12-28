@@ -29,6 +29,7 @@ func Init() {
 	es = append(es, db.Instance.AutoMigrate(&Person{}))
 	es = append(es, db.Instance.AutoMigrate(&UploadRequest{}))
 	es = append(es, db.Instance.AutoMigrate(&User{}))
+	es = append(es, db.Instance.AutoMigrate(&VideoCall{}))
 
 	for _, e := range es {
 		if e != nil {
