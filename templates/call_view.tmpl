@@ -49,8 +49,8 @@
             }
             button {
                 margin: 3px !important;
-                width: 70px !important;
-                height: 70px !important;
+                width: 60px !important;
+                height: 60px !important;
             }
         }
         button {
@@ -83,6 +83,9 @@
         #mute-btn.off {
             background-image: url('/static/mic2-off.png');
         }
+        #close-btn {
+            background-image: url('/static/close.png');
+        }
     </style>
 </head>
 <body>
@@ -91,6 +94,7 @@
     <div id="controls">
         <button id="video-btn" class="on"></button>
         <button id="mute-btn" class="on"></button>
+        <button id="close-btn" style="display: none;"></button>
     </div>
 
 <script>
@@ -105,6 +109,7 @@ let myID = "";
 let ws;
 let wsQueue = [];
 let connectAttempts = 0;
+let inApp = window.location.hash.indexOf("inapp") != -1;
 
 
 function addVideoStream(video, stream) {
@@ -298,7 +303,18 @@ async function main() {
     }
 }
 
+if (!inApp) {
+    const closeButton = document.getElementById('close-btn');
+    closeButton.style = "";
+    closeButton.addEventListener('click', () => {
+        if (confirm("Are you sure you want to leave the call?")) {
+            window.location.href = "https://circled.me";
+        }
+    });
+    alert("Please allow camera and microphone access to join the call.");
+}
 main();
+
 </script>
 </body>
 </html>
