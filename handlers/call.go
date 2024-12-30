@@ -23,11 +23,12 @@ func CallLink(c *gin.Context, user *models.User) {
 		return
 	}
 	if c.Query("reset") == "1" {
-		vc.ID = utils.Rand8BytesToBase62()
-		if err = db.Instance.Save(&vc).Error; err != nil {
+		newID := utils.Rand8BytesToBase62()
+		if err = db.Instance.Exec("update video_calls set id = ? where id = ?", newID, vc.ID).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, NopeResponse)
 			return
 		}
+		vc.ID = newID
 	}
 	c.JSON(http.StatusOK, gin.H{"path": "/call/" + vc.ID})
 }

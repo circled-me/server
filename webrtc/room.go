@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"server/utils"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,6 +36,29 @@ var (
 
 func init() {
 	go backgroundCleanup()
+}
+
+// ValidateRoomUser accepts strings in the format "<roomID>_<userID>"
+func ValidateRoomUser(roomUser string) bool {
+	ru := strings.SplitN(roomUser, "_", 2)
+	if len(ru) != 2 {
+		return false
+	}
+	mutex.Lock()
+	defer mutex.Unlock()
+	room, exists := rooms[ru[0]]
+	if !exists {
+		return false
+	}
+	room.mutex.RLock()
+	defer room.mutex.RUnlock()
+
+	for _, v := range room.clients {
+		if v.ID == ru[1] {
+			return true
+		}
+	}
+	return false
 }
 
 func backgroundCleanup() {

@@ -12,6 +12,7 @@ import (
 	"server/processing"
 	"server/utils"
 	"server/web"
+	"server/webrtc"
 	"strings"
 	"time"
 
@@ -142,11 +143,31 @@ func main() {
 	// Misc
 	router.GET("/robots.txt", web.DisallowRobots)
 
+	// Do we need to start up a TURN server?
+	var turnServer *webrtc.TurnServer
+	if config.TURN_SERVER_IP != "" {
+		turnServer = &webrtc.TurnServer{
+			Port:           config.TURN_SERVER_PORT,
+			PublicIP:       config.TURN_SERVER_IP,
+			TrafficMinPort: config.TURN_TRAFFIC_MIN_PORT,
+			TrafficMaxPort: config.TURN_TRAFFIC_MAX_PORT,
+			AuthFunc:       webrtc.ValidateRoomUser,
+		}
+		if err := turnServer.Start(); err != nil {
+			log.Printf("Couldn't start TURN server: %v", err)
+			turnServer = nil
+		} else {
+			log.Printf("Started TURN server at %s:%d", config.TURN_SERVER_IP, config.TURN_SERVER_PORT)
+		}
+	}
 	var err error
 	if config.TLS_DOMAINS != "" {
 		err = autotls.Run(router, strings.Split(config.TLS_DOMAINS, ",")...)
 	} else {
 		err = router.Run(config.BIND_ADDRESS)
+	}
+	if turnServer != nil {
+		turnServer.Stop()
 	}
 	log.Fatalf("Server stopped: %v", err)
 }
