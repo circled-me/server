@@ -2,6 +2,7 @@ package web
 
 import (
 	"net/http"
+	"server/config"
 	"server/models"
 
 	"github.com/gin-gonic/gin"
@@ -19,6 +20,8 @@ func CallView(c *gin.Context) {
 		return
 	}
 	c.HTML(http.StatusOK, "call_view.tmpl", gin.H{
-		"token": vc.ID,
+		"token":    vc.ID,
+		"turnIP":   config.TURN_SERVER_IP,
+		"turnPort": config.TURN_SERVER_PORT,
 	})
 }

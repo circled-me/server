@@ -151,7 +151,7 @@ func main() {
 			PublicIP:       config.TURN_SERVER_IP,
 			TrafficMinPort: config.TURN_TRAFFIC_MIN_PORT,
 			TrafficMaxPort: config.TURN_TRAFFIC_MAX_PORT,
-			AuthFunc:       webrtc.ValidateRoomUser,
+			AuthFunc:       webrtc.ValidateRoom,
 		}
 		if err := turnServer.Start(); err != nil {
 			log.Printf("Couldn't start TURN server: %v", err)
@@ -159,6 +159,8 @@ func main() {
 		} else {
 			log.Printf("Started TURN server at %s:%d", config.TURN_SERVER_IP, config.TURN_SERVER_PORT)
 		}
+	} else {
+		log.Println("No TURN server configured")
 	}
 	var err error
 	if config.TLS_DOMAINS != "" {
