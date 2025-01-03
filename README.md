@@ -1,13 +1,9 @@
 # circled.me community server
-This project aims to help people easily backup and share photos, videos, albums on their own server. Focusing on performance, low footprint and ease of implementation and use.
-The application is not dependant on any other service if you use the default SQLite DB engine. Currently SQLite and MySQL are supported for metadata storage.
+This project aims to help people easily backup and share photos, videos, albums on their own server and to enable communication, including audio/video calls and chats. And do all this by keeping everything private. Focusing on performance, low footprint and ease of implementation and use. The application is not dependant on any other service if you use the default SQLite DB engine.
 
-After certain services that scan for faces, locations, etc, became paid some time ago, I have decided I'd rather be able to host my own photos.
-The main reason being, of course, privacy! But also at that time, there was no alternatve that offered good performance and low CPU/memory usage. 
-
-Another focus of this project is having the ability to host everything a community needs to be able to communicate and exchange photos, ideas, etc.
+Having the ability to host everything a community needs to be able to communicate and exchange photos, ideas, etc, is the main focus here.
 I strongly believe in local/focused communities and sharing with the community, but at the same time - keeping everything private, within the community.
-In my personal case, I share mostly photos with my family and close friends.
+In my personal case, I share mostly photos with my family and close friends, and also use the video call functionality to talk to them.
 
 Logo is <a href="http://madebytow.com/">madebytow.com</a>
 
@@ -26,11 +22,12 @@ ___
 
 
 ## Main features:
-- Fast response times and low CPU and memory footprint
+- Fast response times and low CPU and very low memory footprint
 - iOS and Android photo backup (using the circled.me app available on the AppStore and Google Play)
   - Supports either locally mounted disks or
   - S3-compatible Services - this allows different users to use their own S3 bucket on the same server
 - Push notifications for new Album photos, etc
+- Video/Audio Calls using the mobile app OR any browser
 - Face detection and tagging
 - Albums
   - Adding local server contributors and viewers
