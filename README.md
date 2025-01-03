@@ -1,4 +1,4 @@
-# circled.me community server
+# Circled.me Community Server
 This project aims to help people easily backup and share photos, videos, albums on their own server and to enable communication, including audio/video calls and chats. And do all this by keeping everything private. Focusing on performance, low footprint and ease of implementation and use. The application is not dependant on any other service if you use the default SQLite DB engine.
 
 Having the ability to host everything a community needs to be able to communicate and exchange photos, ideas, etc, is the main focus here.
