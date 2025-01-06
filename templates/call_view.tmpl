@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000"/>
+    <title>circled.me video call</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+        }
+        #video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(50%, 1fr));
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            #video-grid {
+                grid-template-columns: 1fr !important;
+            }
+            video {
+                border-radius: 12px !important;
+            }
+            video.mine.min {
+                position: absolute;
+                z-index: 1000;
+                width: 33%;
+                height: 33%;
+                right: 10px;
+            }
+            video.mine.min1 {
+                bottom: 10px;
+                top: auto;
+            }
+            video.mine.min2 {
+                bottom: auto;
+                top: 10px;
+            }
+            video.off {
+                display: none;
+            }
+            #controls {
+                float: left;
+                margin: 12px;
+            }
+            button {
+                margin: 3px !important;
+                width: 60px !important;
+                height: 60px !important;
+            }
+        }
+        button {
+            margin: 20px;
+            width: 100px;
+            height: 100px;
+            cursor: pointer;
+            background-repeat: no-repeat;
+            background-size: 100% 100%;
+            background-color: #000;
+            border: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            -webkit-transform: scaleX(-1);
+            transform: scaleX(-1);
+        }
+        #video-btn.on {
+            background-image: url('/static/cam.png');
+        }
+        #video-btn.off {
+            background-image: url('/static/cam-off.png');
+        }
+        #mute-btn.on {
+            background-image: url('/static/mic2.png');
+        }
+        #mute-btn.off {
+            background-image: url('/static/mic2-off.png');
+        }
+        #close-btn {
+            background-image: url('/static/close.png');
+        }
+    </style>
+</head>
+<body>
+    <div id="video-grid">
+    </div>
+    <div id="controls">
+        <button id="video-btn" class="on"></button>
+        <button id="mute-btn" class="on"></button>
+        <button id="close-btn" style="display: none;"></button>
+    </div>
+
+<script>
+const videoGrid = document.getElementById('video-grid');
+let isMuted = false;
+let isVideoStopped = false;
+let myVideoLocation = 1; // 0: bigger, 1: bottom right, 2: top right
+let connections = {};
+let streams = {};
+let localStream;
+let myID = "";
+let ws;
+let wsQueue = [];
+let connectAttempts = 0;
+let inApp = window.location.hash.indexOf("inapp") != -1;
+
+
+function addVideoStream(video, stream) {
+    video.autoplay = true;
+    video.playsInline = true;
+    video.srcObject = stream;
+    video.addEventListener('loadedmetadata', () => {
+        video.play();
+    });
+    videoGrid.prepend(video);
+}
+
+function removeVideoStream(stream) {
+    for (let video of videoGrid.getElementsByTagName('video')) {
+        if (video.srcObject === stream) {
+            video.remove();
+            break;
+        }
+    }
+}
+
+function toggleVideo() {
+    localStream.getVideoTracks().forEach(track => track.enabled = !track.enabled);
+    isVideoStopped = !isVideoStopped;
+    document.getElementById('video-btn').className = isVideoStopped ? 'off' : 'on';
+    document.querySelector('.mine').style.display = isVideoStopped ? 'none' : 'block';
+}
+
+function toggleMute() {
+    localStream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').className = isMuted ? 'off' : 'on';
+}
+
+function wsSend(data) {
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send(data);
+    } else {
+        wsQueue.push(data);
+    }
+}
+
+async function setUpPeerConnection(userID) {
+    let iceServers = [{urls: 'stun:stun.l.google.com:19302'}];
+    if ("{{ .turnIP }}" != "") {
+        iceServers.push({
+            urls: 'turn:{{ .turnIP }}:{{ .turnPort }}?transport=udp',
+            credential: '{{ .token }}',
+            username: '{{ .token }}'
+        });
+    }
+    let connection = new RTCPeerConnection({
+        iceServers: iceServers
+    });
+    connections[userID] = connection;
+
+    // Add local stream to connection
+    localStream.getTracks().forEach(track => connection.addTrack(track, localStream));
+
+    connection.onicecandidate = (event) => {
+        if (event.candidate) {
+            wsSend(JSON.stringify({ type: 'candidate', to: userID, candidate: event.candidate }));
+        }
+    };    
+    connection.ontrack = (event) => {
+        if (event.track.kind === 'audio') {
+            return;
+        }
+        const remoteVideo = document.createElement('video');
+        addVideoStream(remoteVideo, event.streams[0]);
+        streams[userID] = event.streams[0];
+        console.log("Added Remote Video: ", event);
+    }; 
+    connection.onremovetrack = (event) => {
+        removeVideoStream(event.streams[0]);
+    };
+    connection.oniceconnectionstatechange = (event) => {
+        if (connection.iceConnectionState === 'failed') {
+            connection.restartIce();
+        }
+    };
+    connection.onnegotiationneeded = async () => {
+        const offer = await connection.createOffer();
+        await connection.setLocalDescription(offer);
+        wsSend(JSON.stringify({type: 'offer', to: userID, offer: offer}));
+    };
+}
+
+function closePeerConnection(user) {
+    if (connections[user]) {
+        connections[user].close();
+        delete connections[user];
+    }
+    if (streams[user]) {
+        removeVideoStream(streams[user]);
+        delete streams[user];
+    }
+}
+
+function establishServerConnection() {
+    console.log('Connecting to signaling server...');
+    protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(protocol+`//${window.location.host}/ws-call/{{ .token }}`);
+    
+    ws.onopen = () => {
+        connectAttempts = 0;
+        console.log('Connected to the signaling server');
+        ws.send(myID);
+        if (wsQueue.length > 0) {
+            for (let data of wsQueue) {
+                ws.send(data);
+            }
+            wsQueue = [];
+        }
+    };
+
+    ws.onclose = (e) => {
+        console.log('Disconnected from the signaling server');
+        connectAttempts++;
+        if (connectAttempts > 3) {
+            setTimeout(establishServerConnection, 500*connectAttempts);
+            return;
+        }
+        establishServerConnection();
+    };
+    
+    ws.onmessage = async (message) => {
+        console.log('Got message:', message.data);
+        const data = JSON.parse(message.data);
+        if (data.type === 'id') {
+            myID = data.id;
+            console.log('My ID is:', myID);
+            return;
+        }
+        // All other messages are from other users and must have a 'from' field
+        if (!data.from) {
+            console.log('Invalid message from unknown user:', data);
+            return;
+        }
+        // Set up a new peer connection if needed
+        if (!connections[data.from] && data.type !== 'left') {
+            // Unknown user, create a new connection
+            setUpPeerConnection(data.from);
+            console.log("Connections: ", connections);
+        }
+        let peerConnection = connections[data.from];
+        switch (data.type) {
+            case 'joined':
+                console.log('User joined:', data.from);
+                break;
+            case 'left':
+                closePeerConnection(data.from);
+                console.log('User left:', data.from);
+                break;
+            case 'offer':
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                wsSend(JSON.stringify({ type: 'answer', to: data.from, answer: answer }));
+                break;
+            case 'answer':
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                break;
+            case 'candidate':
+                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                break;
+            default:
+                console.log('Invalid message:', data);
+                break;
+        }
+    };
+}
+
+async function initPage() {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    // localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    const myVideo = document.createElement('video');
+    myVideo.muted = true;
+    myVideo.className = 'mine min min'+myVideoLocation.toString();
+    myVideo.addEventListener('click', () => {
+        myVideoLocation = (myVideoLocation+1)%3;
+        myVideo.className = myVideoLocation==0 ? 'mine' : ('mine min min'+myVideoLocation.toString());
+    });
+    addVideoStream(myVideo, localStream);
+
+    document.getElementById('video-btn').addEventListener('click', toggleVideo);
+    document.getElementById('mute-btn').addEventListener('click', toggleMute);
+}
+
+async function main() {
+    
+    await initPage();
+    establishServerConnection();
+    // Set up a ping to the server to keep the connection alive
+    setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+        }
+    }, 15000);
+    window.onbeforeunload = () => {
+        ws.send(JSON.stringify({ type: 'leave' }));
+    }
+}
+
+if (!inApp) {
+    const closeButton = document.getElementById('close-btn');
+    closeButton.style = "";
+    closeButton.addEventListener('click', () => {
+        if (confirm("Are you sure you want to leave the call?")) {
+            window.location.href = "https://circled.me";
+        }
+    });
+    alert("Please allow camera and microphone access to join the call.");
+}
+main();
+
+</script>
+</body>
+</html>

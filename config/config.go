@@ -19,6 +19,12 @@ var (
 	FACE_DETECT                = true  // Enable/disable face detection
 	FACE_DETECT_CNN            = false // Use Convolutional Neural Network for face detection (as opposed to HOG). Much slower, supposedly more accurate at different angles
 	FACE_MAX_DISTANCE_SQ       = 0.11  // Squared distance between faces to consider them similar
+	// TURN server support is better be enabled if you are planning to use the video/audio call functionalities.
+	// By default a public STUN server would be added, but in cases where NAT firewall rules are too strict (symmetric NATs, etc), a TURN server is needed to relay the traffic
+	TURN_SERVER_PORT      = 3478 // Defaults to UDP port 3478
+	TURN_SERVER_IP        = ""   // Defaults to empty string. If configured, Pion TURN server would be started locally and this value used to advertise ourselves. Should be your public IP
+	TURN_TRAFFIC_MIN_PORT = 49152
+	TURN_TRAFFIC_MAX_PORT = 65535
 )
 
 func init() {
@@ -34,6 +40,10 @@ func init() {
 	readEnvBool("FACE_DETECT", &FACE_DETECT)
 	readEnvBool("FACE_DETECT_CNN", &FACE_DETECT_CNN)
 	readEnvFloat("FACE_MAX_DISTANCE_SQ", &FACE_MAX_DISTANCE_SQ)
+	readEnvString("TURN_SERVER_IP", &TURN_SERVER_IP)
+	readEnvInt("TURN_SERVER_PORT", &TURN_SERVER_PORT)
+	readEnvInt("TURN_TRAFFIC_MIN_PORT", &TURN_TRAFFIC_MIN_PORT)
+	readEnvInt("TURN_TRAFFIC_MAX_PORT", &TURN_TRAFFIC_MAX_PORT)
 }
 
 func readEnvString(name string, value *string) {
@@ -59,6 +69,18 @@ func readEnvFloat(name string, value *float64) {
 		return
 	}
 	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return
+	}
+	*value = f
+}
+
+func readEnvInt(name string, value *int) {
+	v := os.Getenv(name)
+	if v == "" {
+		return
+	}
+	f, err := strconv.Atoi(v)
 	if err != nil {
 		return
 	}

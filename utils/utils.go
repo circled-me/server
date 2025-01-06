@@ -92,6 +92,16 @@ func Rand16BytesToBase62() string {
 	return i.SetBytes(buf).Text(62)
 }
 
+func Rand8BytesToBase62() string {
+	buf := make([]byte, 8)
+	_, err := rand.Read(buf)
+	if err != nil {
+		panic(err)
+	}
+	var i big.Int
+	return i.SetBytes(buf).Text(62)
+}
+
 type ImageThumbConverted struct {
 	ThumbSize int64
 	NewX      uint16
