@@ -153,9 +153,7 @@ function wsSend(data) {
 }
 
 async function setUpPeerConnection(userID) {
-    let iceServers = [
-        // {urls: 'stun:stun.l.google.com:19302'},
-    ];
+    let iceServers = [{urls: 'stun:stun.l.google.com:19302'}];
     if ("{{ .turnIP }}" != "") {
         iceServers.push({
             urls: 'turn:{{ .turnIP }}:{{ .turnPort }}?transport=udp',
