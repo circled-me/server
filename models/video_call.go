@@ -37,9 +37,19 @@ func VideoCallForUser(userID uint64) (vc VideoCall, err error) {
 	return
 }
 
+func VideoCallForGroup(userID uint64, groupID uint64) (vc VideoCall, err error) {
+	err = db.Instance.
+		Where("group_id = ?", groupID).
+		First(&vc).
+		Error
+	if vc.ID == "" {
+		return NewVideoCall(userID, groupID, 0)
+	}
+	return
+}
+
 func VideoCallByID(id string) (vc VideoCall, err error) {
 	err = db.Instance.
-		Preload("User").
 		Where("id = ?", id).
 		First(&vc).
 		Error

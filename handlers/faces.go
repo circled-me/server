@@ -177,15 +177,17 @@ func PersonAssignFace(c *gin.Context, user *models.User) {
 	if db.Instance.Exec(`update faces 
 						set person_id=? 
 						where id in (
-							select t2.id 
-							from faces t1 join faces t2 
-							where t1.id=? and 
-								t1.id!=t2.id and 
-								t1.user_id=? and 
-								t1.user_id=t2.user_id and 
-								`+models.FacesVectorDistance+` <= ? and 
-								(t2.distance == 0 OR t2.distance > `+models.FacesVectorDistance+`)
-							)`,
+							select id from (
+								select t2.id 
+								from faces t1 join faces t2 
+								where t1.id=? and 
+									t1.id!=t2.id and 
+									t1.user_id=? and 
+									t1.user_id=t2.user_id and 
+									`+models.FacesVectorDistance+` <= ? and 
+									(t2.distance = 0 OR t2.distance > `+models.FacesVectorDistance+`)
+							) tmp
+						)`,
 		face.PersonID, face.ID, user.ID, threshold).Error != nil {
 
 		c.JSON(http.StatusInternalServerError, DBError2Response)

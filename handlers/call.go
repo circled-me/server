@@ -10,12 +10,13 @@ import (
 	"server/push"
 	"server/utils"
 	"server/webrtc"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-func CallLink(c *gin.Context, user *models.User) {
+func UserCallLink(c *gin.Context, user *models.User) {
 	if !user.HasPermission(models.PermissionAdmin) && !user.HasPermission(models.PermissionCanCreateGroups) {
 		c.JSON(http.StatusUnauthorized, NopeResponse)
 		return
@@ -36,6 +37,27 @@ func CallLink(c *gin.Context, user *models.User) {
 	c.JSON(http.StatusOK, gin.H{"path": "/call/" + vc.ID})
 }
 
+func GroupCallLink(c *gin.Context, user *models.User) {
+	// Load group and check if user is a member
+	groupID, _ := strconv.ParseUint(c.Query("id"), 10, 64)
+	groupUser := models.GroupUser{
+		GroupID: groupID,
+		UserID:  user.ID,
+	}
+	result := db.Instance.First(&groupUser)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, DBError1Response)
+		return
+	}
+
+	vc, err := models.VideoCallForGroup(user.ID, groupID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NopeResponse)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"path": "/call/" + vc.ID})
+}
+
 func sendCallNotificationTo(users map[uint64]string, from *models.User, callURL string) {
 	log.Printf("Sending call notification to %v, url: %s\n", users, callURL)
 	pushTokens := make([]string, 0, len(users))
@@ -50,7 +72,7 @@ func sendCallNotificationTo(users map[uint64]string, from *models.User, callURL 
 	}
 	callerName := from.Name
 	if from.ID == 0 || from.Name == "" {
-		callerName = "<Unknown>"
+		callerName = "Web User"
 	}
 	uuid := uuid.New()
 	notification := &push.Notification{
@@ -59,6 +81,7 @@ func sendCallNotificationTo(users map[uint64]string, from *models.User, callURL 
 			"id":          uuid.String(),
 			"caller_name": callerName,
 			"caller_id":   callURL,
+			"video":       "1",
 		},
 	}
 	if err := notification.SendTo(pushTokens); err != nil {

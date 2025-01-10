@@ -124,9 +124,10 @@ func main() {
 	authRouter.POST("/group/save", handlers.GroupSave)
 	authRouter.POST("/group/delete", handlers.GroupDelete)
 	// Video Call endpoints
-	authRouter.GET("/user/video-link", handlers.CallLink) // Returns the path to the video call for the current user
-	router.GET("/call/:id", web.CallView)                 // Renders the video call page
-	router.GET("/ws-call/:id", handlers.CallWebSocket)    // WebSocket handler for the video call
+	authRouter.GET("/user/video-link", handlers.UserCallLink)   // Returns the path to the video call for the current user or creates a new one
+	authRouter.GET("/group/video-link", handlers.GroupCallLink) // Returns the path to the video call for the given group or creates a new one
+	router.GET("/call/:id", web.CallView)                       // Renders the video call page
+	router.GET("/ws-call/:id", handlers.CallWebSocket)          // WebSocket handler for the video call
 	router.Static("/static", "./static")
 
 	// WebSocket handler
