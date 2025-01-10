@@ -12,15 +12,16 @@ import (
 
 const (
 	NotificationTypeNewAssetsInAlbum = "album"
+	NotificationTypeCall             = "call"
 )
 
 var httpClient = http.Client{}
 
 type Notification struct {
-	UserToken  string            `json:"user_token" binding:"required"` // TODO: deprecate
+	Type       string            `json:"type"`
 	UserTokens []string          `json:"user_tokens" binding:"required"`
-	Title      string            `json:"title" binding:"required"`
-	Body       string            `json:"body" binding:"required"`
+	Title      string            `json:"title"`
+	Body       string            `json:"body"`
 	Data       map[string]string `json:"data"`
 }
 

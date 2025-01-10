@@ -27,9 +27,9 @@ func AlbumNewContributor(newUser, albumId uint64, mode uint8, addeByUser *models
 		what = "contributor. You can now see and add more photos"
 	}
 	notification := Notification{
-		UserToken: receiver.PushToken,
-		Title:     "Album \"" + album.Name + "\"",
-		Body:      addeByUser.Name + " added you as a " + what,
+		UserTokens: []string{receiver.PushToken},
+		Title:      "Album \"" + album.Name + "\"",
+		Body:       addeByUser.Name + " added you as a " + what,
 		Data: map[string]string{
 			"type":  NotificationTypeNewAssetsInAlbum,
 			"album": strconv.Itoa(int(albumId)),
@@ -65,7 +65,7 @@ func AlbumNewAssets(count int, albumId uint64, addeByUser *models.User) {
 		},
 	}
 	if album.UserID != addeByUser.ID {
-		notification.UserToken = album.User.PushToken
+		notification.UserTokens = []string{album.User.PushToken}
 		notification.Send()
 	}
 	for _, c := range album.Contributors {
@@ -79,7 +79,7 @@ func AlbumNewAssets(count int, albumId uint64, addeByUser *models.User) {
 		if c.User.PushToken == "" {
 			continue
 		}
-		notification.UserToken = c.User.PushToken
+		notification.UserTokens = []string{c.User.PushToken}
 		notification.Send()
 	}
 }

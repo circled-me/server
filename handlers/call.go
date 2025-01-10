@@ -4,15 +4,19 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"server/auth"
 	"server/db"
 	"server/models"
+	"server/push"
 	"server/utils"
 	"server/webrtc"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
-func CallLink(c *gin.Context, user *models.User) {
+func UserCallLink(c *gin.Context, user *models.User) {
 	if !user.HasPermission(models.PermissionAdmin) && !user.HasPermission(models.PermissionCanCreateGroups) {
 		c.JSON(http.StatusUnauthorized, NopeResponse)
 		return
@@ -33,9 +37,61 @@ func CallLink(c *gin.Context, user *models.User) {
 	c.JSON(http.StatusOK, gin.H{"path": "/call/" + vc.ID})
 }
 
+func GroupCallLink(c *gin.Context, user *models.User) {
+	// Load group and check if user is a member
+	groupID, _ := strconv.ParseUint(c.Query("id"), 10, 64)
+	groupUser := models.GroupUser{
+		GroupID: groupID,
+		UserID:  user.ID,
+	}
+	result := db.Instance.First(&groupUser)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, DBError1Response)
+		return
+	}
+
+	vc, err := models.VideoCallForGroup(user.ID, groupID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NopeResponse)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"path": "/call/" + vc.ID})
+}
+
+func sendCallNotificationTo(users map[uint64]string, from *models.User, callURL string) {
+	log.Printf("Sending call notification to %v, url: %s\n", users, callURL)
+	pushTokens := make([]string, 0, len(users))
+	for userID, pushToken := range users {
+		if userID == from.ID {
+			continue
+		}
+		pushTokens = append(pushTokens, pushToken)
+	}
+	if len(pushTokens) == 0 {
+		return
+	}
+	callerName := from.Name
+	if from.ID == 0 || from.Name == "" {
+		callerName = "Web User"
+	}
+	uuid := uuid.New()
+	notification := &push.Notification{
+		Type: push.NotificationTypeCall,
+		Data: map[string]string{
+			"id":          uuid.String(),
+			"caller_name": callerName,
+			"caller_id":   callURL,
+			"video":       "1",
+		},
+	}
+	if err := notification.SendTo(pushTokens); err != nil {
+		log.Printf("Failed to send call notification to %v, error: %v", pushTokens, err)
+	}
+}
+
 func CallWebSocket(c *gin.Context) {
-	token := c.Param("token")
-	_, err := models.VideoCallByID(token)
+	stringID := c.Param("id")
+	vc, err := models.VideoCallByID(stringID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
@@ -47,15 +103,21 @@ func CallWebSocket(c *gin.Context) {
 	}
 	defer conn.Close()
 
-	room := webrtc.GetRoom(token)
+	// Load the user session by setting the token cookie manually from the query
+	c.Request.Header.Add("Cookie", "token="+c.Query("token"))
+	session := auth.LoadSession(c)
+	user := session.User()
+	log.Printf("User %d is trying to connect to WS %s", user.ID, vc.ID)
+
+	room, isNewRoom := webrtc.GetRoom(stringID)
 	// Wait for the client to send their ID
 	_, id, err := conn.ReadMessage()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	client, isNew := room.SetUpClient(conn, string(id))
-	if isNew {
+	client, isNewClient, numClients := room.SetUpClient(conn, string(id), user.ID)
+	if isNewClient {
 		room.MessageTo(client.ID, map[string]interface{}{
 			"type": "id",
 			"id":   client.ID,
@@ -63,6 +125,10 @@ func CallWebSocket(c *gin.Context) {
 		log.Printf("Client %s joined\n", client.ID)
 	} else {
 		log.Printf("Client %s reconnected\n", client.ID)
+	}
+	if isNewRoom || (isNewClient && numClients == 1) {
+		// Send call notification to all users that are not in the call
+		sendCallNotificationTo(vc.GetOwners(), &user, c.Query("url"))
 	}
 	room.Broadcast(client.ID, map[string]interface{}{
 		"type": "joined",
