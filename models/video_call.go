@@ -29,7 +29,7 @@ func NewVideoCall(userID uint64, groupID uint64, expiresAt int64) (vc VideoCall,
 func VideoCallForUser(userID uint64) (vc VideoCall, err error) {
 	err = db.Instance.
 		Preload("User").
-		Where("user_id = ?", userID).
+		Where("user_id = ? and group_id = 0", userID).
 		First(&vc).
 		Error
 	if vc.ID == "" {
