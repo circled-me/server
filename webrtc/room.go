@@ -18,6 +18,7 @@ const (
 type Client struct {
 	conn     *websocket.Conn
 	ID       string
+	UserID   uint64
 	lastSeen time.Time
 }
 
@@ -82,19 +83,19 @@ func checkAbandonedRooms() {
 	}
 }
 
-func GetRoom(id string) *Room {
+func GetRoom(id string) (room *Room, isNew bool) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if room, exists := rooms[id]; exists {
 		lastSeen[id] = time.Now()
-		return room
+		return room, false
 	}
-	room := &Room{
+	room = &Room{
 		ID: id,
 	}
 	rooms[id] = room
 	lastSeen[id] = time.Now()
-	return room
+	return room, true
 }
 
 func (r *Room) CheckAbandonedClients(callback func(string)) {
@@ -129,16 +130,14 @@ func (r *Room) SeenClient(client *Client) {
 	}
 }
 
-func (r *Room) SetUpClient(conn *websocket.Conn, id string) (client *Client, isNew bool) {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+func (r *Room) SetUpClient(conn *websocket.Conn, id string, userID uint64) (client *Client, isNew bool, numClients int) {
 	// Is the client already in the room?
 	for _, c := range r.clients {
 		if c.ID == id {
 			// Update the connection and last seen time
 			c.conn = conn
 			c.lastSeen = time.Now()
-			return c, false
+			return c, false, len(r.clients)
 		}
 	}
 	// Add new client to the room
@@ -146,9 +145,10 @@ func (r *Room) SetUpClient(conn *websocket.Conn, id string) (client *Client, isN
 		conn:     conn,
 		ID:       utils.Rand8BytesToBase62(),
 		lastSeen: time.Now(),
+		UserID:   userID,
 	}
 	r.clients = append(r.clients, client)
-	return client, true
+	return client, true, len(r.clients)
 }
 
 func (r *Room) RemoveClient(client *Client) {
@@ -185,4 +185,13 @@ func (r *Room) MessageTo(clientId string, data interface{}) {
 		}
 	}
 	r.mutex.RUnlock()
+}
+
+func (r *Room) GetOnlineUsers() (result []uint64) {
+	r.mutex.RLock()
+	for _, client := range r.clients {
+		result = append(result, client.UserID)
+	}
+	r.mutex.RUnlock()
+	return
 }

@@ -157,8 +157,8 @@ async function setUpPeerConnection(userID) {
     if ("{{ .turnIP }}" != "") {
         iceServers.push({
             urls: 'turn:{{ .turnIP }}:{{ .turnPort }}?transport=udp',
-            credential: '{{ .token }}',
-            username: '{{ .token }}'
+            credential: '{{ .id }}',
+            username: '{{ .id }}'
         });
     }
     let connection = new RTCPeerConnection({
@@ -211,8 +211,9 @@ function closePeerConnection(user) {
 
 function establishServerConnection() {
     console.log('Connecting to signaling server...');
-    protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(protocol+`//${window.location.host}/ws-call/{{ .token }}`);
+    wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    callUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+    ws = new WebSocket(wsProtocol+`//${window.location.host}/ws-call/{{ .id }}?{{ .wsQuery }}&url=${callUrl}`);
     
     ws.onopen = () => {
         connectAttempts = 0;

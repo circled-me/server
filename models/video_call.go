@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"server/db"
 	"server/utils"
 )
@@ -38,8 +39,17 @@ func VideoCallForUser(userID uint64) (vc VideoCall, err error) {
 
 func VideoCallByID(id string) (vc VideoCall, err error) {
 	err = db.Instance.
+		Preload("User").
 		Where("id = ?", id).
 		First(&vc).
 		Error
+	log.Printf("VideoCallByID, User, Token: %v, %v\n", vc.User.ID, vc.User.PushToken)
 	return
+}
+
+func (vc *VideoCall) GetOwners() map[uint64]string {
+	if vc.GroupID > 0 {
+		return LoadGroupUserIDs(vc.GroupID)
+	}
+	return map[uint64]string{vc.User.ID: vc.User.PushToken}
 }
