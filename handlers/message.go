@@ -15,6 +15,7 @@ import (
 const (
 	TypeGroupMessage = "group_message"
 	TypeGroupUpdate  = "group_update"
+	TypeSeenMessage  = "seen_message"
 
 	GroupUpdateValueNew        = "new"
 	GroupUpdateValueLeft       = "left"
@@ -43,9 +44,24 @@ type GroupUpdateDetails struct {
 	Name    string `json:"name"`
 }
 
+type SeenMessageDetails struct {
+	ID      uint64 `json:"id"`
+	GroupID uint64 `json:"group_id"`
+	UserID  uint64 `json:"user_id"`
+}
+
+type SeenMessage struct {
+	Message
+	Data SeenMessageDetails `json:"data"`
+}
+
 type GroupUpdate struct {
 	Message
 	Data GroupUpdateDetails `json:"data"`
+}
+
+func (sm *SeenMessage) getNotification() *push.Notification {
+	return nil
 }
 
 func (gm *GroupMessage) getNotification() *push.Notification {
@@ -76,6 +92,15 @@ func (sm *GroupUpdate) getNotification() *push.Notification {
 		Body:  sm.Data.Body,
 		// TODO: Data
 	}
+}
+
+func NewSeenMessage(groupID, messageID, userID uint64) (m SeenMessage) {
+	m.Message.Type = TypeSeenMessage
+	m.Message.Stamp = time.Now().UnixMilli()
+	m.Data.ID = messageID
+	m.Data.GroupID = groupID
+	m.Data.UserID = userID
+	return
 }
 
 func NewGroupMessage() (m GroupMessage) {
@@ -133,17 +158,38 @@ func processMessage(user *models.User, data []byte) {
 			return
 		}
 		log.Printf("Group message: %+v", groupMessage)
-		groupMessage.saveAndPropagate(user)
+		recipients := models.GetGroupRecipients(groupMessage.Data.GroupID, user)
+		if len(recipients) == 0 {
+			log.Printf("User %d does not belong to group %d", user.ID, groupMessage.Data.GroupID)
+			return
+		}
+		groupMessage.saveFor(user)
+		groupMessage.propagateToGroupUsers(recipients)
+
+	case TypeSeenMessage:
+		seenMessage := SeenMessage{}
+		if err := json.Unmarshal(data, &seenMessage); err != nil {
+			log.Printf("Not a Seen message: %v", err)
+			return
+		}
+		log.Printf("Seen message: %+v", seenMessage)
+		recipients := models.GetGroupRecipients(seenMessage.Data.GroupID, user)
+		if len(recipients) == 0 {
+			log.Printf("User %d does not belong to group %d", user.ID, seenMessage.Data.GroupID)
+			return
+		}
+		// Update the GroupUser object for the current user and set the SeenMessage field
+		err := db.Instance.Exec("update group_users set seen_message = ? where group_id = ? and user_id = ?", seenMessage.Data.ID, seenMessage.Data.GroupID, user.ID).Error
+		if err != nil {
+			log.Printf("SeenMessage udpate DB error: %v", err)
+			return
+		}
+		sendToSocketAndPush(&seenMessage, recipients)
 	}
 }
 
-func (message *GroupMessage) saveAndPropagate(initiator *models.User) {
+func (message *GroupMessage) saveFor(initiator *models.User) {
 	groupMessage := &message.Data
-	recipients := models.LoadGroupUserIDs(groupMessage.GroupID)
-	if _, ok := recipients[initiator.ID]; !ok {
-		log.Printf("User %d does not belong to group %d", initiator.ID, groupMessage.GroupID)
-		return
-	}
 	groupMessage.ServerStamp = time.Now().UnixMilli()
 	groupMessage.UserName = initiator.Name
 	groupMessage.UserID = initiator.ID
@@ -152,6 +198,10 @@ func (message *GroupMessage) saveAndPropagate(initiator *models.User) {
 		log.Printf("Couldn't save GroupMessage: %+v, err: %v", *groupMessage, err)
 		return
 	}
+}
+
+func (message *GroupMessage) propagateToGroupUsers(recipients map[uint64]string) {
+	groupMessage := &message.Data
 	message.Stamp = groupMessage.ServerStamp
 	// Just for notification purposes
 	if len(recipients) > 2 {

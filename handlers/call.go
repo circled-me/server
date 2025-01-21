@@ -76,7 +76,9 @@ func sendCallNotificationTo(users map[uint64]string, from *models.User, callURL 
 	}
 	uuid := uuid.New()
 	notification := &push.Notification{
-		Type: push.NotificationTypeCall,
+		Type:  push.NotificationTypeCall,
+		Title: "Incoming call",
+		Body:  callerName + " is calling you",
 		Data: map[string]string{
 			"id":          uuid.String(),
 			"caller_name": callerName,

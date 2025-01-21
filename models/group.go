@@ -34,3 +34,11 @@ func LoadGroupUserIDs(groupID uint64) map[uint64]string {
 	rows.Close()
 	return result
 }
+
+func GetGroupRecipients(groupID uint64, initiator *User) map[uint64]string {
+	recipients := LoadGroupUserIDs(groupID)
+	if _, ok := recipients[initiator.ID]; !ok {
+		return map[uint64]string{}
+	}
+	return recipients
+}

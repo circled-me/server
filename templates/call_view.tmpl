@@ -26,7 +26,7 @@
                 border-radius: 12px !important;
             }
             video.mine.min {
-                position: absolute;
+                position: fixed;
                 z-index: 1000;
                 width: 33%;
                 height: 33%;
@@ -44,8 +44,11 @@
                 display: none;
             }
             #controls {
+                position: fixed;
+                z-index: 1000;
+                left: 10px;
+                bottom: 10px;
                 float: left;
-                margin: 12px;
             }
             button {
                 margin: 3px !important;
@@ -70,6 +73,10 @@
             object-fit: cover;
             -webkit-transform: scaleX(-1);
             transform: scaleX(-1);
+        }
+        video.wide {
+            /* height: 100vh !important;
+            min-height: 100%; */
         }
         #video-btn.on {
             background-image: url('/static/cam.png');
@@ -179,6 +186,10 @@ async function setUpPeerConnection(userID) {
             return;
         }
         const remoteVideo = document.createElement('video');
+        remoteVideo.addEventListener('click', () => {
+            remoteVideo.className = remoteVideo.className == '' ? 'wide' : '';
+            remoteVideo.style.height = remoteVideo.className == '' ? '' : window.innerHeight+'px';
+        });
         addVideoStream(remoteVideo, event.streams[0]);
         streams[userID] = event.streams[0];
         console.log("Added Remote Video: ", event);

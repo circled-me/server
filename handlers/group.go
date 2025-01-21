@@ -19,18 +19,25 @@ var upgrader = websocket.Upgrader{
 }
 
 type GroupUserInfo struct {
-	ID      uint64 `json:"id"`
-	Name    string `json:"name"`
-	IsAdmin bool   `json:"is_admin"`
+	ID          uint64 `json:"id"`
+	Name        string `json:"name"`
+	IsAdmin     bool   `json:"is_admin"`
+	SeenMessage uint64 `json:"seen_message"`
+}
+
+type GroupSeenMessage struct {
+	GroupID   uint64 `json:"group_id" binding:"required"`
+	MessageID uint64 `json:"message_id" binding:"required"`
 }
 
 type GroupInfo struct {
-	ID        uint64          `json:"id" form:"id" binding:"required"`
-	Name      string          `json:"name" form:"name"`
-	Colour    string          `json:"colour" form:"colour"`
-	Favourite bool            `json:"favourite" form:"favourite"`
-	IsAdmin   bool            `json:"is_admin"`
-	Members   []GroupUserInfo `json:"members"`
+	ID          uint64          `json:"id" form:"id" binding:"required"`
+	Name        string          `json:"name" form:"name"`
+	Colour      string          `json:"colour" form:"colour"`
+	Favourite   bool            `json:"favourite" form:"favourite"`
+	IsAdmin     bool            `json:"is_admin"`
+	Members     []GroupUserInfo `json:"members"`
+	SeenMessage uint64          `json:"seen_message"`
 }
 
 type GroupCreateRequest struct {
@@ -52,7 +59,7 @@ func (gi *GroupInfo) loadMembers() {
 	rows, err := db.Instance.
 		Table("group_users").
 		Joins("join `users` on group_users.user_id = `users`.id").
-		Select("user_id, name, is_admin").
+		Select("user_id, name, is_admin, seen_message").
 		Where("group_id = ?", gi.ID).
 		Order("group_users.created_at").
 		Rows()
@@ -64,7 +71,7 @@ func (gi *GroupInfo) loadMembers() {
 	gi.Members = []GroupUserInfo{}
 	for rows.Next() {
 		userInfo := GroupUserInfo{}
-		if err = rows.Scan(&userInfo.ID, &userInfo.Name, &userInfo.IsAdmin); err != nil {
+		if err = rows.Scan(&userInfo.ID, &userInfo.Name, &userInfo.IsAdmin, &userInfo.SeenMessage); err != nil {
 			continue
 		}
 		gi.Members = append(gi.Members, userInfo)
@@ -75,7 +82,7 @@ func GroupList(c *gin.Context, user *models.User) {
 	rows, err := db.Instance.
 		Table("group_users").
 		Joins("join `groups` on group_users.group_id = `groups`.id").
-		Select("group_id, name, colour, is_favourite, is_admin").
+		Select("group_id, name, colour, is_favourite, is_admin, seen_message").
 		Where("user_id = ?", user.ID).
 		Order("is_favourite DESC, `groups`.updated_at DESC").
 		Rows()
@@ -89,7 +96,7 @@ func GroupList(c *gin.Context, user *models.User) {
 	isGlobalAdmin := user.HasPermission(models.PermissionAdmin)
 	for rows.Next() {
 		groupInfo := GroupInfo{}
-		if err = rows.Scan(&groupInfo.ID, &groupInfo.Name, &groupInfo.Colour, &groupInfo.Favourite, &groupInfo.IsAdmin); err != nil {
+		if err = rows.Scan(&groupInfo.ID, &groupInfo.Name, &groupInfo.Colour, &groupInfo.Favourite, &groupInfo.IsAdmin, &groupInfo.SeenMessage); err != nil {
 			c.JSON(http.StatusInternalServerError, DBError2Response)
 			return
 		}
