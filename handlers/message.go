@@ -83,14 +83,17 @@ func (gm *GroupMessage) getNotification() *push.Notification {
 	}
 }
 
-func (sm *GroupUpdate) getNotification() *push.Notification {
-	if sm.Data.Title == "" {
+func (gu *GroupUpdate) getNotification() *push.Notification {
+	if gu.Data.Title == "" {
 		return nil
 	}
 	return &push.Notification{
-		Title: sm.Data.Title,
-		Body:  sm.Data.Body,
-		// TODO: Data
+		Title: gu.Data.Title,
+		Body:  gu.Data.Body,
+		Data: map[string]string{
+			"type":  TypeGroupUpdate,
+			"group": strconv.FormatUint(gu.Data.GroupID, 10),
+		},
 	}
 }
 
