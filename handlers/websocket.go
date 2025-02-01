@@ -6,7 +6,8 @@ import (
 	"log"
 	"server/db"
 	"server/models"
-	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -52,33 +53,46 @@ func (c *connectedClient) removeFrom(id string) {
 	})
 }
 
-func getMessagesFor(user *models.User, since int64) []models.GroupMessage {
-	result := []models.GroupMessage{}
+func withMessagesFor(user *models.User, since int64, callback func(models.GroupMessage)) {
 	rows, err := db.Instance.
 		Table("group_messages").
-		Select("group_messages.id, group_messages.group_id, server_stamp, client_stamp, users.id, users.name, content").
+		Select("group_messages.id, group_messages.group_id, server_stamp, client_stamp, "+
+			"users.id, users.name, content, reply_to, group_concat(group_message_reactions.user_id||':'||group_message_reactions.reaction)").
 		Joins("join group_users ON group_users.user_id = ? AND group_users.group_id = group_messages.group_id", user.ID).
 		Joins("join users ON users.id = group_messages.user_id").
+		Joins("left join group_message_reactions ON group_message_reactions.id = group_messages.id").
 		Where("group_messages.id > ?", since).
-		Order("group_messages.id DESC").
+		Group("group_messages.id").
+		Order("group_messages.id ASC").
 		Rows()
 	if err != nil {
-		return result
+		return
 	}
 	defer rows.Close()
 	for rows.Next() {
 		groupMessage := models.GroupMessage{}
+		reactions := ""
+		reactionsPtr := &reactions
 		if err := rows.Scan(&groupMessage.ID, &groupMessage.GroupID, &groupMessage.ServerStamp, &groupMessage.ClientStamp,
-			&groupMessage.UserID, &groupMessage.UserName, &groupMessage.Content); err != nil {
+			&groupMessage.UserID, &groupMessage.UserName, &groupMessage.Content, &groupMessage.ReplyTo, &reactionsPtr); err != nil {
 
 			log.Printf("DB error: %v", err)
 			continue
 		}
-		result = append(result, groupMessage)
+		groupMessage.Reactions = []models.GroupMessageReaction{}
+		for _, reaction := range strings.Split(reactions, ",") {
+			parts := strings.Split(reaction, ":")
+			if len(parts) != 2 {
+				continue
+			}
+			uID, _ := strconv.ParseUint(parts[0], 10, 64)
+			groupMessage.Reactions = append(groupMessage.Reactions, models.GroupMessageReaction{
+				UserID:   uID,
+				Reaction: parts[1],
+			})
+		}
+		callback(groupMessage)
 	}
-	// Reverse as we request recent messages (DESC order)
-	slices.Reverse(result)
-	return result
 }
 
 func WebSocket(c *gin.Context, user *models.User) {
@@ -110,13 +124,13 @@ func WebSocket(c *gin.Context, user *models.User) {
 	r := MessagesRequest{}
 	if err = c.ShouldBindWith(&r, binding.Form); err == nil {
 		message := NewGroupMessage()
-		for _, groupMessage := range getMessagesFor(user, int64(r.SinceID)) {
+		withMessagesFor(user, int64(r.SinceID), func(groupMessage models.GroupMessage) {
 			message.Data = groupMessage
 			message.Stamp = groupMessage.ServerStamp
 			buffer := bytes.Buffer{}
 			_ = json.NewEncoder(&buffer).Encode(message)
 			client.sendFunc(buffer.Bytes())
-		}
+		})
 	}
 	client.addTo(id)
 	defer client.removeFrom(id)

@@ -23,6 +23,7 @@ func Init() {
 	es = append(es, db.Instance.AutoMigrate(&Grant{}))
 	es = append(es, db.Instance.AutoMigrate(&Group{}))
 	es = append(es, db.Instance.AutoMigrate(&GroupMessage{}))
+	es = append(es, db.Instance.AutoMigrate(&GroupMessageReaction{}))
 	es = append(es, db.Instance.AutoMigrate(&GroupUser{}))
 	es = append(es, db.Instance.AutoMigrate(&Location{}))
 	es = append(es, db.Instance.AutoMigrate(&Place{}))
