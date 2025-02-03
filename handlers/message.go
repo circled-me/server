@@ -13,10 +13,9 @@ import (
 )
 
 const (
-	TypeGroupMessage         = "group_message"
-	TypeGroupUpdate          = "group_update"
-	TypeSeenMessage          = "seen_message"
-	TypeGroupMessageReaction = "group_message_reaction"
+	TypeGroupMessage = "group_message"
+	TypeGroupUpdate  = "group_update"
+	TypeSeenMessage  = "seen_message"
 
 	GroupUpdateValueNew        = "new"
 	GroupUpdateValueLeft       = "left"
@@ -56,11 +55,6 @@ type SeenMessage struct {
 	Data SeenMessageDetails `json:"data"`
 }
 
-type GroupMessageReaction struct {
-	Message
-	Data models.GroupMessageReaction `json:"data"`
-}
-
 type GroupUpdate struct {
 	Message
 	Data GroupUpdateDetails `json:"data"`
@@ -71,6 +65,11 @@ func (sm *SeenMessage) getNotification() *push.Notification {
 }
 
 func (gm *GroupMessage) getNotification() *push.Notification {
+	if gm.Data.ReactionTo > 0 {
+		// TODO: Implement reaction notifications - but only to the parent message author
+		// title = gm.Data.UserName + " reacted"
+		return nil
+	}
 	body := gm.Data.Content
 	if strings.HasPrefix(body, "[image:http") {
 		body = "[image]"
@@ -101,11 +100,6 @@ func (gu *GroupUpdate) getNotification() *push.Notification {
 			"group": strconv.FormatUint(gu.Data.GroupID, 10),
 		},
 	}
-}
-
-func (gr *GroupMessageReaction) getNotification() *push.Notification {
-	// TODO: Show the reaction in a notification? E.g. "Someone reacted to your message: 😄"
-	return nil
 }
 
 func NewSeenMessage(groupID, messageID, userID uint64) (m SeenMessage) {
@@ -199,34 +193,6 @@ func processMessage(user *models.User, data []byte) {
 			return
 		}
 		sendToSocketAndPush(&seenMessage, recipients)
-
-	case TypeGroupMessageReaction:
-		reaction := GroupMessageReaction{}
-		if err := json.Unmarshal(data, &reaction); err != nil {
-			log.Printf("Not a GroupMessageReaction: %v", err)
-			return
-		}
-		log.Printf("GroupMessageReaction: %+v", reaction)
-		if reaction.Data.UserID != user.ID {
-			log.Printf("User %d is not allowed to react to message %d", user.ID, reaction.Data.ID)
-			return
-		}
-		groupMessage := models.GroupMessage{}
-		db.Instance.First(&groupMessage, "id = ?", reaction.Data.ID)
-		if groupMessage.ID == 0 {
-			log.Printf("GroupMessageReaction: message not found")
-			return
-		}
-		recipients := models.GetGroupRecipients(groupMessage.GroupID, user)
-		if len(recipients) == 0 {
-			log.Printf("User %d does not belong to group %d", user.ID, groupMessage.GroupID)
-			return
-		}
-		if err := db.Instance.Save(&reaction.Data).Error; err != nil {
-			log.Printf("GroupMessageReaction save error: %v", err)
-			return
-		}
-		sendToSocketAndPush(&reaction, recipients)
 	}
 }
 
