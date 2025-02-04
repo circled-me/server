@@ -65,6 +65,11 @@ func (sm *SeenMessage) getNotification() *push.Notification {
 }
 
 func (gm *GroupMessage) getNotification() *push.Notification {
+	if gm.Data.ReactionTo > 0 {
+		// TODO: Implement reaction notifications - but only to the parent message author
+		// title = gm.Data.UserName + " reacted"
+		return nil
+	}
 	body := gm.Data.Content
 	if strings.HasPrefix(body, "[image:http") {
 		body = "[image]"

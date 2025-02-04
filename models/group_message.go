@@ -10,4 +10,6 @@ type GroupMessage struct {
 	User        User   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	UserName    string `gorm:"-" json:"user_name"`
 	Content     string `gorm:"type:varchar(5000)" json:"content"`
+	ReplyTo     uint64 `gorm:"not null;default 0" json:"reply_to"`
+	ReactionTo  uint64 `gorm:"not null;default 0" json:"reaction_to"`
 }
