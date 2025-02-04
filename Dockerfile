@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine
+FROM golang:1.23-alpine3.21
 RUN apk add dlib dlib-dev --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/
 RUN apk add blas blas-dev cblas lapack lapack-dev libjpeg-turbo-dev cmake make gcc libc-dev g++ unzip libx11-dev pkgconf jpeg jpeg-dev libpng libpng-dev mailcap
 
@@ -12,7 +12,7 @@ COPY . /go/src/circled-server
 RUN CGO_ENABLED=1 CGO_CFLAGS="-D_LARGEFILE64_SOURCE" GOOS=linux go build -a -installsuffix cgo -o circled-server .
 
 # Final output image
-FROM alpine:3.20.1
+FROM alpine:3.21
 RUN apk add dlib --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/
 RUN apk --no-cache add ca-certificates exiftool tzdata blas cblas lapack libjpeg-turbo libstdc++ libgcc ffmpeg
 WORKDIR /opt/circled
