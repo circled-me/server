@@ -6,8 +6,8 @@ COPY go.mod /go/src/circled-server/
 COPY go.sum /go/src/circled-server/
 WORKDIR /go/src/circled-server/
 RUN go mod download
-RUN CGO_ENABLED=1 CGO_CFLAGS="-D_LARGEFILE64_SOURCE" GOOS=linux go build github.com/Kagami/go-face
-RUN CGO_ENABLED=1 CGO_CFLAGS="-D_LARGEFILE64_SOURCE" GOOS=linux go build github.com/mattn/go-sqlite3
+#RUN CGO_ENABLED=1 CGO_CFLAGS="-D_LARGEFILE64_SOURCE" GOOS=linux go build github.com/Kagami/go-face
+#RUN CGO_ENABLED=1 CGO_CFLAGS="-D_LARGEFILE64_SOURCE" GOOS=linux go build github.com/mattn/go-sqlite3
 COPY . /go/src/circled-server
 RUN CGO_ENABLED=1 CGO_CFLAGS="-D_LARGEFILE64_SOURCE" GOOS=linux go build -a -installsuffix cgo -o circled-server .
 
