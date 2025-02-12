@@ -63,6 +63,9 @@ Current configuration environment variables:
 - `FACE_DETECT` - enable/disable face detection. Defaults to `yes`
 - `FACE_DETECT_CNN` - use Convolutional Neural Network for face detection (as opposed to HOG). Much slower, but more accurate at different angles. Defaults to `no`
 - `FACE_MAX_DISTANCE_SQ` - squared distance between faces to consider them similar. Defaults to `0.11`
+- `TURN_SERVER_IP` - if configured, Pion TURN server would be started locally and this value used to advertise ourselves. Should be your public IP. Defaults to empty string
+- `TURN_SERVER_PORT` - Defaults to port '3478' (UDP)
+- `TURN_TRAFFIC_MIN_PORT` and `TURN_TRAFFIC_MAX_PORT` - Advertise-able UDP port range for TURN traffic. Those ports need to be open on your public IP (and forwarded to the circled.me server instance). Defaults to 49152-65535
 
 ## docker-compose example
 ```yaml
