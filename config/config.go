@@ -21,10 +21,10 @@ var (
 	FACE_MAX_DISTANCE_SQ       = 0.11  // Squared distance between faces to consider them similar
 	// TURN server support is better be enabled if you are planning to use the video/audio call functionalities.
 	// By default a public STUN server would be added, but in cases where NAT firewall rules are too strict (symmetric NATs, etc), a TURN server is needed to relay the traffic
+	TURN_SERVER_IP        = ""   // If configured, Pion TURN server would be started locally and this value used to advertise ourselves. Should be your public IP. Defaults to empty string.
 	TURN_SERVER_PORT      = 3478 // Defaults to UDP port 3478
-	TURN_SERVER_IP        = ""   // Defaults to empty string. If configured, Pion TURN server would be started locally and this value used to advertise ourselves. Should be your public IP
 	TURN_TRAFFIC_MIN_PORT = 49152
-	TURN_TRAFFIC_MAX_PORT = 65535
+	TURN_TRAFFIC_MAX_PORT = 65535 // Advertise-able UDP port range for TURN traffic. Those ports need to be open on your public IP (and forwarded to the circled.me server instance). Defaults to 49152-65535
 )
 
 func init() {
