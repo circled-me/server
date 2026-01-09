@@ -38,9 +38,10 @@ func (l *location) process(asset *models.Asset, storage storage.StorageAPI) (int
 	if config.GAODE_API_KEY != "" {
 		// Try Gaode Maps API
 		nominatim = locations.GetGaodeLocation(location.GpsLat, location.GpsLong, config.GAODE_API_KEY)
-	}
+	} else {
 	// Try a Nominatim request
-	nominatim = locations.GetNominatimLocation(location.GpsLat, location.GpsLong)
+		nominatim = locations.GetNominatimLocation(location.GpsLat, location.GpsLong)
+	}
 	if nominatim == nil {
 		log.Printf("No location found for: %d, %f, %f", asset.ID, location.GpsLat, location.GpsLong)
 		return Failed, nil
