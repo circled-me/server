@@ -2,39 +2,39 @@ package locations
 
 import (
 	"encoding/json"
-	"io"
 	"fmt"
+	"io"
 	"log"
+	"math"
 	"net/http"
 	"strings"
 	"time"
-	"math"
 )
 
 // WGS84(World) to GCJ02(China GPS) offline algo
 func wgs84ToGCJ02(wgsLon, wgsLat float64) (float64, float64) {
 	const pi = 3.1415926535897932384626
-	const a = 6378245.0              
-	const ee = 0.00669342162296594323 
-	
+	const a = 6378245.0
+	const ee = 0.00669342162296594323
+
 	if outOfChina(wgsLon, wgsLat) {
 		return wgsLon, wgsLat
 	}
-	
+
 	dLat := transformLat(wgsLon-105.0, wgsLat-35.0)
 	dLon := transformLon(wgsLon-105.0, wgsLat-35.0)
-	
+
 	radLat := wgsLat / 180.0 * pi
 	magic := math.Sin(radLat)
 	magic = 1 - ee*magic*magic
 	sqrtMagic := math.Sqrt(magic)
-	
+
 	dLat = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * pi)
 	dLon = (dLon * 180.0) / (a / sqrtMagic * math.Cos(radLat) * pi)
-	
+
 	gcjLat := wgsLat + dLat
 	gcjLon := wgsLon + dLon
-	
+
 	return gcjLon, gcjLat
 }
 
@@ -58,9 +58,6 @@ func transformLon(x, y float64) float64 {
 	return ret
 }
 
-
-
-
 func GetGaodeLocation(lat, long float64, apiKey string) *NominatimLocation {
 	// Add throttling
 	if time.Since(lastRequest) < throttling {
@@ -70,10 +67,10 @@ func GetGaodeLocation(lat, long float64, apiKey string) *NominatimLocation {
 	gcj02Long, gcj02Lat := wgs84ToGCJ02(long, lat)
 	url := fmt.Sprintf("https://restapi.amap.com/v3/geocode/regeo?key=%s&location=%f,%f&extensions=all&batch=false&roadlevel=0&output=JSON", apiKey, gcj02Long, gcj02Lat)
 	log.Printf("Making request to: %s", url)
-	
+
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9")
-	
+
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println("Failed request to:", url, err)
@@ -95,7 +92,7 @@ func GetGaodeLocation(lat, long float64, apiKey string) *NominatimLocation {
 		Regeocode struct {
 			FormattedAddress string `json:"formatted_address"`
 			AddressComponent struct {
-				City        json.RawMessage `json:"city"`  // city : maybe string or empty array 
+				City        json.RawMessage `json:"city"` // city : maybe string or empty array
 				Province    string          `json:"province"`
 				District    string          `json:"district"`
 				Township    string          `json:"township"`
@@ -106,13 +103,11 @@ func GetGaodeLocation(lat, long float64, apiKey string) *NominatimLocation {
 		} `json:"regeocode"`
 	}
 
-
 	if err = json.Unmarshal(body, &gaodeResp); err != nil {
 		log.Println("JSON decode error:", err)
 		log.Println("URL:", url)
 		return nil
 	}
-
 
 	if gaodeResp.Status != "1" {
 		log.Printf("Gaode API error: Status=%s, Info=%s", gaodeResp.Status, gaodeResp.Info)
@@ -121,11 +116,10 @@ func GetGaodeLocation(lat, long float64, apiKey string) *NominatimLocation {
 
 	// Get City Name (Processing Municipality Logic)
 	var cityName string
-	
-	
-	if len(gaodeResp.Regeocode.AddressComponent.City) > 0 && 
-	   string(gaodeResp.Regeocode.AddressComponent.City) != "[]" {
-		
+
+	if len(gaodeResp.Regeocode.AddressComponent.City) > 0 &&
+		string(gaodeResp.Regeocode.AddressComponent.City) != "[]" {
+
 		// Try to parse it as a string
 		var cityStr string
 		if err := json.Unmarshal(gaodeResp.Regeocode.AddressComponent.City, &cityStr); err == nil && cityStr != "" {
@@ -172,7 +166,7 @@ func GetGaodeLocation(lat, long float64, apiKey string) *NominatimLocation {
 
 	if result.DisplayName == "" {
 		parts := []string{}
-		
+
 		isMunicipality := false
 		municipalityProvinces := []string{"北京市", "上海市", "天津市", "重庆市"}
 		for _, mp := range municipalityProvinces {
@@ -185,25 +179,25 @@ func GetGaodeLocation(lat, long float64, apiKey string) *NominatimLocation {
 		if result.Address.Neighbourhood != "" {
 			parts = append(parts, result.Address.Neighbourhood)
 		}
-		
+
 		if gaodeResp.Regeocode.AddressComponent.District != "" && !isMunicipality {
 			parts = append(parts, gaodeResp.Regeocode.AddressComponent.District)
 		}
-		
+
 		if result.Address.City != "" {
 			parts = append(parts, result.Address.City)
 		}
-		
+
 		if result.Address.Province != "" && !isMunicipality {
 			parts = append(parts, result.Address.Province)
 		}
-		
+
 		if result.Address.Country != "" {
 			parts = append(parts, result.Address.Country)
 		}
-		
+
 		result.DisplayName = strings.Join(parts, ", ")
 	}
-	
+
 	return result
 }

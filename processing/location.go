@@ -39,7 +39,7 @@ func (l *location) process(asset *models.Asset, storage storage.StorageAPI) (int
 		// Try Gaode Maps API
 		nominatim = locations.GetGaodeLocation(location.GpsLat, location.GpsLong, config.GAODE_API_KEY)
 	} else {
-	// Try a Nominatim request
+		// Try a Nominatim request
 		nominatim = locations.GetNominatimLocation(location.GpsLat, location.GpsLong)
 	}
 	if nominatim == nil {
