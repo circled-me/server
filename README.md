@@ -66,6 +66,7 @@ Current configuration environment variables:
 - `TURN_SERVER_IP` - if configured, Pion TURN server would be started locally and this value used to advertise ourselves. Should be your public IP. Defaults to empty string
 - `TURN_SERVER_PORT` - Defaults to port '3478' (UDP)
 - `TURN_TRAFFIC_MIN_PORT` and `TURN_TRAFFIC_MAX_PORT` - Advertise-able UDP port range for TURN traffic. Those ports need to be open on your public IP (and forwarded to the circled.me server instance). Defaults to 49152-65535
+- `GAODE_API_KEY` - Gaode API key to use for reverse geocoding and maps for the clients' devices. Use Gaode in China as the default OpenStreetMap provider is not available there. *NOTE: This API key will be shared with authenticated users. Pass it only if you trust all the users of your server.*
 
 ## docker-compose example
 ```yaml
