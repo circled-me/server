@@ -21,6 +21,20 @@ func ProxyGaodeMapsTiles(c *gin.Context, user *models.User) {
 	}
 	queryParams := currentUrl.Query()
 	subdomainParam := queryParams.Get("subdomain")
+	// Validate the subdomain parameter to prevent SSRF by restricting it to expected values.
+	if subdomainParam == "" {
+		// Use a safe default if no subdomain is provided.
+		subdomainParam = "1"
+	} else {
+		switch subdomainParam {
+		case "1", "2", "3", "4":
+			// allowed
+		default:
+			log.Printf("Invalid subdomain parameter (%s) in request URI (%s)", subdomainParam, c.Request.RequestURI)
+			c.AbortWithStatus(400)
+			return
+		}
+	}
 	queryParams.Del("subdomain")
 	queryParams.Set("key", config.GAODE_API_KEY) // Set the server-side API key
 	tileUrl := "https://webst0" + subdomainParam + ".is.autonavi.com/appmaptile?" + queryParams.Encode()
