@@ -32,14 +32,14 @@ type UserInfo struct {
 }
 
 type UserStatusResponse struct {
-	Error       string `json:"error"`
-	Name        string `json:"name"`
-	UserID      uint64 `json:"user_id"`
-	PushToken   string `json:"push_token"`
-	Permissions []int  `json:"permissions"`
-	BucketUsage int64  `json:"bucket_usage"`
-	BucketQuota int64  `json:"bucket_quota"`
-	GaodeApiKey string `json:"gaode_api_key,omitempty"`
+	Error            string `json:"error"`
+	Name             string `json:"name"`
+	UserID           uint64 `json:"user_id"`
+	PushToken        string `json:"push_token"`
+	Permissions      []int  `json:"permissions"`
+	BucketUsage      int64  `json:"bucket_usage"`
+	BucketQuota      int64  `json:"bucket_quota"`
+	GaodeMapsEnabled bool   `json:"gaode_maps_enabled,omitempty"`
 }
 
 type UserSaveResponse struct {
@@ -120,7 +120,7 @@ func newUserStatusResponse(user *models.User, details bool) UserStatusResponse {
 	}
 	// Include Gaode API key if available so that clients can use it directly
 	if config.GAODE_API_KEY != "" {
-		result.GaodeApiKey = config.GAODE_API_KEY
+		result.GaodeMapsEnabled = true
 	}
 	return result
 }
