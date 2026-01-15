@@ -56,5 +56,7 @@ func ProxyGaodeMapsTiles(c *gin.Context, user *models.User) {
 	c.Writer.WriteHeader(resp.StatusCode)
 
 	// Copy the response body
-	_, _ = io.Copy(c.Writer, resp.Body)
+	if _, err := io.Copy(c.Writer, resp.Body); err != nil {
+		log.Printf("Failed to copy response body from Gaode Maps (%s): %v", tileUrl, err)
+	}
 }
