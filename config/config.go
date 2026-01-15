@@ -15,6 +15,7 @@ var (
 	BIND_ADDRESS               = "0.0.0.0:8080"
 	TMP_DIR                    = "/tmp" // Used for temporary video conversion, etc (in case of S3 bucket)
 	DEFAULT_BUCKET_DIR         = ""     // Used for creating initial bucket
+	GAODE_API_KEY              = ""     // Gaode Maps API key, optional
 	DEBUG_MODE                 = true
 	FACE_DETECT                = true  // Enable/disable face detection
 	FACE_DETECT_CNN            = false // Use Convolutional Neural Network for face detection (as opposed to HOG). Much slower, supposedly more accurate at different angles
@@ -35,6 +36,7 @@ func init() {
 	readEnvString("BIND_ADDRESS", &BIND_ADDRESS)
 	readEnvString("TMP_DIR", &TMP_DIR)
 	readEnvString("DEFAULT_BUCKET_DIR", &DEFAULT_BUCKET_DIR)
+	readEnvString("GAODE_API_KEY", &GAODE_API_KEY)
 	readEnvString("DEFAULT_ASSET_PATH_PATTERN", &DEFAULT_ASSET_PATH_PATTERN)
 	readEnvBool("DEBUG_MODE", &DEBUG_MODE)
 	readEnvBool("FACE_DETECT", &FACE_DETECT)

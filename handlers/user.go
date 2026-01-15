@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"server/auth"
+	"server/config"
 	"server/db"
 	"server/models"
 	"server/utils"
@@ -38,6 +39,7 @@ type UserStatusResponse struct {
 	Permissions []int  `json:"permissions"`
 	BucketUsage int64  `json:"bucket_usage"`
 	BucketQuota int64  `json:"bucket_quota"`
+	GaodeApiKey string `json:"gaode_api_key,omitempty"`
 }
 
 type UserSaveResponse struct {
@@ -115,6 +117,10 @@ func newUserStatusResponse(user *models.User, details bool) UserStatusResponse {
 				result.BucketQuota = available / 1024 / 1024
 			}
 		}
+	}
+	// Include Gaode API key if available so that clients can use it directly
+	if config.GAODE_API_KEY != "" {
+		result.GaodeApiKey = config.GAODE_API_KEY
 	}
 	return result
 }
