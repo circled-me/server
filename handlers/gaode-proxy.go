@@ -37,7 +37,7 @@ func ProxyGaodeMapsTiles(c *gin.Context, user *models.User) {
 	}
 	queryParams.Del("subdomain")
 	queryParams.Set("key", config.GAODE_API_KEY) // Set the server-side API key
-	tileUrl := "https://webst0" + subdomainParam + ".is.autonavi.com/appmaptile?" + queryParams.Encode()
+	tileUrl := "https://wprd0" + subdomainParam + ".is.autonavi.com/appmaptile?" + queryParams.Encode()
 	// Create a new request to the tile URL
 	resp, err := http.Get(tileUrl)
 	if err != nil {
