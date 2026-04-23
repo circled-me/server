@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine3.21
+FROM golang:1.25-alpine3.21
 RUN apk add dlib dlib-dev --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/
 RUN apk add blas blas-dev cblas lapack lapack-dev libjpeg-turbo-dev cmake make gcc libc-dev g++ unzip libx11-dev pkgconf jpeg jpeg-dev libpng libpng-dev mailcap
 
