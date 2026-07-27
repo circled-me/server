@@ -17,9 +17,10 @@ var (
 	DEFAULT_BUCKET_DIR         = ""     // Used for creating initial bucket
 	GAODE_API_KEY              = ""     // Gaode Maps API key, optional
 	DEBUG_MODE                 = true
-	FACE_DETECT                = true  // Enable/disable face detection
-	FACE_DETECT_CNN            = false // Use Convolutional Neural Network for face detection (as opposed to HOG). Much slower, supposedly more accurate at different angles
-	FACE_MAX_DISTANCE_SQ       = 0.11  // Squared distance between faces to consider them similar
+	FACE_DETECT                = true                 // Enable/disable face detection
+	FACE_DETECT_CNN            = false                // Use Convolutional Neural Network for face detection (as opposed to HOG). Much slower, supposedly more accurate at different angles
+	FACE_MAX_DISTANCE_SQ       = 0.11                 // Squared distance between faces to consider them similar
+	SESSION_ENCRYPTION_KEY     = "this is a long key" // Default value as it was before this variable was added
 	// TURN server support is better be enabled if you are planning to use the video/audio call functionalities.
 	// By default a public STUN server would be added, but in cases where NAT firewall rules are too strict (symmetric NATs, etc), a TURN server is needed to relay the traffic
 	TURN_SERVER_IP        = ""   // If configured, Pion TURN server would be started locally and this value used to advertise ourselves. Should be your public IP. Defaults to empty string.
@@ -38,6 +39,7 @@ func init() {
 	readEnvString("DEFAULT_BUCKET_DIR", &DEFAULT_BUCKET_DIR)
 	readEnvString("GAODE_API_KEY", &GAODE_API_KEY)
 	readEnvString("DEFAULT_ASSET_PATH_PATTERN", &DEFAULT_ASSET_PATH_PATTERN)
+	readEnvString("SESSION_ENCRYPTION_KEY", &SESSION_ENCRYPTION_KEY)
 	readEnvBool("DEBUG_MODE", &DEBUG_MODE)
 	readEnvBool("FACE_DETECT", &FACE_DETECT)
 	readEnvBool("FACE_DETECT_CNN", &FACE_DETECT_CNN)

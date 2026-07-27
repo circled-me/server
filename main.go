@@ -29,7 +29,6 @@ import (
 )
 
 const (
-	sessionStoreKey       = "this is a long key" // TODO: convert to env variable
 	sessionCookieName     = "token"
 	sessionExpirationTime = 365 * 86400 // 1 year
 )
@@ -64,7 +63,7 @@ func main() {
 	// HTML templates
 	router.LoadHTMLGlob("templates/*.tmpl")
 
-	cookieStore := gormsessions.NewStore(db.Instance, true, []byte(sessionStoreKey))
+	cookieStore := gormsessions.NewStore(db.Instance, true, []byte(config.SESSION_ENCRYPTION_KEY))
 	cookieStore.Options(sessions.Options{MaxAge: sessionExpirationTime})
 	router.Use(sessions.Sessions(sessionCookieName, cookieStore))
 	if !config.DEBUG_MODE {
