@@ -70,7 +70,7 @@ Current configuration environment variables:
 
 ## docker-compose example
 ```yaml
-version: '2'
+version: '3.8'
 services:
   circled-server:
     image: gubble/circled-server:latest
