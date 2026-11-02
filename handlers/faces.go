@@ -147,7 +147,7 @@ func PersonAssignFace(c *gin.Context, user *models.User) {
 			return
 		}
 		// We want to unassign a face from a person
-		if db.Instance.Exec("update faces set person_id=null where id=?", face.ID).Error != nil {
+		if db.Instance.Exec("update faces set person_id=null where id=? and user_id=?", face.ID, user.ID).Error != nil {
 			c.JSON(http.StatusInternalServerError, DBError1Response)
 			return
 		}
@@ -162,7 +162,7 @@ func PersonAssignFace(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusUnauthorized, NopeResponse)
 		return
 	}
-	if db.Instance.Exec("update faces set person_id=? where id=?", face.PersonID, face.ID).Error != nil {
+	if db.Instance.Exec("update faces set person_id=? where id=? and user_id=?", face.PersonID, face.ID, user.ID).Error != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
 	}
