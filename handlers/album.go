@@ -253,9 +253,32 @@ func AlbumAddAssets(c *gin.Context, user *models.User) {
 		c.JSON(http.StatusUnauthorized, NopeResponse)
 		return
 	}
+	existingIds := make([]uint64, 0, len(r.AssetIDs))
+	// Check ownership and/or album-based access of all assets
+	rows, err := db.Instance.Raw("select id, user_id from assets where id in ?", r.AssetIDs).Rows()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, DBError2Response)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, uid uint64
+		if err = rows.Scan(&id, &uid); err != nil {
+			c.JSON(http.StatusInternalServerError, DBError3Response)
+			return
+		}
+		if uid != user.ID && !checkAlbumAccess(c, user.ID, id) {
+			return
+		}
+		existingIds = append(existingIds, id)
+	}
+	if rows.Err() != nil {
+		c.JSON(http.StatusInternalServerError, DBError4Response)
+		return
+	}
 	failed := []uint64{}
-	successful := len(r.AssetIDs)
-	for _, id := range r.AssetIDs {
+	successful := len(existingIds)
+	for _, id := range existingIds {
 		albumAsset := models.AlbumAsset{
 			AlbumID: r.AlbumID,
 			AssetID: id,
@@ -268,9 +291,10 @@ func AlbumAddAssets(c *gin.Context, user *models.User) {
 			}
 		}
 	}
-	// Push notifications in background
-	go push.AlbumNewAssets(successful, r.AlbumID, user)
-
+	if successful > 0 {
+		// Push notifications in background
+		go push.AlbumNewAssets(successful, r.AlbumID, user)
+	}
 	if len(failed) > 0 {
 		c.JSON(http.StatusInternalServerError, MultiResponse{"Some assets cannot be added", failed})
 		return
