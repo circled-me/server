@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"server/auth"
 	"server/config"
@@ -231,26 +230,7 @@ func UserSave(c *gin.Context, adminUser *models.User) {
 }
 
 func UserDelete(c *gin.Context, loggedUser *models.User) {
-	req := UserInfo{}
-	err := c.ShouldBindWith(&req, binding.JSON)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, Response{err.Error()})
-		return
-	}
-	if !loggedUser.HasPermission(models.PermissionAdmin) && loggedUser.ID != req.ID {
-		c.JSON(http.StatusForbidden, NopeResponse)
-		return
-	}
-	user := models.User{ID: req.ID}
-	if db.Instance.First(&user).Error != nil {
-		c.JSON(http.StatusBadRequest, Response{"Invalid user"})
-		return
-	}
-	log.Printf("Will delete user: %d", user.ID)
-	user.Password = ""
-	db.Instance.Save(&user)
-	// TODO: Delete their personal assets later as a background task, keep the group ones
-	c.JSON(http.StatusOK, OKResponse)
+	c.Status(http.StatusNotImplemented)
 }
 
 func UserReInvite(c *gin.Context, currentUser *models.User) {
@@ -293,6 +273,10 @@ func UserList(c *gin.Context, user *models.User) {
 	}
 	result := []UserInfo{}
 	for _, u := range users {
+		if u.Password == "" && !user.HasPermission(models.PermissionAdmin) {
+			// Non-admin users should not see pending users pending users' Email is their invite token (for now)
+			continue
+		}
 		bucket := uint64(0)
 		if u.BucketID != nil {
 			bucket = *u.BucketID
