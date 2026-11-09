@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"server/db"
 	"server/handlers"
+	"server/models"
 	"server/utils"
 
 	"github.com/gin-gonic/gin"
@@ -112,16 +113,13 @@ func AlbumAssetView(c *gin.Context) {
 		return
 	}
 	// Verify we have permission to view this asset
-	hideOriginalCond := ""
-	if r.Download == 1 {
-		hideOriginalCond = " and album_shares.hide_original = 0"
-	}
-	rows, err := db.Instance.Table("album_shares").Select("album_assets.album_id").
+	rows, err := db.Instance.Table("album_shares").
+		Select("album_shares.hide_original, assets.mime_type, assets.thumb_size").
 		Where("token = ? and "+
 			"album_assets.asset_id = ? and "+
-			"(expires_at is null or expires_at=0 or expires_at>"+db.TimestampFunc+")"+
-			hideOriginalCond, token, r.ID).
-		Joins("join album_assets on album_shares.album_id = album_assets.album_id").Rows()
+			"(expires_at is null or expires_at=0 or expires_at>"+db.TimestampFunc+")", token, r.ID).
+		Joins("join album_assets on album_shares.album_id = album_assets.album_id").
+		Joins("join assets on album_assets.asset_id = assets.id").Rows()
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, handlers.Response{Error: "something went wrong"})
@@ -131,6 +129,25 @@ func AlbumAssetView(c *gin.Context) {
 	if !rows.Next() {
 		c.JSON(http.StatusNotFound, handlers.Response{Error: "something went totally wrong"})
 		return
+	}
+	var hideOriginal int
+	var mimeType string
+	var thumbSize int64
+	if err = rows.Scan(&hideOriginal, &mimeType, &thumbSize); err != nil {
+		c.JSON(http.StatusInternalServerError, handlers.Response{Error: "something went wrong"})
+		return
+	}
+	if hideOriginal > 0 {
+		if r.Download == 1 {
+			c.JSON(http.StatusForbidden, handlers.NopeResponse)
+			return
+		}
+		// Videos have no alternative rendition, so inline streaming of the original is still allowed
+		isVideo := handlers.GetTypeFrom(mimeType) == models.AssetTypeVideo
+		if !isVideo && (r.Thumb != 1 || thumbSize <= 0) {
+			c.JSON(http.StatusForbidden, handlers.NopeResponse)
+			return
+		}
 	}
 	// Return the asset
 	handlers.RealAssetFetch(c, 0)
