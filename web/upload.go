@@ -7,6 +7,7 @@ import (
 	"server/handlers"
 	"server/models"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -40,7 +41,22 @@ func UploadRequestProcess(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, handlers.Response{Error: "something went wrong"})
 		return
 	}
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, handlers.Response{Error: err.Error()})
+		return
+	}
+	if _, ok := uploadRequestAsset(&req, id); !ok {
+		c.JSON(http.StatusForbidden, handlers.NopeResponse)
+		return
+	}
 	handlers.BackupLocalAsset(req.UserID, c)
+}
+
+// uploadRequestAsset loads an asset only if it was created through this upload request
+func uploadRequestAsset(req *models.UploadRequest, id uint64) (asset models.Asset, ok bool) {
+	err := db.Instance.Where("id = ? AND user_id = ?", id, req.UserID).First(&asset).Error
+	return asset, err == nil && strings.HasPrefix(asset.RemoteID, req.AssetRemoteIDPrefix())
 }
 
 func UploadRequestView(c *gin.Context) {
@@ -64,10 +80,6 @@ func UploadRequestNewURL(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, handlers.Response{Error: "something went wrong"})
 		return
 	}
-	prefix := req.Token
-	if len(prefix) > 10 {
-		prefix = prefix[:10]
-	}
 	// TODO: user NewMetadata here too instead of all this
 	if req.User.HasNoRemainingQuota() {
 		c.JSON(http.StatusForbidden, handlers.Response{Error: "Quota exceeded"})
@@ -76,7 +88,7 @@ func UploadRequestNewURL(c *gin.Context) {
 	asset := models.Asset{
 		UserID:    req.UserID,
 		BucketID:  *req.User.BucketID,
-		RemoteID:  prefix + "_" + strconv.FormatInt(time.Now().UnixNano(), 10),
+		RemoteID:  req.AssetRemoteIDPrefix() + strconv.FormatInt(time.Now().UnixNano(), 10),
 		Name:      c.Query("name"),
 		CreatedAt: time.Now().UnixMilli() / 1000,
 	}
@@ -113,18 +125,30 @@ func UploadRequestConfirm(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, handlers.Response{Error: err.Error()})
 		return
 	}
-	asset := models.Asset{
-		ID:     r.ID,
-		UserID: req.UserID,
+	if r.Size < 0 {
+		c.JSON(http.StatusBadRequest, handlers.Response{Error: "invalid size"})
+		return
 	}
-	result := db.Instance.First(&asset)
-	if result.Error != nil {
+	asset, ok := uploadRequestAsset(&req, r.ID)
+	if !ok {
+		c.JSON(http.StatusForbidden, handlers.NopeResponse)
+		return
+	}
+	size := asset.Size
+	if size == 0 {
+		// Not measured by us (e.g. direct S3 upload)
+		size = r.Size
+	}
+	mimeType := r.MimeType
+	if !handlers.IsAllowedMediaMimeType(mimeType) {
+		// Never serve arbitrary client-chosen types (e.g. text/html) from our origin
+		mimeType = "application/octet-stream"
+	}
+	err = db.Instance.Model(&asset).Updates(map[string]interface{}{"size": size, "mime_type": mimeType}).Error
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, handlers.DBError1Response)
 		return
 	}
-	asset.Size = r.Size
-	asset.MimeType = r.MimeType
-	db.Instance.Updates(&asset)
 	c.JSON(http.StatusOK, handlers.OKResponse)
 }
 

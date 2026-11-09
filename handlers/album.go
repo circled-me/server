@@ -426,47 +426,6 @@ func AlbumShare(c *gin.Context, user *models.User) {
 	})
 }
 
-// AlbumContributorSave is DEPRECATED now
-func AlbumContributorSave(c *gin.Context, user *models.User) {
-	r := AlbumContributeRequest{}
-	err := c.ShouldBindJSON(&r)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, Response{err.Error()})
-		return
-	}
-	if r.Mode != models.ContributorCanAdd && r.Mode != models.ContributorViewOnly {
-		c.JSON(http.StatusBadRequest, Response{"Invalid share mode"})
-		return
-	}
-	album := models.Album{
-		ID:     r.AlbumID,
-		UserID: user.ID,
-	}
-	result := db.Instance.Find(&album)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, DBError1Response)
-		return
-	}
-	if result.RowsAffected != 1 || r.UserID == user.ID {
-		c.JSON(http.StatusUnauthorized, Response{"no!"})
-		return
-	}
-	albumContributor := models.AlbumContributor{
-		AlbumID: r.AlbumID,
-		UserID:  r.UserID,
-		Mode:    r.Mode,
-	}
-	result = db.Instance.Create(&albumContributor)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, DBError2Response)
-		return
-	}
-	// Push notifications in background
-	go push.AlbumNewContributor(r.UserID, r.AlbumID, r.Mode, user)
-
-	c.JSON(http.StatusOK, OKResponse)
-}
-
 func AlbumContributorsGet(c *gin.Context, user *models.User) {
 	r := AlbumContributorsGetRequest{}
 	if err := c.ShouldBindWith(&r, binding.Form); err != nil {

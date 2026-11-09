@@ -11,6 +11,15 @@ type UploadRequest struct {
 	Token     string `gorm:"type:varchar(100);index:uniq_token,unique"`
 }
 
+// AssetRemoteIDPrefix is the RemoteID prefix of all assets created through this request
+func (r *UploadRequest) AssetRemoteIDPrefix() string {
+	prefix := r.Token
+	if len(prefix) > 10 {
+		prefix = prefix[:10]
+	}
+	return prefix + "_"
+}
+
 func NewUploadRequest(userID uint64) UploadRequest {
 	return UploadRequest{
 		UserID: userID,

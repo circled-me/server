@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -89,6 +90,15 @@ func BackupConfirm(c *gin.Context, user *models.User) {
 	}
 }
 
+func IsAllowedMediaMimeType(mimeType string) bool {
+	return mimeType == "image/jpeg" ||
+		mimeType == "image/png" ||
+		mimeType == "image/gif" ||
+		mimeType == "image/heic" || // TODO: which one to remain?
+		mimeType == "image/heif" ||
+		strings.HasPrefix(mimeType, "video/")
+}
+
 func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.Asset {
 	if user.BucketID == nil {
 		panic("Bucket is nil")
@@ -120,26 +130,22 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 		asset.MimeType = mime.TypeByExtension(filepath.Ext(asset.Name))
 	}
 	// For now, only allow image and video
-	if asset.MimeType != "image/jpeg" &&
-		asset.MimeType != "image/png" &&
-		asset.MimeType != "image/gif" &&
-		asset.MimeType != "image/heic" && // TODO: which one to remain?
-		asset.MimeType != "image/heif" &&
-		!strings.HasPrefix(asset.MimeType, "video/") {
-
+	if !IsAllowedMediaMimeType(asset.MimeType) {
 		c.JSON(http.StatusForbidden, Response{"this file type is not allowed"})
 		return nil
 	}
 
 	result := db.Instance.Create(&asset)
 	if result.Error != nil {
-		// Try loading the asset by RemoteID, maybe it exists and we should overwrite it
-		result = db.Instance.First(&asset, "remote_id = ?", r.RemoteID)
+		// Try loading the user's own asset by RemoteID, maybe it exists and we should overwrite it
+		existing := models.Asset{}
+		result = db.Instance.Where("user_id = ? AND remote_id = ?", user.ID, r.RemoteID).First(&existing)
 		if result.Error != nil {
 			// Now give up...
 			c.JSON(http.StatusInternalServerError, DBError1Response)
 			return nil
 		}
+		asset = existing
 	}
 	if db.Instance.Preload("Bucket").First(&asset).Error != nil {
 		c.JSON(http.StatusInternalServerError, DBError2Response)
@@ -160,7 +166,7 @@ func NewMetadata(c *gin.Context, user *models.User, r *BackupRequest) *models.As
 		MimeType: asset.MimeType,
 	})
 	// Save as Paths are updated
-	if db.Instance.Save(&asset).Error != nil {
+	if db.Instance.Omit(clause.Associations).Save(&asset).Error != nil {
 		c.JSON(http.StatusInternalServerError, DBError3Response)
 		return nil
 	}

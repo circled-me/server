@@ -39,12 +39,13 @@ func UserCallLink(c *gin.Context, user *models.User) {
 
 func GroupCallLink(c *gin.Context, user *models.User) {
 	// Load group and check if user is a member
-	groupID, _ := strconv.ParseUint(c.Query("id"), 10, 64)
-	groupUser := models.GroupUser{
-		GroupID: groupID,
-		UserID:  user.ID,
+	groupID, err := strconv.ParseUint(c.Query("id"), 10, 64)
+	if err != nil || groupID == 0 {
+		c.JSON(http.StatusBadRequest, Response{"invalid group id"})
+		return
 	}
-	result := db.Instance.First(&groupUser)
+	groupUser := models.GroupUser{}
+	result := db.Instance.Where("group_id = ? AND user_id = ?", groupID, user.ID).First(&groupUser)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, DBError1Response)
 		return
