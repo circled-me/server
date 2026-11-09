@@ -171,7 +171,9 @@ func processMessage(user *models.User, data []byte) {
 			log.Printf("User %d does not belong to group %d", user.ID, groupMessage.Data.GroupID)
 			return
 		}
-		groupMessage.saveFor(user)
+		if !groupMessage.saveFor(user) {
+			return
+		}
 		groupMessage.propagateToGroupUsers(recipients)
 
 	case TypeSeenMessage:
@@ -196,16 +198,41 @@ func processMessage(user *models.User, data []byte) {
 	}
 }
 
-func (message *GroupMessage) saveFor(initiator *models.User) {
+func (message *GroupMessage) saveFor(initiator *models.User) bool {
+	if message.Data.ID != 0 {
+		return message.editFor(initiator)
+	}
 	groupMessage := &message.Data
 	groupMessage.ServerStamp = time.Now().UnixMilli()
 	groupMessage.UserName = initiator.Name
 	groupMessage.UserID = initiator.ID
-	err := db.Instance.Save(groupMessage).Error
+	err := db.Instance.Create(groupMessage).Error
 	if err != nil || groupMessage.ID == 0 {
 		log.Printf("Couldn't save GroupMessage: %+v, err: %v", *groupMessage, err)
-		return
+		return false
 	}
+	return true
+}
+
+func (message *GroupMessage) editFor(initiator *models.User) bool {
+	requested := &message.Data
+	existing := models.GroupMessage{}
+	err := db.Instance.
+		Where("id = ? AND user_id = ? AND group_id = ?", requested.ID, initiator.ID, requested.GroupID).
+		First(&existing).Error
+	if err != nil {
+		log.Printf("User %d cannot edit GroupMessage %d in group %d: %v", initiator.ID, requested.ID, requested.GroupID, err)
+		return false
+	}
+	err = db.Instance.Model(&existing).Update("content", requested.Content).Error
+	if err != nil {
+		log.Printf("Couldn't edit GroupMessage %d: %v", existing.ID, err)
+		return false
+	}
+	existing.Content = requested.Content
+	existing.UserName = initiator.Name
+	message.Data = existing
+	return true
 }
 
 func (message *GroupMessage) propagateToGroupUsers(recipients map[uint64]string) {

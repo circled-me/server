@@ -122,7 +122,7 @@ func TagList(c *gin.Context, user *models.User) {
 		}
 	}
 	// Find all people, all their faces in assets and add them as tags
-	rows, err = db.Instance.Raw("select p.id, p.name, f.asset_id from people p join faces f on f.person_id=p.id").Rows()
+	rows, err = db.Instance.Raw("select p.id, p.name, f.asset_id from people p join faces f on f.person_id=p.id where p.user_id=? and f.user_id=?", user.ID, user.ID).Rows()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, DBError3Response)
 		return

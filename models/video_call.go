@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"log"
 	"server/db"
 	"server/utils"
@@ -39,6 +40,10 @@ func VideoCallForUser(userID uint64) (vc VideoCall, err error) {
 }
 
 func VideoCallForGroup(userID uint64, groupID uint64) (vc VideoCall, err error) {
+	if groupID == 0 {
+		// group_id = 0 is used for personal calls
+		return vc, errors.New("invalid group id")
+	}
 	err = db.Instance.
 		Preload("User").
 		Where("group_id = ?", groupID).
